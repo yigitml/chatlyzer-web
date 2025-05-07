@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 import { withProtectedRoute } from "@/middleware/jwtAuth";
 import { ApiResponse } from "@/types/api/apiResponse";
-import { uploadFile } from "@/lib/fal";
+//import { uploadFile } from "@/lib/fal";
 import prisma from "@/lib/prisma";
 
 export const GET = withProtectedRoute(async (request: NextRequest) => {
@@ -88,8 +88,8 @@ export const POST = withProtectedRoute(async (request: NextRequest) => {
       }
     }
 
-    const url = await uploadFile(file);
-
+    //const url = await uploadFile(file);
+    const url = "https://example.com/file.pdf";
     const newFile = await prisma.file.create({
       data: {
         url: url,
