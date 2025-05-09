@@ -1,32 +1,20 @@
-'use client'
+import { LoginForm } from "@/components/login-form"
 
-import { Button } from "@/components/ui/button"
-import { cn } from "@/lib/utils"
-import Image from "next/image"
-import { useState } from "react"
-
-export default function SignIn() {
-  
+export default function LoginPage() {
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-background">
-      <Button
-        type="button"
-        className={cn(
-          "flex items-center justify-center gap-2 rounded-lg"
-        )}
-      >
-      <div className="w-5 h-5 relative flex-shrink-0">
-        <Image
-          src="/images/google_icon.png"
-          width={20}
-          height={20}
-          alt="Google"
-          className="object-contain"
-          priority
-        />
+      <div className="flex min-h-screen items-center justify-center bg-black px-4 py-12 sm:px-6 lg:px-8">
+        <div className="w-full max-w-md space-y-8">
+          <div className="text-center">
+            <h1 className="text-3xl font-bold tracking-tight text-white">Sign in to your account</h1>
+            <p className="mt-2 text-sm text-gray-300">
+              Or{" "}
+              <a href="#" className="font-medium text-white hover:underline">
+                create a new account
+              </a>
+            </p>
+          </div>
+          <LoginForm />
+        </div>
       </div>
-    </Button>
-    <p>Sign in with Google</p>
-    </div>
   )
 }

@@ -88,6 +88,7 @@ export const POST = withProtectedRoute(async (request: NextRequest) => {
       }
     }
 
+    // TODO
     //const url = await uploadFile(file);
     const url = "https://example.com/file.pdf";
     const newFile = await prisma.file.create({
