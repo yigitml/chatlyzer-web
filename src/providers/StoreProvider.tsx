@@ -5,10 +5,9 @@ import {
   useUIStore, 
   useLanguageStore,
   useCreditStore,
-  useContactStore,
   useMessageStore,
   useChatStore,
-  useAnalysisStore
+  useAnalyticsResultStore
 } from '@/store';
 
 interface StoreContextValue {
@@ -30,10 +29,9 @@ export function StoreProvider({ children }: StoreProviderProps) {
   const uiInitialize = useUIStore(state => state.initialize);
   const languageInitialize = useLanguageStore(state => state.initialize);
   
-  const contactStore = useContactStore();
   const messageStore = useMessageStore();
   const chatStore = useChatStore();
-  const analysisStore = useAnalysisStore();
+  const analyticsResultStore = useAnalyticsResultStore();
   const creditStore = useCreditStore();
   const initializeStores = async () => {
     if (languageInitialize) {
@@ -50,8 +48,8 @@ export function StoreProvider({ children }: StoreProviderProps) {
     
     const promises = [];
     
-    if ('initialize' in contactStore && typeof contactStore.initialize === 'function') {
-      promises.push(Promise.resolve(contactStore.initialize()));
+    if ('initialize' in analyticsResultStore && typeof analyticsResultStore.initialize === 'function') {
+      promises.push(Promise.resolve(analyticsResultStore.initialize()));
     }
     
     if ('initialize' in messageStore && typeof messageStore.initialize === 'function') {
@@ -66,8 +64,8 @@ export function StoreProvider({ children }: StoreProviderProps) {
       promises.push(Promise.resolve(creditStore.initialize()));
     }
     
-    if ('initialize' in analysisStore && typeof analysisStore.initialize === 'function') {
-      promises.push(Promise.resolve(analysisStore.initialize()));
+    if ('initialize' in analyticsResultStore && typeof analyticsResultStore.initialize === 'function') {
+      promises.push(Promise.resolve(analyticsResultStore.initialize()));
     }
     
     if (promises.length > 0) {

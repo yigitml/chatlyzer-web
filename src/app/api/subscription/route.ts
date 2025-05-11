@@ -65,9 +65,7 @@ export const DELETE = withProtectedRoute(async (request: NextRequest) => {
       ).toResponse();
     }
 
-    return ApiResponse.success({
-      message: "Subscription deleted successfully",
-    }).toResponse();
+    return ApiResponse.success(deletedSubscription).toResponse();
   } catch (error) {
     console.error("Error deleting subscription:", error);
     return ApiResponse.error("Failed to delete subscription", 500).toResponse();

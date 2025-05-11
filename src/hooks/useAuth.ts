@@ -2,12 +2,17 @@ import { useGoogleLogin } from "@react-oauth/google";
 import { useRouter } from "next/navigation";
 import { v4 as uuidv4 } from "uuid";
 import { useAuthStore } from "@/store";
+import { useEffect, useCallback } from "react";
 
 const useAuth = () => {
-  const { login, logout } = useAuthStore();
+  const { login, logout, isLoggingIn, setIsLoggingIn } = useAuthStore();
   const router = useRouter();
 
-  const signIn = useGoogleLogin({
+  const resetLoadingState = useCallback(() => {
+    setIsLoggingIn(false);
+  }, [setIsLoggingIn]);
+
+  const googleLogin = useGoogleLogin({
     onSuccess: async (codeResponse) => {
       try {
         const sessionId = generateSessionId();
@@ -18,12 +23,20 @@ const useAuth = () => {
         router.push("/home");
       } catch (error) {
         console.error("Sign in failed:", error);
+        resetLoadingState();
         router.push("/auth/signin");
       }
     },
+    onError: resetLoadingState,
+    onNonOAuthError: resetLoadingState,
     flow: "implicit",
     scope: "openid email profile",
   });
+
+  const signIn = () => {
+    setIsLoggingIn(true);
+    googleLogin();
+  };
 
   const signOut = async () => {
     try {
@@ -34,7 +47,7 @@ const useAuth = () => {
     }
   };
 
-  return { signIn, signOut };
+  return { signIn, signOut, isLoggingIn };
 };
 
 const generateSessionId = (): string => {

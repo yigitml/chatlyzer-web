@@ -13,10 +13,10 @@ import {
   MessagePostRequest,
   MessagePutRequest,
   MessageDeleteRequest,
-  AnalysisGetRequest,
-  AnalysisPostRequest,
-  AnalysisPutRequest,
-  AnalysisDeleteRequest,
+  AnalyticsResultGetRequest,
+  AnalyticsResultPostRequest,
+  AnalyticsResultPutRequest,
+  AnalyticsResultDeleteRequest,
   ContactGetRequest,
   ContactPostRequest,
   ContactPutRequest,
@@ -32,8 +32,7 @@ import {
   File,
   Chat,
   Message,
-  Analysis,
-  Contact,
+  AnalyticsResult,
 } from "@prisma/client";
 import { PhotoPagination } from "@/types/app";
 import { AnalyzeImageResponse } from "@/types/openai";
@@ -138,44 +137,23 @@ export class NetworkService {
 
   // ===== Analysis API =====
 
-  async fetchAnalyses(params?: AnalysisGetRequest): Promise<Analysis[]> {
-    const response = await this.api.get(API_ENDPOINTS.ANALYSIS, params);
+  async fetchAnalyticsResults(params?: AnalyticsResultGetRequest): Promise<AnalyticsResult[]> {
+    const response = await this.api.get(API_ENDPOINTS.ANALYTICS_RESULT, params);
     return response.data;
   }
 
-  async createAnalysis(data: AnalysisPostRequest): Promise<Analysis> {
-    const response = await this.api.post(API_ENDPOINTS.ANALYSIS, data);
+  async createAnalyticsResult(data: AnalyticsResultPostRequest): Promise<AnalyticsResult> {
+    const response = await this.api.post(API_ENDPOINTS.ANALYTICS_RESULT, data);
     return response.data;
   }
 
-  async updateAnalysis(data: AnalysisPutRequest): Promise<Analysis> {
-    const response = await this.api.put(API_ENDPOINTS.ANALYSIS, data);
+  async updateAnalyticsResult(data: AnalyticsResultPutRequest): Promise<AnalyticsResult> {
+    const response = await this.api.put(API_ENDPOINTS.ANALYTICS_RESULT, data);
     return response.data;
   }
 
-  async deleteAnalysis(data: AnalysisDeleteRequest): Promise<void> {
-    await this.api.delete(API_ENDPOINTS.ANALYSIS, data);
-  }
-
-  // ===== Contact API =====
-
-  async fetchContacts(params?: ContactGetRequest): Promise<Contact[]> {
-    const response = await this.api.get(API_ENDPOINTS.CONTACT, params);
-    return response.data;
-  }
-
-  async createContact(data: ContactPostRequest): Promise<Contact> {
-    const response = await this.api.post(API_ENDPOINTS.CONTACT, data);
-    return response.data;
-  }
-
-  async updateContact(data: ContactPutRequest): Promise<Contact> {
-    const response = await this.api.put(API_ENDPOINTS.CONTACT, data);
-    return response.data;
-  }
-
-  async deleteContact(data: ContactDeleteRequest): Promise<void> {
-    await this.api.delete(API_ENDPOINTS.CONTACT, data);
+  async deleteAnalyticsResult(data: AnalyticsResultDeleteRequest): Promise<void> {
+    await this.api.delete(API_ENDPOINTS.ANALYTICS_RESULT, data);
   }
 
   // ===== Credit API =====

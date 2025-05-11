@@ -3,10 +3,9 @@ import {
   UserCredit,
   Subscription,
   File,
-  Contact,
   Message,
   Chat,
-  Analysis,
+  AnalyticsResult,
 } from "@prisma/client";
 
 import {
@@ -24,9 +23,10 @@ import {
   ChatPostRequest,
   ChatPutRequest,
   ChatDeleteRequest,
-  AnalysisPostRequest,
-  AnalysisPutRequest,
-  AnalysisDeleteRequest,
+  AnalyticsResultPostRequest,
+  AnalyticsResultPutRequest,
+  AnalyticsResultDeleteRequest,
+  AnalyticsResultGetRequest,
 } from "@/types/api/apiRequest";
 
 export interface PhotoPagination {
@@ -50,17 +50,14 @@ export interface AppContextType {
   credits: UserCredit[];
   subscription: Subscription | null;
 
-  contacts: Contact[];
-  selectedContact: Contact | null;
-
   messages: Message[];
   selectedMessage: Message | null;
 
   chats: Chat[];
   selectedChat: Chat | null;
 
-  analyses: Analysis[];
-  selectedAnalysis: Analysis | null;
+  analyticsResults: AnalyticsResult[];
+  selectedAnalyticsResult: AnalyticsResult | null;
 
   setActiveTab: (tab: string) => void;
 
@@ -69,12 +66,6 @@ export interface AppContextType {
 
   fetchUser: () => Promise<User>;
   updateUser: (data: UserPutRequest) => Promise<User>;
-
-  fetchContacts: (params?: ContactGetRequest) => Promise<Contact[]>;
-  createContact: (data: ContactPostRequest) => Promise<Contact>;
-  selectContact: (contact: Contact) => Promise<void>;
-  updateContact: (data: ContactPutRequest) => Promise<Contact>;
-  deleteContact: (data: ContactDeleteRequest) => Promise<boolean>;
 
   fetchMessages: (params?: MessageGetRequest) => Promise<Message[]>;
   createMessage: (data: MessagePostRequest) => Promise<Message>;
@@ -88,10 +79,11 @@ export interface AppContextType {
   updateChat: (data: ChatPutRequest) => Promise<Chat>;
   deleteChat: (data: ChatDeleteRequest) => Promise<void>;
 
-  createAnalysis: (data: AnalysisPostRequest) => Promise<Analysis>;
-  selectAnalysis: (analysis: Analysis) => Promise<void>;
-  updateAnalysis: (data: AnalysisPutRequest) => Promise<Analysis>;
-  deleteAnalysis: (data: AnalysisDeleteRequest) => Promise<void>;
+  fetchAnalyticsResults: (params?: AnalyticsResultGetRequest) => Promise<AnalyticsResult[]>;
+  createAnalyticsResult: (data: AnalyticsResultPostRequest) => Promise<AnalyticsResult>;
+  selectAnalyticsResult: (analyticsResult: AnalyticsResult) => Promise<void>;
+  updateAnalyticsResult: (data: AnalyticsResultPutRequest) => Promise<AnalyticsResult>;
+  deleteAnalyticsResult: (data: AnalyticsResultDeleteRequest) => Promise<void>;
 
   //createFile: (data: FormData) => Promise<File>;
 

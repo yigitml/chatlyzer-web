@@ -78,10 +78,10 @@ export const POST = withProtectedRoute(async (request: NextRequest) => {
 
     const message = await prisma.message.create({
       data: {
+        userId: authenticatedUserId,
         content: data.content,
         timestamp: data.timestamp || new Date(),
-        senderId: data.senderId,
-        senderName: data.senderName,
+        sender: data.sender,
         chatId: data.chatId,
         metadata: data.metadata || {}
       }

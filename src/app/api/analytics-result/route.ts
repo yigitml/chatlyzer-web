@@ -3,19 +3,20 @@ import { withProtectedRoute } from "@/middleware/jwtAuth";
 import { ApiResponse } from "@/types/api/apiResponse";
 import prisma from "@/lib/prisma";
 import type {
-  AnalysisPostRequest,
-  AnalysisPutRequest,
-  AnalysisDeleteRequest,
+  AnalyticsResultPostRequest,
+  AnalyticsResultPutRequest,
+  AnalyticsResultDeleteRequest,
 } from "@/types/api/apiRequest";
+import { analyzeChat } from "@/lib/openai";
 
 export const GET = withProtectedRoute(async (request: NextRequest) => {
   try {
     const { searchParams } = new URL(request.url);
     const id = searchParams.get("id");
-    const authenticatedUserId= request.user!.id;
+    const authenticatedUserId = request.user!.id;
 
     if (!id) {
-      const analysis = await prisma.analysis.findFirst({
+      const analysis = await prisma.analyticsResult.findFirst({
         where: {
           userId: authenticatedUserId,
         },
@@ -25,7 +26,7 @@ export const GET = withProtectedRoute(async (request: NextRequest) => {
       }
       return ApiResponse.error("Analysis not found").toResponse();
     } else {
-      const analyzes = await prisma.analysis.findMany({
+      const analyzes = await prisma.analyticsResult.findMany({
         where: {
           userId: authenticatedUserId,
         },
@@ -41,13 +42,12 @@ export const GET = withProtectedRoute(async (request: NextRequest) => {
 export const POST = withProtectedRoute(async (request: NextRequest) => {
   try {
    const authenticatedUserId = request.user!.id;
-   const data: AnalysisPostRequest = await request.json();
+   const data: AnalyticsResultPostRequest = await request.json();
 
 
-   const existingAnalysis = await prisma.analysis.findFirst({
+   const existingAnalysis = await prisma.analyticsResult.findFirst({
     where: {
       chatId: data.chatId,
-      type: data.type,
     }
    });
     
@@ -55,12 +55,13 @@ export const POST = withProtectedRoute(async (request: NextRequest) => {
     return ApiResponse.error("Analysis already exists").toResponse();
    }
 
-   const analysis = await prisma.analysis.create({
+   const stats = await analyzeChat(data.chatId);
+
+   const analysis = await prisma.analyticsResult.create({
     data: {
       chatId: data.chatId,
-      type: data.type,
       userId: authenticatedUserId,
-      results: [],
+      result: stats,
     }
    });
 
@@ -79,20 +80,20 @@ export const POST = withProtectedRoute(async (request: NextRequest) => {
 export const PUT = withProtectedRoute(async (request: NextRequest) => {
   try {
     const authenticatedUserId = request.user!.id;
-    const data: AnalysisPutRequest = await request.json();
-    const { id, type } = data;
+    const data: AnalyticsResultPutRequest = await request.json();
+    const { id, result } = data;
 
     if (!id) {
       return ApiResponse.error("Analysis ID is required").toResponse();
     }
 
-    const updatedAnalysis = await prisma.analysis.update({
+    const updatedAnalysis = await prisma.analyticsResult.update({
       where: {
         id,
         userId: authenticatedUserId,
       },
       data: {
-        type: type,
+        result: data.result,
       },
     });
 
@@ -114,14 +115,14 @@ export const PUT = withProtectedRoute(async (request: NextRequest) => {
 export const DELETE = withProtectedRoute(async (request: NextRequest) => {
     try {
       const authenticatedUserId = request.user!.id;
-      const data: AnalysisDeleteRequest = await request.json();
+      const data: AnalyticsResultDeleteRequest = await request.json();
       const { id } = data;
 
       if (!id) {
         return ApiResponse.error("Analysis ID is required").toResponse();
       }
 
-      const deletedAnalysis = await prisma.analysis.update({
+      const deletedAnalysis = await prisma.analyticsResult.update({
         where: {
           id,
           userId: authenticatedUserId,

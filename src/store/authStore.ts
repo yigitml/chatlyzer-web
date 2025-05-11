@@ -9,6 +9,7 @@ interface AuthState {
   accessToken: string | null;
   user: User | null;
   error: Error | null;
+  isLoggingIn: boolean;
 }
 
 interface AuthActions {
@@ -18,6 +19,7 @@ interface AuthActions {
   refreshToken: () => Promise<void>;
   fetchUser: () => Promise<User>;
   updateUser: (data: UserPutRequest) => Promise<User>;
+  setIsLoggingIn: (value: boolean) => void;
 }
 
 export type AuthStore = AuthState & AuthActions;
@@ -31,6 +33,11 @@ export const useAuthStore = create<AuthStore>((set, get) => {
     accessToken: null,
     user: null,
     error: null,
+    isLoggingIn: false,
+
+    setIsLoggingIn: (value: boolean) => {
+      set({ isLoggingIn: value });
+    },
 
     initialize: async () => {
       try {
@@ -39,7 +46,7 @@ export const useAuthStore = create<AuthStore>((set, get) => {
           const expiresAt = localStorage.getItem(LOCAL_STORAGE_KEYS.EXPIRES_AT);
 
           if (token && expiresAt) {
-            const expiryTimestamp = parseInt(expiresAt, 10);
+            const expiryTimestamp = parseInt(expiresAt, 10) * 1000;
             const currentTimestamp = Date.now();
 
             if (expiryTimestamp > currentTimestamp) {
@@ -47,7 +54,7 @@ export const useAuthStore = create<AuthStore>((set, get) => {
               await get().fetchUser();
             } else {
               try {
-                //await get().refreshToken();
+                await get().refreshToken();
               } catch (error) {
                 localStorage.removeItem(LOCAL_STORAGE_KEYS.ACCESS_TOKEN);
                 localStorage.removeItem(LOCAL_STORAGE_KEYS.EXPIRES_AT);
@@ -107,7 +114,7 @@ export const useAuthStore = create<AuthStore>((set, get) => {
 
         set({ accessToken: newToken });
       } catch (error) {
-        //await get().logout();
+        await get().logout();
         throw error;
       }
     },

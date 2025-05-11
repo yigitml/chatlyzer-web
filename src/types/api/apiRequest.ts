@@ -1,3 +1,5 @@
+import { Message } from "@prisma/client";
+
 export interface AuthWebPostRequest {
   accessToken: string;
   sessionId: string;
@@ -26,37 +28,33 @@ export interface ChatGetRequest {
 }
 
 export interface ChatPostRequest {
-  name: string;
-  source: string;
-  description?: string;
+  title: string;
+  messages?: Message[];
 }
 
 export interface ChatPutRequest {
   id: string;
-  name?: string;
-  description?: string;
+  title?: string;
 }
 
 export interface ChatDeleteRequest {
   id: string;
 }
 
-export interface AnalysisGetRequest {
+export interface AnalyticsResultGetRequest {
   id?: string;
-  chatId?: string;
 }
 
-export interface AnalysisPostRequest {
+export interface AnalyticsResultPostRequest {
   chatId: string;
-  type: string;
 }
 
-export interface AnalysisPutRequest {
+export interface AnalyticsResultPutRequest {
   id: string;
-  type: string;
+  result: string;
 }
 
-export interface AnalysisDeleteRequest {
+export interface AnalyticsResultDeleteRequest {
   id: string;
 }
 
@@ -68,8 +66,7 @@ export interface MessageGetRequest {
 export interface MessagePostRequest {
   content: string;
   timestamp?: Date;
-  senderId: string;
-  senderName: string;
+  sender: string;
   chatId: string;
   metadata?: any;
 }

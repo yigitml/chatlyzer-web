@@ -3,6 +3,7 @@ import prisma from "@/lib/prisma";
 import { withProtectedRoute } from "@/middleware/jwtAuth";
 import { ApiResponse } from "@/types/api/apiResponse";
 import { ChatPostRequest, ChatPutRequest } from "@/types/api/apiRequest";
+import { InputJsonValue, JsonValue } from "@prisma/client/runtime/library";
 
 export const GET = withProtectedRoute(async (request: NextRequest) => {
     try {
@@ -17,7 +18,7 @@ export const GET = withProtectedRoute(async (request: NextRequest) => {
           if (chat) {
             return ApiResponse.success(chat).toResponse();
           }
-          return ApiResponse.error("Model not found", 404).toResponse();
+          return ApiResponse.error("Chat not found", 404).toResponse();
         } else {
           const chats = await prisma.chat.findMany({
             where: { userId: authenticatedUserId },
@@ -38,7 +39,7 @@ export const POST = withProtectedRoute(async (request: NextRequest) => {
     
     const existingChat = await prisma.chat.findFirst({
       where: {
-        name: data.name,
+        title: data.title,
         userId: authenticatedUserId,
       }
     });
@@ -49,13 +50,28 @@ export const POST = withProtectedRoute(async (request: NextRequest) => {
 
     const chat = await prisma.chat.create({
       data: {
-        name: data.name,
-        source: data.source,
+        title: data.title,
         userId: authenticatedUserId,
-        description: data.description || "",
       }
     });
+
+    const messages = data.messages
     
+    if (messages) {
+      messages.forEach(async (message) => {
+        await prisma.message.create({
+          data: {
+            userId: authenticatedUserId,
+            chatId: chat.id,
+            sender: message.sender,
+            content: message.content,
+            timestamp: message.timestamp,
+            metadata: message.metadata as InputJsonValue,
+          }
+        })
+      })
+    } 
+
     return ApiResponse.success(chat, "Chat created successfully", 200).toResponse();
   } catch (error) {
     console.error("Error creating chat:", error);
@@ -67,17 +83,15 @@ export const PUT = withProtectedRoute(async (request: NextRequest) => {
   try {
     const authenticatedUserId = request.user!.id;
     const data: ChatPutRequest = await request.json();
-    const { id, name, description } = data;
     
-    if (!id) {
+    if (!data.id) {
       return ApiResponse.error("Chat ID is required", 400).toResponse();
     }
 
     const updatedModel = await prisma.chat.update({
-      where: { id, userId: authenticatedUserId },
+      where: { id: data.id, userId: authenticatedUserId },
       data: {
-        name,
-        description,
+        title: data.title,
       }
     });
 
