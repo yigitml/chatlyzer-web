@@ -24,7 +24,7 @@ const useAuth = () => {
       } catch (error) {
         console.error("Sign in failed:", error);
         resetLoadingState();
-        router.push("/auth/signin");
+        router.push("/auth/sign-in");
       }
     },
     onError: resetLoadingState,
