@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, ReactNode, useCallback } from 'react';
 import { useStoreInitializer } from '@/hooks/useStoreInitializer';
 import { 
   useAuthStore, 
@@ -33,7 +33,8 @@ export function StoreProvider({ children }: StoreProviderProps) {
   const chatStore = useChatStore();
   const analyticsResultStore = useAnalyticsResultStore();
   const creditStore = useCreditStore();
-  const initializeStores = async () => {
+
+  const initializeStores = useCallback(async () => {
     if (languageInitialize) {
       await Promise.resolve(languageInitialize());
     }
@@ -45,34 +46,16 @@ export function StoreProvider({ children }: StoreProviderProps) {
     if (uiInitialize) {
       await Promise.resolve(uiInitialize());
     }
-    
-    const promises = [];
-    
-    if ('initialize' in analyticsResultStore && typeof analyticsResultStore.initialize === 'function') {
-      promises.push(Promise.resolve(analyticsResultStore.initialize()));
-    }
-    
-    if ('initialize' in messageStore && typeof messageStore.initialize === 'function') {
-      promises.push(Promise.resolve(messageStore.initialize()));
-    }
-    
-    if ('initialize' in chatStore && typeof chatStore.initialize === 'function') {
-      promises.push(Promise.resolve(chatStore.initialize()));
-    }
-    
-    if ('initialize' in creditStore && typeof creditStore.initialize === 'function') {
-      promises.push(Promise.resolve(creditStore.initialize()));
-    }
-    
-    if ('initialize' in analyticsResultStore && typeof analyticsResultStore.initialize === 'function') {
-      promises.push(Promise.resolve(analyticsResultStore.initialize()));
-    }
-    
-    if (promises.length > 0) {
-      await Promise.all(promises);
-    }
-  };
-  
+  }, [
+    authInitialize, 
+    languageInitialize, 
+    uiInitialize, 
+    analyticsResultStore,
+    chatStore,
+    creditStore,
+    messageStore
+  ]);
+
   const initialized = useStoreInitializer(initializeStores);
   
   return (

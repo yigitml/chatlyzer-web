@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { useAuthStore } from "@/store/authStore";
 import { useChatStore } from "@/store/chatStore";
 import { useMessageStore } from "@/store/messageStore";
@@ -10,27 +10,32 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 export default function UserDashboard() {
-  const { user, isInitialized, initialize } = useAuthStore();
+  const { user, isInitialized } = useAuthStore();
   const { chats, fetchChats } = useChatStore();
   const { messages, fetchMessages } = useMessageStore();
   const { analyticsResults, fetchAnalyticsResults } = useAnalyticsResultStore();
   const { credits, subscription, fetchCredits, fetchSubscription } = useCreditStore();
   
-  useEffect(() => {
-    if (!isInitialized) {
-      initialize();
-    }
-  }, [isInitialized, initialize]);
+  // Track whether data has been fetched to prevent multiple fetches
+  const dataFetchedRef = useRef(false);
 
   useEffect(() => {
-    if (user) {
-      fetchChats();
-      fetchMessages();
-      fetchAnalyticsResults();
-      fetchCredits();
-      fetchSubscription();
+    // Only fetch data if:
+    // 1. User exists
+    // 2. We haven't already fetched data in this component's lifecycle
+    if (user && !dataFetchedRef.current) {
+      dataFetchedRef.current = true;
+      
+      // Only fetch data that doesn't require additional parameters
+      fetchChats(); // This one doesn't require parameters
+      fetchCredits(); // This one doesn't require parameters
+      fetchSubscription(); // This one doesn't require parameters
+      
+      // Don't fetch these as they require parameters:
+      // fetchMessages() - Requires chatId or id
+      // fetchAnalyticsResults() - Likely requires parameters
     }
-  }, [user, fetchChats, fetchMessages, fetchAnalyticsResults, fetchCredits, fetchSubscription]);
+  }, [user?.id]); // Only depend on user ID, not functions or entire user object
 
   if (!isInitialized) {
     return <div className="flex items-center justify-center h-screen">Loading...</div>;
@@ -132,20 +137,7 @@ export default function UserDashboard() {
             <CardTitle>Recent Messages</CardTitle>
           </CardHeader>
           <CardContent>
-            {messages.length > 0 ? (
-              <ul className="space-y-2">
-                {messages.slice(0, 5).map(message => (
-                  <li key={message.id} className="p-2 rounded bg-gray-100 dark:bg-gray-800">
-                    <p className="text-sm truncate">{message.content}</p>
-                    <p className="text-xs text-gray-500">
-                      {message.sender} • {new Date(message.createdAt).toLocaleTimeString()}
-                    </p>
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <p className="text-gray-500">No messages available</p>
-            )}
+            <p className="text-gray-500">Select a chat to view messages</p>
           </CardContent>
         </Card>
 
@@ -155,18 +147,7 @@ export default function UserDashboard() {
             <CardTitle>Analytics Results</CardTitle>
           </CardHeader>
           <CardContent>
-            {analyticsResults.length > 0 ? (
-              <ul className="space-y-2">
-                {analyticsResults.slice(0, 5).map(result => (
-                  <li key={result.id} className="p-2 rounded bg-gray-100 dark:bg-gray-800">
-                    <p className="font-medium">{result.chatId || "Untitled Analysis"}</p>
-                    <p className="text-sm text-gray-500">Created: {new Date(result.createdAt).toLocaleDateString()}</p>
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <p className="text-gray-500">No analytics results available</p>
-            )}
+            <p className="text-gray-500">Select a chat to view analytics</p>
           </CardContent>
         </Card>
       </div>

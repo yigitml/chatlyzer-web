@@ -8,7 +8,6 @@ import { GoogleOAuthProvider } from "@react-oauth/google";
 import { useRouter } from "next/navigation";
 import { useState, useEffect } from "react"; 
 import { StoreProvider } from "@/providers/StoreProvider";
-import Link from "next/link";
 
 interface ProvidersProps {
   children: React.ReactNode;
