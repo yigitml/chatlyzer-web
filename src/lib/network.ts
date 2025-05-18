@@ -3,7 +3,6 @@ import {
   AuthWebPostRequest,
   UserPutRequest,
   FileGetRequest,
-  FilePostRequest,
   FileDeleteRequest,
   ChatGetRequest,
   ChatPostRequest,
@@ -17,11 +16,6 @@ import {
   AnalyticsResultPostRequest,
   AnalyticsResultPutRequest,
   AnalyticsResultDeleteRequest,
-  ContactGetRequest,
-  ContactPostRequest,
-  ContactPutRequest,
-  ContactDeleteRequest,
-  SubscriptionGetRequest,
   SubscriptionDeleteRequest,
 } from "@/types/api/apiRequest";
 import { API_ENDPOINTS } from "@/types/api/apiEndpoints";
@@ -34,12 +28,7 @@ import {
   Message,
   AnalyticsResult,
 } from "@prisma/client";
-import { PhotoPagination } from "@/types/app";
-import { AnalyzeImageResponse } from "@/types/openai";
 
-/**
- * Network layer that provides typed API requests using our API client
- */
 export class NetworkService {
   private api: ApiClient;
 
@@ -174,9 +163,7 @@ export class NetworkService {
     await this.api.delete(API_ENDPOINTS.SUBSCRIPTION, data);
   } 
 }
-/**
- * Creates a network service using the provided token getter
- */
+
 export const createNetworkService = (
   getToken: () => string | null,
 ): NetworkService => {

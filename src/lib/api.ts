@@ -1,5 +1,3 @@
-import { API_ENDPOINTS } from "@/types/api/apiEndpoints";
-
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000/api";
 
 export const createApiClient = (getToken: () => string | null) => {

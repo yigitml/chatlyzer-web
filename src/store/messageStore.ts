@@ -22,7 +22,7 @@ interface MessageActions {
 
 export type MessageStore = MessageState & MessageActions;
 
-export const useMessageStore = create<MessageStore>((set, get) => {
+export const useMessageStore = create<MessageStore>((set) => {
   const getAccessToken = () => useAuthStore.getState().accessToken;
   const networkService = createNetworkService(getAccessToken);
 

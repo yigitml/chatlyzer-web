@@ -21,7 +21,6 @@ export const GET = withProtectedRoute(async (request: NextRequest) => {
 
       return ApiResponse.success(file).toResponse();
     } else if (chatId) {
-      // Get files for a specific chat
       const files = await prisma.file.findMany({
         where: {
           userId: authenticatedUserId,
@@ -35,7 +34,6 @@ export const GET = withProtectedRoute(async (request: NextRequest) => {
 
       return ApiResponse.success(files).toResponse();
     } else {
-      // Get all user files
       const files = await prisma.file.findMany({
         where: {
           userId: authenticatedUserId,
@@ -74,7 +72,6 @@ export const POST = withProtectedRoute(async (request: NextRequest) => {
       return ApiResponse.error("File is required", 400).toResponse();
     }
 
-    // If chatId is provided, verify that it belongs to the user
     if (chatId) {
       const chat = await prisma.chat.findFirst({
         where: {
@@ -89,7 +86,7 @@ export const POST = withProtectedRoute(async (request: NextRequest) => {
     }
 
     // TODO
-    //const url = await uploadFile(file);
+    // const url = await uploadFile(file);
     const url = "https://example.com/file.pdf";
     const newFile = await prisma.file.create({
       data: {

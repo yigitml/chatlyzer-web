@@ -2,7 +2,6 @@ import {
   User,
   UserCredit,
   Subscription,
-  File,
   Message,
   Chat,
   AnalyticsResult,
@@ -11,10 +10,6 @@ import {
 import {
   AuthWebPostRequest,
   UserPutRequest,
-  ContactGetRequest,
-  ContactPostRequest,
-  ContactPutRequest,
-  ContactDeleteRequest,
   MessageGetRequest,
   MessagePostRequest,
   MessagePutRequest,
@@ -84,8 +79,6 @@ export interface AppContextType {
   selectAnalyticsResult: (analyticsResult: AnalyticsResult) => Promise<void>;
   updateAnalyticsResult: (data: AnalyticsResultPutRequest) => Promise<AnalyticsResult>;
   deleteAnalyticsResult: (data: AnalyticsResultDeleteRequest) => Promise<void>;
-
-  //createFile: (data: FormData) => Promise<File>;
 
   fetchCredits: () => Promise<UserCredit[]>;
 

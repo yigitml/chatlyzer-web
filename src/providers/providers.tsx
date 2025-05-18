@@ -8,6 +8,7 @@ import { GoogleOAuthProvider } from "@react-oauth/google";
 import { useRouter } from "next/navigation";
 import { useState, useEffect } from "react"; 
 import { StoreProvider } from "@/providers/StoreProvider";
+import { PostHogProvider } from "./PostHogProvider";
 
 interface ProvidersProps {
   children: React.ReactNode;
@@ -69,21 +70,23 @@ export default function Providers({ children }: ProvidersProps) {
   const googleClientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID!;
 
   return (
-    <ErrorBoundary FallbackComponent={RootErrorFallback}>
-      <GoogleOAuthProvider clientId={googleClientId}>
-        <QueryClientProvider client={queryClient}>
-          <NextThemesProvider
-            attribute="class"
-            defaultTheme="dark"
-            enableSystem={true}
-            enableColorScheme
-          >
-            <StoreProvider>
-              {children}
-            </StoreProvider>
-          </NextThemesProvider>
-        </QueryClientProvider>
-      </GoogleOAuthProvider>
-    </ErrorBoundary>
+    <PostHogProvider>
+      <ErrorBoundary FallbackComponent={RootErrorFallback}>
+        <GoogleOAuthProvider clientId={googleClientId}>
+          <QueryClientProvider client={queryClient}>
+            <NextThemesProvider
+              attribute="class"
+              defaultTheme="dark"
+              enableSystem={true}
+              enableColorScheme
+            >
+              <StoreProvider>
+                {children}
+              </StoreProvider>
+            </NextThemesProvider>
+          </QueryClientProvider>
+        </GoogleOAuthProvider>
+      </ErrorBoundary>
+    </PostHogProvider>
   );
 }

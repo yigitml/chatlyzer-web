@@ -23,7 +23,7 @@ export class ApiResponse<T> {
 
   toResponse(headers?: Record<string, string>): NextResponse {
     return NextResponse.json(
-      { error: this.error, data: this.data },
+      { success: this.success, error: this.error, data: this.data, message: this.message },
       { status: this.statusCode, headers: headers },
     );
   }

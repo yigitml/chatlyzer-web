@@ -29,7 +29,6 @@ export const GET = withProtectedRoute(async (request: NextRequest) => {
       }
       return ApiResponse.error("Message not found", 404).toResponse();
     } else if (chatId) {
-      // Get all messages for a specific chat (with ownership verification)
       const chat = await prisma.chat.findFirst({
         where: {
           id: chatId,
@@ -64,7 +63,6 @@ export const POST = withProtectedRoute(async (request: NextRequest) => {
     const authenticatedUserId = request.user!.id;
     const data: MessagePostRequest = await request.json();
     
-    // Verify that the user owns the chat
     const chat = await prisma.chat.findFirst({
       where: {
         id: data.chatId,
@@ -104,7 +102,6 @@ export const PUT = withProtectedRoute(async (request: NextRequest) => {
       return ApiResponse.error("Message ID is required", 400).toResponse();
     }
 
-    // First verify the user owns the chat containing this message
     const message = await prisma.message.findFirst({
       where: { id },
       include: { chat: true }
@@ -142,7 +139,6 @@ export const DELETE = withProtectedRoute(async (request: NextRequest) => {
       return ApiResponse.error("Message ID is required", 400).toResponse();
     }
 
-    // First verify the user owns the chat containing this message
     const message = await prisma.message.findFirst({
       where: { id },
       include: { chat: true }

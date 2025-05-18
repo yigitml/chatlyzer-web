@@ -25,9 +25,7 @@ export default function RootLayout({
         />
       </head>
       <body className="min-h-screen antialiased">
-        <PostHogProvider>
-          <Providers>{children}</Providers>
-        </PostHogProvider>
+        <Providers>{children}</Providers>
       </body>
     </html>
   );

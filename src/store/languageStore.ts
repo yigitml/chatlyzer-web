@@ -14,7 +14,8 @@ type TranslationParams = {
   [key: string]: string | ReactNode;
 };
 
-//import localizationData from "../../public/localization.json";
+// TODO
+// import localizationData from "../../public/localization.json";
 
 const translations: Translations = {};
 
@@ -38,7 +39,6 @@ interface LanguageActions {
 export type LanguageStore = LanguageState & LanguageActions;
 
 export const useLanguageStore = create<LanguageStore>((set, get) => {
-  // This is only called in the browser after hydration via the StoreProvider
   const translate = (
     key: string,
     params?: TranslationParams,
@@ -75,14 +75,11 @@ export const useLanguageStore = create<LanguageStore>((set, get) => {
   };
 
   return {
-    // Always start with default values for SSR
     language: DEFAULT_LANGUAGE,
     isInitialized: false,
     availableLanguages,
 
-    // Safe initialization function called only on the client after hydration
     initialize: () => {
-      // This only runs on the client after hydration
       const getBrowserLanguage = (): Language => {
         try {
           const browserLang = navigator.language.split("-")[0];
@@ -100,10 +97,8 @@ export const useLanguageStore = create<LanguageStore>((set, get) => {
         return DEFAULT_LANGUAGE;
       };
 
-      // Get stored language from localStorage (safely)
       const savedLanguage = getStorageItem<Language | null>("language", null);
       
-      // Use saved language or detect from browser
       const detectedLanguage = savedLanguage || getBrowserLanguage();
       
       set({
@@ -114,7 +109,6 @@ export const useLanguageStore = create<LanguageStore>((set, get) => {
 
     setLanguage: (lang: Language) => {
       set({ language: lang });
-      // Safely set language in localStorage
       setStorageItem("language", lang);
     },
 

@@ -1,4 +1,3 @@
-   // src/schemas/chatStats.ts
    import { z } from "zod"
 
    export const ChatStatsSchema = z.object({
@@ -9,5 +8,4 @@
      }),
      emojiUsage: z.record(z.record(z.number())),
      avgResponseTime: z.record(z.number()),
-     // …any other buckets…
    })

@@ -16,26 +16,15 @@ export default function UserDashboard() {
   const { analyticsResults, fetchAnalyticsResults } = useAnalyticsResultStore();
   const { credits, subscription, fetchCredits, fetchSubscription } = useCreditStore();
   
-  // Track whether data has been fetched to prevent multiple fetches
   const dataFetchedRef = useRef(false);
 
-  useEffect(() => {
-    // Only fetch data if:
-    // 1. User exists
-    // 2. We haven't already fetched data in this component's lifecycle
-    if (user && !dataFetchedRef.current) {
+  useEffect(() => {if (user && !dataFetchedRef.current) {
       dataFetchedRef.current = true;
-      
-      // Only fetch data that doesn't require additional parameters
-      fetchChats(); // This one doesn't require parameters
-      fetchCredits(); // This one doesn't require parameters
-      fetchSubscription(); // This one doesn't require parameters
-      
-      // Don't fetch these as they require parameters:
-      // fetchMessages() - Requires chatId or id
-      // fetchAnalyticsResults() - Likely requires parameters
+      fetchChats();
+      fetchCredits(); 
+      fetchSubscription();
     }
-  }, [user?.id]); // Only depend on user ID, not functions or entire user object
+  }, [user?.id]);
 
   if (!isInitialized) {
     return <div className="flex items-center justify-center h-screen">Loading...</div>;

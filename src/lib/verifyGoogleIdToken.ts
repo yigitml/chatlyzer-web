@@ -6,7 +6,7 @@ export async function verifyGoogleIdToken(idToken: string) {
   try {
     const ticket = await client.verifyIdToken({
       idToken,
-      audience: process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID, // Must match your OAuth client ID
+      audience: process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID,
     });
 
     const payload = ticket.getPayload();
@@ -21,7 +21,6 @@ export async function verifyGoogleIdToken(idToken: string) {
       throw new Error("Missing required user information (email or name)");
     }
 
-    // Extract user info
     const userInfo = {
       id: payload.sub,
       email: payload.email!,
