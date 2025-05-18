@@ -1,6 +1,7 @@
 import "./globals.css";
 import { Metadata } from "next";
 import Providers from "@/providers/providers";
+import { PostHogProvider } from "@/providers/PostHogProvider";
 
 export const metadata: Metadata = {
   title: "Chatlyzer",
@@ -24,7 +25,9 @@ export default function RootLayout({
         />
       </head>
       <body className="min-h-screen antialiased">
-        <Providers>{children}</Providers>
+        <PostHogProvider>
+          <Providers>{children}</Providers>
+        </PostHogProvider>
       </body>
     </html>
   );

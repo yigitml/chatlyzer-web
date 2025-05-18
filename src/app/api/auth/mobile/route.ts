@@ -1,8 +1,10 @@
+// pages/api/auth/mobile.ts (or wherever this lives)
 import { NextRequest } from "next/server";
 import jwt from "jsonwebtoken";
 import prisma from "@/lib/prisma";
 import { ApiResponse } from "@/types/api/apiResponse";
 import type { AuthMobilePostRequest } from "@/types/api/apiRequest";
+import { verifyGoogleIdToken } from "@/lib/verifyGoogleIdToken";
 
 export async function POST(request: NextRequest) {
   try {
@@ -21,22 +23,7 @@ export async function POST(request: NextRequest) {
       return ApiResponse.error("Invalid device ID", 400).toResponse();
     }
 
-    const userInfoResponse = await fetch(
-      `${process.env.GOOGLE_OAUTH2_URL}/userinfo`,
-      {
-        headers: { Authorization: `Bearer ${accessToken}` },
-      },
-    );
-
-    if (!userInfoResponse.ok) {
-      return ApiResponse.error("Failed to fetch user info", 401).toResponse();
-    }
-
-    const payload = await userInfoResponse.json();
-
-    if (!payload.email || !payload.name) {
-      return ApiResponse.error("Invalid user info", 401).toResponse();
-    }
+    const payload = await verifyGoogleIdToken(accessToken);
 
     let user = await prisma.user.findUnique({
       where: { email: payload.email },
@@ -47,7 +34,7 @@ export async function POST(request: NextRequest) {
         data: {
           email: payload.email,
           name: payload.name,
-          googleId: payload.sub,
+          googleId: payload.id,
           image: payload.picture,
           tokenVersion: 0,
           lastLoginAt: new Date(),
