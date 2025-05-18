@@ -41,20 +41,20 @@ export interface ChatDeleteRequest {
   id: string;
 }
 
-export interface AnalyticsResultGetRequest {
+export interface AnalysisGetRequest {
   id?: string;
 }
 
-export interface AnalyticsResultPostRequest {
+export interface AnalysisPostRequest {
   chatId: string;
 }
 
-export interface AnalyticsResultPutRequest {
+export interface AnalysisPutRequest {
   id: string;
   result: string;
 }
 
-export interface AnalyticsResultDeleteRequest {
+export interface AnalysisDeleteRequest {
   id: string;
 }
 

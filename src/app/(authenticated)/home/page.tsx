@@ -4,7 +4,7 @@ import { useEffect, useRef } from "react";
 import { useAuthStore } from "@/store/authStore";
 import { useChatStore } from "@/store/chatStore";
 import { useMessageStore } from "@/store/messageStore";
-import { useAnalyticsResultStore } from "@/store/analyticsResultStore";
+import { useAnalysisStore } from "@/store/analysisStore";
 import { useCreditStore } from "@/store/creditStore";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -13,7 +13,7 @@ export default function UserDashboard() {
   const { user, isInitialized } = useAuthStore();
   const { chats, fetchChats } = useChatStore();
   const { messages, fetchMessages } = useMessageStore();
-  const { analyticsResults, fetchAnalyticsResults } = useAnalyticsResultStore();
+  const { analyzes, fetchAnalyzes } = useAnalysisStore();
   const { credits, subscription, fetchCredits, fetchSubscription } = useCreditStore();
   
   const dataFetchedRef = useRef(false);

@@ -4,7 +4,7 @@ import {
   Subscription,
   Message,
   Chat,
-  AnalyticsResult,
+  Analysis,
 } from "@prisma/client";
 
 import {
@@ -18,10 +18,10 @@ import {
   ChatPostRequest,
   ChatPutRequest,
   ChatDeleteRequest,
-  AnalyticsResultPostRequest,
-  AnalyticsResultPutRequest,
-  AnalyticsResultDeleteRequest,
-  AnalyticsResultGetRequest,
+  AnalysisPostRequest,
+  AnalysisPutRequest,
+  AnalysisDeleteRequest,
+  AnalysisGetRequest,
 } from "@/types/api/apiRequest";
 
 export interface PhotoPagination {
@@ -51,8 +51,8 @@ export interface AppContextType {
   chats: Chat[];
   selectedChat: Chat | null;
 
-  analyticsResults: AnalyticsResult[];
-  selectedAnalyticsResult: AnalyticsResult | null;
+  analyzes: Analysis[];
+  selectedAnalysis: Analysis | null;
 
   setActiveTab: (tab: string) => void;
 
@@ -74,11 +74,11 @@ export interface AppContextType {
   updateChat: (data: ChatPutRequest) => Promise<Chat>;
   deleteChat: (data: ChatDeleteRequest) => Promise<void>;
 
-  fetchAnalyticsResults: (params?: AnalyticsResultGetRequest) => Promise<AnalyticsResult[]>;
-  createAnalyticsResult: (data: AnalyticsResultPostRequest) => Promise<AnalyticsResult>;
-  selectAnalyticsResult: (analyticsResult: AnalyticsResult) => Promise<void>;
-  updateAnalyticsResult: (data: AnalyticsResultPutRequest) => Promise<AnalyticsResult>;
-  deleteAnalyticsResult: (data: AnalyticsResultDeleteRequest) => Promise<void>;
+  fetchAnalyzes: (params?: AnalysisGetRequest) => Promise<Analysis[]>;
+  createAnalysis: (data: AnalysisPostRequest) => Promise<Analysis>;
+  selectAnalysis: (analysis: Analysis) => Promise<void>;
+  updateAnalysis: (data: AnalysisPutRequest) => Promise<Analysis>;
+  deleteAnalysis: (data: AnalysisDeleteRequest) => Promise<void>;
 
   fetchCredits: () => Promise<UserCredit[]>;
 

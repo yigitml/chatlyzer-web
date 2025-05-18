@@ -12,10 +12,10 @@ import {
   MessagePostRequest,
   MessagePutRequest,
   MessageDeleteRequest,
-  AnalyticsResultGetRequest,
-  AnalyticsResultPostRequest,
-  AnalyticsResultPutRequest,
-  AnalyticsResultDeleteRequest,
+  AnalysisGetRequest,
+  AnalysisPostRequest,
+  AnalysisPutRequest,
+  AnalysisDeleteRequest,
   SubscriptionDeleteRequest,
 } from "@/types/api/apiRequest";
 import { API_ENDPOINTS } from "@/types/api/apiEndpoints";
@@ -26,7 +26,7 @@ import {
   File,
   Chat,
   Message,
-  AnalyticsResult,
+  Analysis,
 } from "@prisma/client";
 
 export class NetworkService {
@@ -126,22 +126,22 @@ export class NetworkService {
 
   // ===== Analysis API =====
 
-  async fetchAnalyticsResults(params?: AnalyticsResultGetRequest): Promise<AnalyticsResult[]> {
+  async fetchAnalyzes(params?: AnalysisGetRequest): Promise<Analysis[]> {
     const response = await this.api.get(API_ENDPOINTS.ANALYTICS_RESULT, params);
     return response.data;
   }
 
-  async createAnalyticsResult(data: AnalyticsResultPostRequest): Promise<AnalyticsResult> {
+  async createAnalysis(data: AnalysisPostRequest): Promise<Analysis> {
     const response = await this.api.post(API_ENDPOINTS.ANALYTICS_RESULT, data);
     return response.data;
   }
 
-  async updateAnalyticsResult(data: AnalyticsResultPutRequest): Promise<AnalyticsResult> {
+  async updateAnalysis(data: AnalysisPutRequest): Promise<Analysis> {
     const response = await this.api.put(API_ENDPOINTS.ANALYTICS_RESULT, data);
     return response.data;
   }
 
-  async deleteAnalyticsResult(data: AnalyticsResultDeleteRequest): Promise<void> {
+  async deleteAnalysis(data: AnalysisDeleteRequest): Promise<void> {
     await this.api.delete(API_ENDPOINTS.ANALYTICS_RESULT, data);
   }
 

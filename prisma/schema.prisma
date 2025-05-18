@@ -27,7 +27,7 @@ model User {
   deletedAt        DateTime?
   chats            Chat[]
   messages         Message[]
-  analyticsResults AnalyticsResult[]
+  analyzes         Analysis[]
 }
 
 model UserSession {
@@ -108,7 +108,7 @@ model Chat {
   userId           String
   user             User              @relation(fields: [userId], references: [id])
   messages         Message[]
-  analyticsResults AnalyticsResult[]
+  analyzes         Analysis[]
   files            File[]
 }
 
@@ -127,7 +127,7 @@ model Message {
   deletedAt DateTime?
 }
 
-model AnalyticsResult {
+model Analysis {
   id        String    @id @default(cuid())
   chatId    String
   chat      Chat      @relation(fields: [chatId], references: [id])

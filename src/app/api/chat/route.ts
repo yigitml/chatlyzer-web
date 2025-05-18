@@ -23,6 +23,13 @@ export const GET = withProtectedRoute(async (request: NextRequest) => {
           const chats = await prisma.chat.findMany({
             where: { userId: authenticatedUserId },
             orderBy: { createdAt: "desc" },
+            include: {
+              messages: {
+                orderBy: {
+                  timestamp: "asc",
+                },
+              },
+            }
           });
           return ApiResponse.success(chats).toResponse();
         }

@@ -5,7 +5,7 @@ import {
   useUIStore,
   useMessageStore,
   useChatStore,
-  useAnalyticsResultStore,
+  useAnalysisStore,
   useCreditStore,
 } from "@/store";
 import { AppContextType } from "@/types/app";
@@ -16,7 +16,7 @@ export function useAppState(): AppContextType {
   const message = useMessageStore();
   const chat = useChatStore();
   const credit = useCreditStore();
-  const analyticsResult = useAnalyticsResultStore();
+  const analysis = useAnalysisStore();
 
   return {
     isInitialized: auth.isInitialized,
@@ -25,8 +25,8 @@ export function useAppState(): AppContextType {
     tabs: ui.tabs,
     accessToken: auth.accessToken,
     user: auth.user,
-    analyticsResults: analyticsResult.analyticsResults,
-    selectedAnalyticsResult: analyticsResult.selectedAnalyticsResult,
+    analyzes: analysis.analyzes,
+    selectedAnalysis: analysis.selectedAnalysis,
     messages: message.messages,
     selectedMessage: message.selectedMessage,
     chats: chat.chats,
@@ -41,11 +41,11 @@ export function useAppState(): AppContextType {
 
     setActiveTab: ui.setActiveTab,
 
-    fetchAnalyticsResults: analyticsResult.fetchAnalyticsResults,
-    createAnalyticsResult: analyticsResult.createAnalyticsResult,
-    selectAnalyticsResult: analyticsResult.setSelectedAnalyticsResult,
-    updateAnalyticsResult: analyticsResult.updateAnalyticsResult,
-    deleteAnalyticsResult: analyticsResult.deleteAnalyticsResult,
+    fetchAnalyzes: analysis.fetchAnalyzes,
+    createAnalysis: analysis.createAnalysis,
+    selectAnalysis: analysis.setSelectedAnalysis,
+    updateAnalysis: analysis.updateAnalysis,
+    deleteAnalysis: analysis.deleteAnalysis,
 
     fetchMessages: message.fetchMessages,
     createMessage: message.createMessage,

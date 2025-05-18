@@ -3,9 +3,9 @@ import { withProtectedRoute } from "@/middleware/jwtAuth";
 import { ApiResponse } from "@/types/api/apiResponse";
 import prisma from "@/lib/prisma";
 import type {
-  AnalyticsResultPostRequest,
-  AnalyticsResultPutRequest,
-  AnalyticsResultDeleteRequest,
+  AnalysisPostRequest,
+  AnalysisPutRequest,
+  AnalysisDeleteRequest,
 } from "@/types/api/apiRequest";
 import { analyzeChat } from "@/lib/openai";
 
@@ -17,30 +17,30 @@ export const GET = withProtectedRoute(async (request: NextRequest) => {
     const authenticatedUserId = request.user!.id;
 
     if (!id) {
-      const analyticsResult = await prisma.analyticsResult.findFirst({
+      const analysis = await prisma.analysis.findFirst({
         where: {
           userId: authenticatedUserId,
         },
       });
-      if (analyticsResult) {
-        return ApiResponse.success(analyticsResult).toResponse();
+      if (analysis) {
+        return ApiResponse.success(analysis).toResponse();
       }
-      return ApiResponse.error("analyticsResult not found").toResponse();
+      return ApiResponse.error("analysis not found").toResponse();
     } else if (chatId) {
-      const analyticsResults = await prisma.analyticsResult.findMany({
+      const analyzes = await prisma.analysis.findMany({
         where: {
           userId: authenticatedUserId,
           chatId,
         },
       });
-      return ApiResponse.success(analyticsResults).toResponse();
+      return ApiResponse.success(analyzes).toResponse();
     } else {
-      const analyticsResults = await prisma.analyticsResult.findMany({
+      const analyzes = await prisma.analysis.findMany({
         where: {
           userId: authenticatedUserId,
         },
       });
-      return ApiResponse.success(analyticsResults).toResponse();
+      return ApiResponse.success(analyzes).toResponse();
     }
   } catch (error) {
    console.error(error);
@@ -51,22 +51,22 @@ export const GET = withProtectedRoute(async (request: NextRequest) => {
 export const POST = withProtectedRoute(async (request: NextRequest) => {
   try {
    const authenticatedUserId = request.user!.id;
-   const data: AnalyticsResultPostRequest = await request.json();
+   const data: AnalysisPostRequest = await request.json();
 
 
-   const existinganalyticsResult = await prisma.analyticsResult.findFirst({
+   const existinganalysis = await prisma.analysis.findFirst({
     where: {
       chatId: data.chatId,
     }
    });
     
-   if (existinganalyticsResult) {
-    return ApiResponse.error("analyticsResult already exists").toResponse();
+   if (existinganalysis) {
+    return ApiResponse.error("analysis already exists").toResponse();
    }
 
    const stats = await analyzeChat(data.chatId);
 
-   const analyticsResult = await prisma.analyticsResult.create({
+   const analysis = await prisma.analysis.create({
     data: {
       chatId: data.chatId,
       userId: authenticatedUserId,
@@ -75,13 +75,13 @@ export const POST = withProtectedRoute(async (request: NextRequest) => {
    });
 
    return ApiResponse.success(
-    analyticsResult,
-    "analyticsResult created successfully!",
+    analysis,
+    "analysis created successfully!",
     200
    ).toResponse();
 
   } catch (error) {
-    console.error("Error proccessing POST /api/analyticsResult");
+    console.error("Error proccessing POST /api/analysis");
     return ApiResponse.error(`Failed to process request`, 500).toResponse();
   }
 });
@@ -89,14 +89,14 @@ export const POST = withProtectedRoute(async (request: NextRequest) => {
 export const PUT = withProtectedRoute(async (request: NextRequest) => {
   try {
     const authenticatedUserId = request.user!.id;
-    const data: AnalyticsResultPutRequest = await request.json();
+    const data: AnalysisPutRequest = await request.json();
     const { id, result } = data;
 
     if (!id) {
-      return ApiResponse.error("analyticsResult ID is required").toResponse();
+      return ApiResponse.error("analysis ID is required").toResponse();
     }
 
-    const updatedanalyticsResult = await prisma.analyticsResult.update({
+    const updatedanalysis = await prisma.analysis.update({
       where: {
         id,
         userId: authenticatedUserId,
@@ -106,17 +106,17 @@ export const PUT = withProtectedRoute(async (request: NextRequest) => {
       },
     });
 
-    if (!updatedanalyticsResult) {
-      return ApiResponse.error("analyticsResult not found").toResponse();
+    if (!updatedanalysis) {
+      return ApiResponse.error("analysis not found").toResponse();
     }
 
     return ApiResponse.success(
-      updatedanalyticsResult,
-      "analyticsResult updated successfully!",
+      updatedanalysis,
+      "analysis updated successfully!",
       200
     ).toResponse();
   } catch (error) {
-    console.error("Error proccessing PUT /api/analyticsResult");
+    console.error("Error proccessing PUT /api/analysis");
     return ApiResponse.error(`Failed to process request`, 500).toResponse();
   }
 });
@@ -124,14 +124,14 @@ export const PUT = withProtectedRoute(async (request: NextRequest) => {
 export const DELETE = withProtectedRoute(async (request: NextRequest) => {
     try {
       const authenticatedUserId = request.user!.id;
-      const data: AnalyticsResultDeleteRequest = await request.json();
+      const data: AnalysisDeleteRequest = await request.json();
       const { id } = data;
 
       if (!id) {
-        return ApiResponse.error("analyticsResult ID is required").toResponse();
+        return ApiResponse.error("analysis ID is required").toResponse();
       }
 
-      const deletedanalyticsResult = await prisma.analyticsResult.update({
+      const deletedanalysis = await prisma.analysis.update({
         where: {
           id,
           userId: authenticatedUserId,
@@ -141,17 +141,17 @@ export const DELETE = withProtectedRoute(async (request: NextRequest) => {
         },
       });
 
-      if (!deletedanalyticsResult) {
-        return ApiResponse.error("analyticsResult not found", 404).toResponse();
+      if (!deletedanalysis) {
+        return ApiResponse.error("analysis not found", 404).toResponse();
       }
 
       return ApiResponse.success(
-        deletedanalyticsResult,
-        "analyticsResult deleted successfully!",
+        deletedanalysis,
+        "analysis deleted successfully!",
         200
       ).toResponse();
   } catch (error) {
-    console.error("Error proccessing DELETE /api/analyticsResult");
+    console.error("Error proccessing DELETE /api/analysis");
     return ApiResponse.error(`Failed to process request`, 500).toResponse();
   }
 });

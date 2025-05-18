@@ -7,7 +7,7 @@ import {
   useCreditStore,
   useMessageStore,
   useChatStore,
-  useAnalyticsResultStore
+  useAnalysisStore
 } from '@/store';
 
 interface StoreContextValue {
@@ -31,7 +31,7 @@ export function StoreProvider({ children }: StoreProviderProps) {
   
   const messageStore = useMessageStore();
   const chatStore = useChatStore();
-  const analyticsResultStore = useAnalyticsResultStore();
+  const analysisStore = useAnalysisStore();
   const creditStore = useCreditStore();
 
   const initializeStores = useCallback(async () => {
@@ -50,7 +50,7 @@ export function StoreProvider({ children }: StoreProviderProps) {
     authInitialize, 
     languageInitialize, 
     uiInitialize, 
-    analyticsResultStore,
+    analysisStore,
     chatStore,
     creditStore,
     messageStore
