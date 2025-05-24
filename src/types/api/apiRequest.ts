@@ -43,11 +43,23 @@ export interface ChatDeleteRequest {
 
 export interface AnalysisGetRequest {
   id?: string;
+  chatId?: string;
 }
 
 export interface AnalysisPostRequest {
   chatId: string;
+  analysisType: AnalysisType;
 }
+
+export type AnalysisType = 
+  | "ChatStats"
+  | "RedFlag" 
+  | "GreenFlag"
+  | "VibeCheck"
+  | "SimpOMeter"
+  | "GhostRisk"
+  | "MainCharacterEnergy"
+  | "EmotionalDepth";
 
 export interface AnalysisPutRequest {
   id: string;

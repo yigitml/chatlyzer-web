@@ -14,13 +14,10 @@ export const GET = withProtectedRoute(async (request: NextRequest) => {
     if (id) {
       const message = await prisma.message.findFirst({
         where: { 
-          id,
+          id: id,
           chat: {
             userId: authenticatedUserId
           }
-        },
-        include: {
-          chat: true
         }
       });
       

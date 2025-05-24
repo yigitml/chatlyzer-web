@@ -6,8 +6,12 @@ import type {
   AnalysisPostRequest,
   AnalysisPutRequest,
   AnalysisDeleteRequest,
+  AnalysisType,
 } from "@/types/api/apiRequest";
 import { analyzeChat } from "@/lib/openai";
+import { ChatlyzerSchemas } from "@/schemas/zodSchemas";
+import { consumeUserCredits } from "@/utils/consumeUserCredits";
+import { CreditType } from "@prisma/client";
 
 export const GET = withProtectedRoute(async (request: NextRequest) => {
   try {
@@ -16,9 +20,10 @@ export const GET = withProtectedRoute(async (request: NextRequest) => {
     const chatId = searchParams.get("chatId");
     const authenticatedUserId = request.user!.id;
 
-    if (!id) {
+    if (id) {
       const analysis = await prisma.analysis.findFirst({
         where: {
+          id: id,
           userId: authenticatedUserId,
         },
       });
@@ -53,24 +58,37 @@ export const POST = withProtectedRoute(async (request: NextRequest) => {
    const authenticatedUserId = request.user!.id;
    const data: AnalysisPostRequest = await request.json();
 
-
+   /*
    const existinganalysis = await prisma.analysis.findFirst({
     where: {
       chatId: data.chatId,
     }
    });
-    
+
    if (existinganalysis) {
-    return ApiResponse.error("analysis already exists").toResponse();
+    return ApiResponse.error("Analysis already exists").toResponse();
+   }
+   */
+
+   const creditConsumption = await consumeUserCredits(authenticatedUserId, CreditType.ANALYSIS, 1);
+
+   if (!creditConsumption) {
+    return ApiResponse.error("Insufficient credits").toResponse();
    }
 
-   const stats = await analyzeChat(data.chatId);
+   // Get the schema based on the selected analysis type
+   const selectedSchema = ChatlyzerSchemas[data.analysisType];
+   if (!selectedSchema) {
+     return ApiResponse.error("Invalid analysis type").toResponse();
+   }
+
+   const analysisData = await analyzeChat(data.chatId, selectedSchema);
 
    const analysis = await prisma.analysis.create({
     data: {
       chatId: data.chatId,
       userId: authenticatedUserId,
-      result: stats,
+      result: analysisData,
     }
    });
 
@@ -81,7 +99,7 @@ export const POST = withProtectedRoute(async (request: NextRequest) => {
    ).toResponse();
 
   } catch (error) {
-    console.error("Error proccessing POST /api/analysis");
+    console.error("Error proccessing POST /api/analysis", error);
     return ApiResponse.error(`Failed to process request`, 500).toResponse();
   }
 });

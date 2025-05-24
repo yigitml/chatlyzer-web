@@ -31,9 +31,17 @@ import {
 
 export class NetworkService {
   private api: ApiClient;
+  private static instance: NetworkService | null = null;
 
-  constructor(getToken: () => string | null) {
+  private constructor(getToken: () => string | null) {
     this.api = createApiClient(getToken);
+  }
+
+  public static getInstance(getToken: () => string | null): NetworkService {
+    if (!NetworkService.instance) {
+      NetworkService.instance = new NetworkService(getToken);
+    }
+    return NetworkService.instance;
   }
 
   // ===== Auth API =====
@@ -127,22 +135,22 @@ export class NetworkService {
   // ===== Analysis API =====
 
   async fetchAnalyzes(params?: AnalysisGetRequest): Promise<Analysis[]> {
-    const response = await this.api.get(API_ENDPOINTS.ANALYTICS_RESULT, params);
+    const response = await this.api.get(API_ENDPOINTS.ANALYSIS, params);
     return response.data;
   }
 
   async createAnalysis(data: AnalysisPostRequest): Promise<Analysis> {
-    const response = await this.api.post(API_ENDPOINTS.ANALYTICS_RESULT, data);
+    const response = await this.api.post(API_ENDPOINTS.ANALYSIS, data);
     return response.data;
   }
 
   async updateAnalysis(data: AnalysisPutRequest): Promise<Analysis> {
-    const response = await this.api.put(API_ENDPOINTS.ANALYTICS_RESULT, data);
+    const response = await this.api.put(API_ENDPOINTS.ANALYSIS, data);
     return response.data;
   }
 
   async deleteAnalysis(data: AnalysisDeleteRequest): Promise<void> {
-    await this.api.delete(API_ENDPOINTS.ANALYTICS_RESULT, data);
+    await this.api.delete(API_ENDPOINTS.ANALYSIS, data);
   }
 
   // ===== Credit API =====
@@ -156,7 +164,7 @@ export class NetworkService {
 
   async fetchSubscription(): Promise<Subscription> {
     const response = await this.api.get(API_ENDPOINTS.SUBSCRIPTION);
-    return response.data;
+    return response.data[0];
   }
 
   async deleteSubscription(data: SubscriptionDeleteRequest): Promise<void> {
@@ -167,5 +175,5 @@ export class NetworkService {
 export const createNetworkService = (
   getToken: () => string | null,
 ): NetworkService => {
-  return new NetworkService(getToken);
+  return NetworkService.getInstance(getToken);
 }

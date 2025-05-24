@@ -2,11 +2,12 @@ import { useGoogleLogin } from "@react-oauth/google";
 import { useRouter } from "next/navigation";
 import { v4 as uuidv4 } from "uuid";
 import { useAuthStore } from "@/store";
-import { useEffect, useCallback } from "react";
+import { useEffect, useCallback, useState } from "react";
 
 const useAuth = () => {
-  const { login, logout, isLoggingIn, setIsLoggingIn } = useAuthStore();
+  const { login, logout } = useAuthStore();
   const router = useRouter();
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
 
   const resetLoadingState = useCallback(() => {
     setIsLoggingIn(false);
@@ -16,10 +17,7 @@ const useAuth = () => {
     onSuccess: async (codeResponse) => {
       try {
         const sessionId = generateSessionId();
-        await login({
-          accessToken: codeResponse.access_token,
-          sessionId: sessionId,
-        });
+        await login({ accessToken: codeResponse.access_token, sessionId });
         router.push("/home");
       } catch (error) {
         console.error("Sign in failed:", error);

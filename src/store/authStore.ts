@@ -5,140 +5,133 @@ import { LOCAL_STORAGE_KEYS } from "@/types/api/apiEndpoints";
 import { AuthWebPostRequest, UserPutRequest } from "@/types/api/apiRequest";
 
 interface AuthState {
-  isInitialized: boolean;
-  accessToken: string | null;
   user: User | null;
-  error: Error | null;
-  isLoggingIn: boolean;
-}
-
-interface AuthActions {
+  accessToken: string | null;
+  isInitialized: boolean;
+  isAuthenticated: boolean;
+  networkService: ReturnType<typeof createNetworkService> | null;
+  setUser: (user: User | null) => void;
+  setAccessToken: (token: string | null) => void;
+  setInitialized: (initialized: boolean) => void;
+  fetchUser: () => Promise<User>;
+  updateUser: (data: UserPutRequest) => Promise<User>;
   initialize: () => Promise<void>;
   login: (data: AuthWebPostRequest) => Promise<User>;
   logout: () => Promise<void>;
-  refreshToken: () => Promise<void>;
-  fetchUser: () => Promise<User>;
-  updateUser: (data: UserPutRequest) => Promise<User>;
-  setIsLoggingIn: (value: boolean) => void;
+  getNetworkService: () => ReturnType<typeof createNetworkService>;
 }
 
-export type AuthStore = AuthState & AuthActions;
+export const useAuthStore = create<AuthState>((set, get) => {
+  const getCurrentToken = () => {
+    const token = get().accessToken;
+    if (token) return token;
+    return localStorage.getItem(LOCAL_STORAGE_KEYS.ACCESS_TOKEN);
+  };
 
-export const useAuthStore = create<AuthStore>((set, get) => {
-  const getAccessToken = () => get().accessToken;
-  const networkService = createNetworkService(getAccessToken);
+  const sharedNetworkService = createNetworkService(getCurrentToken);
 
   return {
-    isInitialized: false,
-    accessToken: null,
     user: null,
-    error: null,
-    isLoggingIn: false,
+    accessToken: null,
+    isInitialized: false,
+    isAuthenticated: false,
+    networkService: sharedNetworkService,
 
-    setIsLoggingIn: (value: boolean) => {
-      set({ isLoggingIn: value });
+    login: async (data: AuthWebPostRequest) => {
+      try {
+        const response = await sharedNetworkService.login(data);
+        
+        localStorage.setItem(LOCAL_STORAGE_KEYS.ACCESS_TOKEN, response.token);
+        localStorage.setItem(LOCAL_STORAGE_KEYS.EXPIRES_AT, response.expiresAt);
+        
+        set({
+          user: response.user,
+          accessToken: response.token,
+          isAuthenticated: true
+        });
+
+        return response.user;
+      } catch (error) {
+        console.error("Login failed:", error);
+        throw error;
+      }
     },
 
     initialize: async () => {
-      try {
-        if (typeof window !== "undefined") {
-          const token = localStorage.getItem(LOCAL_STORAGE_KEYS.ACCESS_TOKEN);
-          const expiresAt = localStorage.getItem(LOCAL_STORAGE_KEYS.EXPIRES_AT);
-
-          if (token && expiresAt) {
-            const expiryTimestamp = parseInt(expiresAt, 10) * 1000;
-            const currentTimestamp = Date.now();
-
-            if (expiryTimestamp > currentTimestamp) {
-              set({ accessToken: token });
-              await get().fetchUser();
-            } else {
-              try {
-                await get().refreshToken();
-              } catch (error) {
-                localStorage.removeItem(LOCAL_STORAGE_KEYS.ACCESS_TOKEN);
-                localStorage.removeItem(LOCAL_STORAGE_KEYS.EXPIRES_AT);
-              }
-            }
-          }
+      const token = localStorage.getItem(LOCAL_STORAGE_KEYS.ACCESS_TOKEN);
+      
+      let userNetworkService = null;
+      
+      if (token) {
+        set({ accessToken: token });
+        
+        try {
+          userNetworkService = createNetworkService(() => token);
+          
+          const userData = await userNetworkService.fetchUser();
+          
+          set({
+            user: userData,
+            isAuthenticated: true,
+            networkService: userNetworkService,
+          });
+        } catch (error) {
+          console.error('AUTH STORE: Error validating token:', error);
+          // TODO: Clear invalid token
+          // localStorage.removeItem(LOCAL_STORAGE_KEYS.ACCESS_TOKEN);
         }
-        set({ isInitialized: true });
-      } catch (error) {
-        set({ error: error as Error, isInitialized: true });
       }
-    },
-
-    login: async (data) => {
-      try {
-        const response = await networkService.login(data);
-        const token = response.token;
-        const expiresAt = response.expiresAt;
-
-        if (typeof window !== "undefined") {
-          localStorage.setItem(LOCAL_STORAGE_KEYS.ACCESS_TOKEN, token);
-          localStorage.setItem(LOCAL_STORAGE_KEYS.EXPIRES_AT, expiresAt);
-        }
-
-        set({ accessToken: token, user: response.user });
-        return response.user;
-      } catch (error) {
-        set({ error: error as Error });
-        throw error;
-      }
-    },
-
-    logout: async () => {
-      try {
-        await networkService.logout();
-        if (typeof window !== "undefined") {
-          localStorage.removeItem(LOCAL_STORAGE_KEYS.ACCESS_TOKEN);
-          localStorage.removeItem(LOCAL_STORAGE_KEYS.EXPIRES_AT);
-        }
-        set({ accessToken: null, user: null });
-      } catch (error) {
-        set({ error: error as Error });
-        throw error;
-      }
-    },
-
-    refreshToken: async () => {
-      try {
-        const response = await networkService.refreshToken();
-        const newToken = response.token;
-        const newExpiresAt = response.expiresAt;
-
-        if (typeof window !== "undefined") {
-          localStorage.setItem(LOCAL_STORAGE_KEYS.ACCESS_TOKEN, newToken);
-          localStorage.setItem(LOCAL_STORAGE_KEYS.EXPIRES_AT, newExpiresAt);
-        }
-
-        set({ accessToken: newToken });
-      } catch (error) {
-        await get().logout();
-        throw error;
-      }
+      
+      set({ isInitialized: true });
+      
+      return;
     },
 
     fetchUser: async () => {
-      try {
-        const user = await networkService.fetchUser();
-        set({ user });
-        return user;
-      } catch (error) {
-        set({ error: error as Error });
-        throw error;
+      const { networkService } = get();
+      if (networkService) {
+        return await networkService.fetchUser();
       }
+      throw new Error("Network service not initialized");
     },
 
-    updateUser: async (data) => {
-      try {
-        const user = await networkService.updateUser(data);
-        set({ user });
-        return user;
-      } catch (error) {
-        set({ error: error as Error });
-        throw error;
+    updateUser: async (data: UserPutRequest) => {
+      const { networkService } = get();
+      if (networkService) {
+        return await networkService.updateUser(data);
       }
+      throw new Error("Network service not initialized");
     },
+
+    setUser: (user) =>
+      set({
+        user,
+        isAuthenticated: !!user,
+      }),
+
+    setAccessToken: (token) =>
+      set({
+        accessToken: token,
+      }),
+
+    setInitialized: (initialized) =>
+      set({
+        isInitialized: initialized,
+      }),
+
+    logout: async () => {
+      const { networkService } = get();
+      if (networkService) {
+        await networkService.logout();
+      }
+      set({
+        user: null,
+        accessToken: null,
+        isAuthenticated: false,
+        networkService: null,
+      });
+    },
+
+    getNetworkService: () => sharedNetworkService,
   };
 });

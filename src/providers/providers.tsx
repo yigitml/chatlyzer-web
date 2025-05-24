@@ -70,7 +70,7 @@ export default function Providers({ children }: ProvidersProps) {
   const googleClientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID!;
 
   return (
-    <PostHogProvider>
+    //<PostHogProvider>
       <ErrorBoundary FallbackComponent={RootErrorFallback}>
         <GoogleOAuthProvider clientId={googleClientId}>
           <QueryClientProvider client={queryClient}>
@@ -87,6 +87,6 @@ export default function Providers({ children }: ProvidersProps) {
           </QueryClientProvider>
         </GoogleOAuthProvider>
       </ErrorBoundary>
-    </PostHogProvider>
+    //</PostHogProvider>
   );
 }

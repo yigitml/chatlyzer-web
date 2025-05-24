@@ -1,4 +1,4 @@
-import React, { createContext, useContext, ReactNode, useCallback } from 'react';
+import React, { createContext, useContext, ReactNode, useCallback, useRef, useEffect, useState } from 'react';
 import { useStoreInitializer } from '@/hooks/useStoreInitializer';
 import { 
   useAuthStore, 
@@ -29,12 +29,15 @@ export function StoreProvider({ children }: StoreProviderProps) {
   const uiInitialize = useUIStore(state => state.initialize);
   const languageInitialize = useLanguageStore(state => state.initialize);
   
-  const messageStore = useMessageStore();
-  const chatStore = useChatStore();
-  const analysisStore = useAnalysisStore();
-  const creditStore = useCreditStore();
+  const initFunctionsRef = useRef({ authInitialize, languageInitialize, uiInitialize });
+  
+  useEffect(() => {
+    initFunctionsRef.current = { authInitialize, languageInitialize, uiInitialize };
+  }, [authInitialize, languageInitialize, uiInitialize]);
 
   const initializeStores = useCallback(async () => {
+    const { languageInitialize, authInitialize, uiInitialize } = initFunctionsRef.current;
+    
     if (languageInitialize) {
       await Promise.resolve(languageInitialize());
     }
@@ -46,15 +49,7 @@ export function StoreProvider({ children }: StoreProviderProps) {
     if (uiInitialize) {
       await Promise.resolve(uiInitialize());
     }
-  }, [
-    authInitialize, 
-    languageInitialize, 
-    uiInitialize, 
-    analysisStore,
-    chatStore,
-    creditStore,
-    messageStore
-  ]);
+  }, []);
 
   const initialized = useStoreInitializer(initializeStores);
   

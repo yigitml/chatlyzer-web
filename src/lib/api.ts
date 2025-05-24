@@ -1,4 +1,4 @@
-const BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000/api";
+const BASE_URL = "http://localhost:3000/api";
 
 export const createApiClient = (getToken: () => string | null) => {
   const getDefaultHeaders = (isFileUpload = false) => {
@@ -29,16 +29,27 @@ export const createApiClient = (getToken: () => string | null) => {
       }
     }
 
-    let errorData: any;
+    let errorData: any = {};
     try {
       errorData = await response.json();
-    } catch {
-      errorData = { message: response.statusText };
+    } catch (parseError) {
+      console.warn("Could not parse error response as JSON:", parseError);
+      errorData = { message: response.statusText || "Unknown error" };
     }
 
-    const error = new Error(
-      errorData.message || "An error occurred",
-    ) as Error & {
+    const errorMessage = errorData.message || 
+                         errorData.error || 
+                         errorData.details || 
+                         response.statusText || 
+                         `HTTP Error ${response.status}`;
+
+    console.error("API Error:", {
+      status: response.status,
+      statusText: response.statusText,
+      errorData
+    });
+
+    const error = new Error(errorMessage) as Error & {
       status?: number;
       data?: any;
     };

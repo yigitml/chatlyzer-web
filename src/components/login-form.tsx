@@ -19,8 +19,6 @@ export function LoginForm({
   isLoading = false
 }: LoginFormProps) {
 
-  console.log("LoginForm isLoading:", isLoading);
-
   const handleSignIn = () => {
     onSignIn();
   }

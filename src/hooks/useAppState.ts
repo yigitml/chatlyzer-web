@@ -20,15 +20,12 @@ export function useAppState(): AppContextType {
 
   return {
     isInitialized: auth.isInitialized,
-    error: auth.error,
     activeTab: ui.activeTab,
     tabs: ui.tabs,
     accessToken: auth.accessToken,
     user: auth.user,
     analyzes: analysis.analyzes,
-    selectedAnalysis: analysis.selectedAnalysis,
     messages: message.messages,
-    selectedMessage: message.selectedMessage,
     chats: chat.chats,
     selectedChat: chat.selectedChat,
     credits: credit.credits,
@@ -43,19 +40,16 @@ export function useAppState(): AppContextType {
 
     fetchAnalyzes: analysis.fetchAnalyzes,
     createAnalysis: analysis.createAnalysis,
-    selectAnalysis: analysis.setSelectedAnalysis,
     updateAnalysis: analysis.updateAnalysis,
     deleteAnalysis: analysis.deleteAnalysis,
 
     fetchMessages: message.fetchMessages,
     createMessage: message.createMessage,
-    selectMessage: message.setSelectedMessage,
     updateMessage: message.updateMessage,
     deleteMessage: message.deleteMessage,
 
     fetchChats: chat.fetchChats,
     createChat: chat.createChat,
-    selectChat: chat.setSelectedChat,
     updateChat: chat.updateChat,
     deleteChat: chat.deleteChat,
 

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 
 /**
  * A hook to safely initialize a store only on the client side after hydration
@@ -8,16 +8,20 @@ import { useEffect, useState } from 'react';
  */
 export function useStoreInitializer(initializeFunction: () => void | Promise<void>): boolean {
   const [initialized, setInitialized] = useState(false);
-
+  const initializationAttempted = useRef(false);
+  
   useEffect(() => {
-    // This code only runs in the browser after hydration
+    if (initializationAttempted.current) {
+      return;
+    }
+    
     const init = async () => {
       try {
+        initializationAttempted.current = true;
         await Promise.resolve(initializeFunction());
         setInitialized(true);
       } catch (error) {
-        console.error('Failed to initialize store:', error);
-        setInitialized(true); // Mark as initialized even on error to prevent endless retries
+        setInitialized(true);
       }
     };
 

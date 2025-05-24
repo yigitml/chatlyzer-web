@@ -6,13 +6,11 @@ import { AnalysisGetRequest, AnalysisPostRequest, AnalysisPutRequest, AnalysisDe
 
 interface AnalysisState {
   analyzes: Analysis[];
-  selectedAnalysis: Analysis | null;
   isLoading: boolean;
   error: Error | null;
 }
 
 interface AnalysisActions {
-  setSelectedAnalysis: (analysis: Analysis) => Promise<void>;
   fetchAnalyzes: (params?: AnalysisGetRequest) => Promise<Analysis[]>;
   fetchAnalysis: (id: string) => Promise<Analysis | null>;
   createAnalysis: (data: AnalysisPostRequest) => Promise<Analysis>;
@@ -31,10 +29,6 @@ export const useAnalysisStore = create<AnalysisStore>((set, get) => {
     selectedAnalysis: null,
     isLoading: false,
     error: null,
-
-    setSelectedAnalysis: async (analysis: Analysis) => {
-      set({ selectedAnalysis: analysis });
-    },
 
     fetchAnalyzes: async (params) => {
       try {
