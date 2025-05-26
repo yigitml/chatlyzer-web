@@ -12,4 +12,3 @@ npm-debug.log
 package-lock.json
 .env
 prisma/dev.db
-prisma/migrations
