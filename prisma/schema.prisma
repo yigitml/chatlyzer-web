@@ -1,0 +1,140 @@
+datasource db {
+  provider = "sqlite" // TODO: switch to postgres
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id               String            @id @default(cuid())
+  name             String
+  email            String            @unique
+  createdAt        DateTime          @default(now())
+  isOnboarded      Boolean           @default(false)
+  image            String?
+  googleId         String?
+  files            File[]
+  credits          UserCredit[]
+  subscription     Subscription?
+  tokenVersion     Int               @default(0)
+  devices          UserDevice[]
+  sessions         UserSession[]
+  lastLoginAt      DateTime?
+  isActive         Boolean           @default(true)
+  updatedAt        DateTime          @updatedAt
+  deletedAt        DateTime?
+  chats            Chat[]
+  messages         Message[]
+  analyzes         Analysis[]
+}
+
+model UserSession {
+  id             String    @id @default(cuid())
+  sessionId      String
+  lastActivityAt DateTime
+  userId         String
+  user           User      @relation(fields: [userId], references: [id])
+  deletedAt      DateTime?
+
+  @@unique([userId, sessionId])
+}
+
+model UserDevice {
+  id          String    @id @default(cuid())
+  deviceId    String
+  lastLoginAt DateTime
+  userId      String
+  user        User      @relation(fields: [userId], references: [id])
+  deletedAt   DateTime?
+
+  @@unique([userId, deviceId])
+}
+
+model Subscription {
+  id           String       @id @default(cuid())
+  name         String
+  price        Float
+  credits      UserCredit[]
+  isActive     Boolean      @default(false)
+  durationDays Int
+  createdAt    DateTime     @default(now())
+  userId       String       @unique
+  user         User         @relation(fields: [userId], references: [id])
+  deletedAt    DateTime?
+}
+
+model UserCredit {
+  id             String       @id @default(cuid())
+  user           User         @relation(fields: [userId], references: [id])
+  userId         String
+  type           CreditType
+  subscription   Subscription @relation(fields: [subscriptionId], references: [id])
+  subscriptionId String
+  totalAmount    Int          @default(0)
+  amount         Int          @default(0)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  minimumBalance Int          @default(0)
+  deletedAt      DateTime?
+
+  @@unique([userId, type])
+}
+
+enum CreditType {
+  ANALYSIS
+}
+
+model File {
+  id        String    @id @default(cuid())
+  url       String
+  size      Int
+  createdAt DateTime  @default(now())
+  user      User      @relation(fields: [userId], references: [id])
+  userId    String
+  chatId    String?
+  chat      Chat?     @relation(fields: [chatId], references: [id])
+  deletedAt DateTime?
+}
+
+model Chat {
+  id               String            @id @default(cuid())
+  title            String?
+  participants     Json              @default("[]") // A JSON array of strings i.e. ["yagmur", "yigit"]
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  deletedAt        DateTime?
+  userId           String
+  user             User              @relation(fields: [userId], references: [id])
+  messages         Message[]
+  analyzes         Analysis[]
+  files            File[]
+}
+
+model Message {
+  id        String    @id @default(cuid())
+  chatId    String
+  chat      Chat      @relation(fields: [chatId], references: [id])
+  userId    String
+  user      User      @relation(fields: [userId], references: [id])
+  sender    String
+  timestamp DateTime
+  content   String
+  metadata  Json?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+}
+
+model Analysis {
+  id        String    @id @default(cuid())
+  chatId    String
+  chat      Chat      @relation(fields: [chatId], references: [id])
+  result    Json
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+  User      User      @relation(fields: [userId], references: [id])
+  userId    String
+}
