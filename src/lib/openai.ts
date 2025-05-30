@@ -175,3 +175,96 @@ function getLanguageName(langCode: string): string {
   
   return languageNames[langCode] || 'the detected language';
 }
+
+export async function analyzeAllChatTypes(chatId: string): Promise<z.infer<typeof ChatlyzerSchemas.AllAnalyses>> {
+  const chatJson = await prisma.chat.findUnique({ where: { id: chatId }, include: { messages: true } });
+
+  if (!chatJson) {
+    throw new Error("Chat not found");
+  }
+
+  const formatTimestamp = (timestamp: Date | string): string => {
+    const date = new Date(timestamp);
+    const day = date.getDate().toString().padStart(2, '0');
+    const month = (date.getMonth() + 1).toString().padStart(2, '0');
+    const year = date.getFullYear().toString().slice(-2);
+    const hours = date.getHours().toString().padStart(2, '0');
+    const minutes = date.getMinutes().toString().padStart(2, '0');
+    return `${day}.${month}.${year} ${hours}:${minutes}`;
+  };
+
+  const minimalChat = {
+    title: chatJson.title,
+    messages: chatJson.messages.map(msg => ({
+      sender: msg.sender,
+      timestamp: formatTimestamp(msg.timestamp),
+      content: msg.content,
+      ...(msg.metadata && { metadata: msg.metadata })
+    }))
+  };
+
+  const openai = new OpenAI({
+    apiKey: process.env.OPENAI_API_KEY,
+  });
+
+  const detectedLanguage = await detectChatLanguage(minimalChat, openai);
+  const languageInstruction = detectedLanguage !== 'en' 
+    ? `IMPORTANT: The conversation is in ${getLanguageName(detectedLanguage)}. Please provide your analysis in ${getLanguageName(detectedLanguage)} and consider cultural context appropriate for ${getLanguageName(detectedLanguage)}-speaking users.`
+    : '';
+
+  const systemPrompt = `You are an expert chat analyzer capable of performing comprehensive multi-faceted analysis. You will analyze the conversation and provide ALL of the following analysis types in a single response:
+
+1. **Chat Statistics**: Comprehensive statistics including message counts, word counts, emoji usage, response times, conversation phases, and user roles.
+
+2. **Red Flag Analysis**: Identify potential problematic patterns such as manipulation, gaslighting, love bombing, possessiveness, disrespect, or toxic communication patterns.
+
+3. **Green Flag Analysis**: Identify positive patterns such as respectful communication, healthy boundaries, emotional support, genuine interest, and positive relationship dynamics.
+
+4. **Vibe Check**: Analyze the overall mood, energy, humor, awkwardness, and social dynamics of the conversation.
+
+5. **Simp-O-Meter**: Analyze for signs of excessive romantic pursuit, one-sided effort, over-complimenting, or unbalanced romantic investment.
+
+6. **Ghost Risk**: Analyze for signs that might indicate someone is losing interest or likely to stop responding (ghosting).
+
+7. **Main Character Energy**: Analyze for main character energy - dramatic flair, storytelling ability, command of attention, confidence, and standout personality moments.
+
+8. **Emotional Depth**: Analyze for emotional depth, vulnerability, empathy, meaningful topics, and genuine emotional connection between participants.
+
+${languageInstruction}
+
+Provide a complete analysis for ALL categories in the exact format specified in the schema.`;
+
+  try {
+    const zodRF = zodResponseFormat(ChatlyzerSchemas.AllAnalyses, "all_analyses");
+
+    const response = await openai.chat.completions.create({
+      model: "gpt-4o-mini",
+      messages: [
+        { 
+          role: "system", 
+          content: systemPrompt
+        },
+        { 
+          role: "user", 
+          content: `Analyze this chat comprehensively across all analysis types and provide the complete multi-faceted analysis:
+          Chat: ${JSON.stringify(minimalChat)}`
+        }
+      ],
+      response_format: zodRF
+    });
+    
+    const responseContent = response.choices[0].message.content;
+    if (!responseContent) {
+      throw new Error("No content found in response");
+    }
+
+    const parsedContent = JSON.parse(responseContent);
+    const analysisData = parsedContent.all_analyses || parsedContent;
+    
+    const parsed = ChatlyzerSchemas.AllAnalyses.parse(analysisData);
+    return parsed;
+  } catch (error) {
+    console.error("Error parsing or validating all analyses response:", error);
+    throw new Error("Failed to parse comprehensive LLM response");
+  }
+}
