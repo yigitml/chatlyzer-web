@@ -161,7 +161,21 @@ export const EmotionalDepthAnalysisSchema = z.object({
   topicsTouched: z.array(z.string()), // e.g., "family", "identity", "trauma"
 });
 
-// Centralized schema registry for type safety
+// Combined schema for all analyses in one API call
+export const AllAnalysesSchema = z.object({
+  type: z.literal("all_analyses"),
+  analyses: z.object({
+    chatStats: ChatStatsSchema.omit({ type: true }),
+    redFlag: RedFlagAnalysisSchema.omit({ type: true }),
+    greenFlag: GreenFlagAnalysisSchema.omit({ type: true }),
+    vibeCheck: VibeCheckAnalysisSchema.omit({ type: true }),
+    simpOMeter: SimpOMeterAnalysisSchema.omit({ type: true }),
+    ghostRisk: GhostRiskAnalysisSchema.omit({ type: true }),
+    mainCharacterEnergy: MainCharacterEnergyAnalysisSchema.omit({ type: true }),
+    emotionalDepth: EmotionalDepthAnalysisSchema.omit({ type: true }),
+  })
+});
+
 export const ChatlyzerSchemas = {
   ChatStats: ChatStatsSchema,
   RedFlag: RedFlagAnalysisSchema,
@@ -171,6 +185,7 @@ export const ChatlyzerSchemas = {
   GhostRisk: GhostRiskAnalysisSchema,
   MainCharacterEnergy: MainCharacterEnergyAnalysisSchema,
   EmotionalDepth: EmotionalDepthAnalysisSchema,
+  AllAnalyses: AllAnalysesSchema,
 } as const;
 
 export type ChatlyzerSchemaType = typeof ChatlyzerSchemas[keyof typeof ChatlyzerSchemas];
