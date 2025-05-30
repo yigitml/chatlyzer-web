@@ -117,7 +117,7 @@ function getSystemPromptForAnalysisType(analysisType: AnalysisType, language: st
 }
 
 async function detectChatLanguage(chat: any, openai: OpenAI): Promise<string> {
-  const sampleMessages = chat.messages.slice(0, Math.min(10, chat.messages.length))
+  const sampleMessages = chat.messages.slice(Math.min(10, Math.floor(chat.messages.length * 0.1)), Math.min(110, chat.messages.length))
     .map((msg: any) => msg.content)
     .join('\n');
 
