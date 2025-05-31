@@ -76,7 +76,6 @@ export const POST = withProtectedRoute(async (request: NextRequest) => {
     return ApiResponse.error("Insufficient credits").toResponse();
    }
 
-   // Get the schema based on the selected analysis type
    const selectedSchema = ChatlyzerSchemas[data.analysisType];
    if (!selectedSchema) {
      return ApiResponse.error("Invalid analysis type").toResponse();
@@ -120,7 +119,7 @@ export const PUT = withProtectedRoute(async (request: NextRequest) => {
         userId: authenticatedUserId,
       },
       data: {
-        result: data.result,
+        result: result,
       },
     });
 
