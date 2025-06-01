@@ -5,12 +5,13 @@ export interface ParsedMessage {
   sender: string;
   content: string;
   timestamp: Date;
-  metadata?: any;
+  metadata?: Record<string, any>;
 }
 
 // Supported chat platforms
 export enum ChatPlatform {
   WHATSAPP = 'whatsapp',
+  INSTAGRAM = 'instagram',
   TELEGRAM = 'telegram',
   DISCORD = 'discord',
   GENERIC = 'generic'
@@ -36,13 +37,289 @@ abstract class MessageConverter {
 class WhatsAppConverter extends MessageConverter {
   platform = ChatPlatform.WHATSAPP;
 
+  // WhatsApp date+time formats for exported messages
+  // Old format: 31.12.23, 23:59 - Sender: Message
+  // New format: [31.12.2023, 23:59:59] Sender: Message
+  private static readonly MESSAGE_HEADER_OLD = /^(\d{1,2}\.\d{1,2}\.\d{2,4}), (\d{2}:\d{2}) - (.*)$/;
+  private static readonly MESSAGE_HEADER_NEW = /^\[(\d{1,2}\.\d{1,2}\.\d{4}), (\d{2}:\d{2}:\d{2})\] (.*)$/;
+
+  // System messages (tr, en, de)
+  private static readonly SYSTEM_MESSAGES = [
+    // English
+    "Messages and calls are end-to-end encrypted.",
+    "You joined using an invite link",
+    "You're now an admin",
+    "You created this group",
+    "You were added",
+    "You added",
+    "You removed",
+    "You left",
+    "You changed the group description",
+    "You changed the group name",
+    "You changed the group icon",
+    "This message was deleted",
+    "Missed voice call",
+    "Missed video call",
+
+    // Turkish
+    "Mesajlar ve aramalar uçtan uca şifrelenmiştir.",
+    "Bir davet bağlantısı kullanarak katıldınız",
+    "Artık bir yöneticisiniz",
+    "Bu grubu sen oluşturdun",
+    "Eklendiniz",
+    "Eklediniz",
+    "Çıkardınız",
+    "Gruptan ayrıldınız",
+    "Grup açıklamasını değiştirdiniz",
+    "Grup adını değiştirdiniz",
+    "Grup simgesini değiştirdiniz",
+    "Bu mesaj silindi",
+    "Cevapsız sesli arama",
+    "Cevapsız görüntülü arama",
+
+    // German
+    "Nachrichten und Anrufe sind Ende-zu-Ende-verschlüsselt.",
+    "Du bist über einen Einladungslink beigetreten",
+    "Du bist jetzt Admin",
+    "Du hast diese Gruppe erstellt",
+    "Du wurdest hinzugefügt",
+    "Du hast hinzugefügt",
+    "Du hast entfernt",
+    "Du hast die Gruppe verlassen",
+    "Du hast die Gruppenbeschreibung geändert",
+    "Du hast den Gruppennamen geändert",
+    "Du hast das Gruppenbild geändert",
+    "Diese Nachricht wurde gelöscht",
+    "Verpasster Sprachanruf",
+    "Verpasster Videoanruf"
+  ];
+
   parseMessages(rawText: string): ParsedMessage[] {
+    const lines = rawText.split('\n');
+    const messages: ParsedMessage[] = [];
+    let currentMessage: string[] | null = null;
+    let currentSender: string | null = null;
+    let currentTimestamp: Date | null = null;
+
+    for (const line of lines) {
+      // Try both WhatsApp formats
+      let match = line.match(WhatsAppConverter.MESSAGE_HEADER_NEW);
+      let isNewFormat = true;
+      
+      if (!match) {
+        match = line.match(WhatsAppConverter.MESSAGE_HEADER_OLD);
+        isNewFormat = false;
+      }
+
+      if (match) {
+        // Finalize previous message if exists
+        if (currentSender && currentMessage && currentTimestamp) {
+          messages.push({
+            sender: currentSender,
+            content: currentMessage.join('\n').trim(),
+            timestamp: currentTimestamp,
+            metadata: { platform: this.platform }
+          });
+        }
+
+        const [, dateStr, timeStr, rest] = match;
+        const timestamp = this.parseTimestamp(dateStr, timeStr, isNewFormat);
+        if (!timestamp) continue;
+
+        const colonIndex = rest.indexOf(':');
+
+        if (colonIndex > 0) {
+          const sender = rest.substring(0, colonIndex).trim();
+          const content = rest.substring(colonIndex + 1).trim();
+
+          if (this.isSystemMessage(content)) {
+            messages.push({
+              sender: "System",
+              content: content,
+              timestamp: timestamp,
+              metadata: {
+                platform: this.platform,
+                messageType: "system"
+              }
+            });
+            currentSender = null;
+            currentMessage = null;
+            currentTimestamp = null;
+            continue;
+          }
+
+          currentSender = sender;
+          currentTimestamp = timestamp;
+          currentMessage = [content];
+        } else {
+          // System message without colon
+          if (this.isSystemMessage(rest)) {
+            messages.push({
+              sender: "System",
+              content: rest.trim(),
+              timestamp: timestamp,
+              metadata: {
+                platform: this.platform,
+                messageType: "system"
+              }
+            });
+            currentSender = null;
+            currentMessage = null;
+            currentTimestamp = null;
+          } else {
+            // Unexpected format, skip
+            currentSender = null;
+            currentMessage = null;
+            currentTimestamp = null;
+          }
+        }
+      } else {
+        // Continuation of multi-line message
+        if (currentMessage) {
+          currentMessage.push(line);
+        }
+      }
+    }
+
+    // Final flush
+    if (currentSender && currentMessage && currentTimestamp) {
+      messages.push({
+        sender: currentSender,
+        content: currentMessage.join('\n').trim(),
+        timestamp: currentTimestamp,
+        metadata: { platform: this.platform }
+      });
+    }
+
+    return messages;
+  }
+
+  private parseTimestamp(dateStr: string, timeStr: string, hasSeconds: boolean = false): Date | null {
+    try {
+      // Parse based on the format pattern
+      const [day, month, year] = dateStr.split('.');
+      const timeParts = timeStr.split(':');
+      const hours = timeParts[0];
+      const minutes = timeParts[1];
+      const seconds = hasSeconds ? timeParts[2] : '0';
+      
+      let fullYear: number;
+      if (year.length === 2) {
+        const yearNum = parseInt(year);
+        // Assume 20xx for years 00-50, 19xx for years 51-99
+        fullYear = yearNum <= 50 ? 2000 + yearNum : 1900 + yearNum;
+      } else {
+        fullYear = parseInt(year);
+      }
+
+      const date = new Date(
+        fullYear,
+        parseInt(month) - 1, // Month is 0-indexed
+        parseInt(day),
+        parseInt(hours),
+        parseInt(minutes),
+        parseInt(seconds || '0')
+      );
+
+      // Validate the date
+      if (isNaN(date.getTime())) {
+        return null;
+      }
+
+      return date;
+    } catch (error) {
+      console.warn('Failed to parse WhatsApp timestamp:', dateStr, timeStr, error);
+      return null;
+    }
+  }
+
+  private isSystemMessage(content: string): boolean {
+    return WhatsAppConverter.SYSTEM_MESSAGES.some(msg => content.startsWith(msg));
+  }
+}
+
+// Instagram message converter
+class InstagramConverter extends MessageConverter {
+  platform = ChatPlatform.INSTAGRAM;
+
+  parseMessages(rawText: string): ParsedMessage[] {
+    const messages: ParsedMessage[] = [];
+
+    try {
+      const jsonArray = JSON.parse(rawText);
+
+      if (!Array.isArray(jsonArray)) {
+        throw new Error('Expected JSON array');
+      }
+
+      for (const obj of jsonArray) {
+        const sender = obj.sender_name || "Unknown";
+        const timestampMs = obj.timestamp_ms || -1;
+        const content = (obj.content || "").trim();
+        const type = obj.type || "Generic";
+
+        if (timestampMs <= 0) continue;
+
+        const timestamp = new Date(timestampMs);
+
+        // Handle possible system messages
+        if (type !== "Generic" || this.isSystemMessage(content)) {
+          messages.push({
+            sender: "System",
+            content: content,
+            timestamp: timestamp,
+            metadata: {
+              platform: this.platform,
+              messageType: "system",
+              originalSender: sender,
+              type: type
+            }
+          });
+          continue;
+        }
+
+        if (content) {
+          messages.push({
+            sender: sender,
+            content: content,
+            timestamp: timestamp,
+            metadata: { platform: this.platform }
+          });
+        }
+      }
+    } catch (error) {
+      console.error('Failed to parse Instagram messages:', error);
+    }
+
+    return messages;
+  }
+
+  private isSystemMessage(content: string): boolean {
+    const systemKeywords = [
+      "unsent a message",
+      "missed a video call",
+      "missed a call",
+      "created group",
+      "added you to the group"
+    ];
+    return systemKeywords.some(keyword => 
+      content.toLowerCase().includes(keyword.toLowerCase())
+    );
+  }
+}
+
+// Telegram message converter
+class TelegramConverter extends MessageConverter {
+  platform = ChatPlatform.TELEGRAM;
+  
+  parseMessages(rawText: string): ParsedMessage[] {
+    // Implement Telegram-specific parsing logic
+    // This would depend on Telegram's export format
     const lines = rawText.split('\n').filter(line => line.trim());
     const messages: ParsedMessage[] = [];
     
-    // WhatsApp pattern: DD.MM.YY, HH:MM - sender: message
-    // or DD.MM.YY, HH:MM - system message
-    const messagePattern = /^(\d{2}\.\d{2}\.\d{2}),\s(\d{2}:\d{2})\s-\s(.+)$/;
+    // Telegram pattern: [DD.MM.YYYY HH:MM:SS] Sender: Message
+    const messagePattern = /^\[(\d{2}\.\d{2}\.\d{4})\s(\d{2}:\d{2}:\d{2})\]\s(.+)$/;
     
     for (const line of lines) {
       const match = line.match(messagePattern);
@@ -51,44 +328,21 @@ class WhatsAppConverter extends MessageConverter {
       const [, dateStr, timeStr, content] = match;
       
       // Parse timestamp
-      const timestamp = this.parseWhatsAppTimestamp(dateStr, timeStr);
+      const timestamp = this.parseTelegramTimestamp(dateStr, timeStr);
       if (!timestamp) continue;
       
-      // Check if it's a user message (contains colon) or system message
       const colonIndex = content.indexOf(':');
       
-      if (colonIndex > 0 && colonIndex < content.length - 1) {
-        // User message: "sender: message"
+      if (colonIndex > 0) {
         const sender = content.substring(0, colonIndex).trim();
         const messageContent = content.substring(colonIndex + 1).trim();
         
-        // Skip empty messages or media placeholders
-        if (!messageContent || this.isMediaPlaceholder(messageContent)) {
-          continue;
-        }
-        
-        messages.push({
-          sender,
-          content: messageContent,
-          timestamp,
-          metadata: {
-            platform: this.platform,
-            originalLine: line
-          }
-        });
-      } else {
-        // System message
-        if (!this.isSystemMessage(content)) {
-          // If it's not a recognized system message, treat as unknown sender
+        if (messageContent) {
           messages.push({
-            sender: 'System',
-            content: content.trim(),
+            sender,
+            content: messageContent,
             timestamp,
-            metadata: {
-              platform: this.platform,
-              messageType: 'system',
-              originalLine: line
-            }
+            metadata: { platform: this.platform }
           });
         }
       }
@@ -96,81 +350,96 @@ class WhatsAppConverter extends MessageConverter {
     
     return messages;
   }
-  
-  private parseWhatsAppTimestamp(dateStr: string, timeStr: string): Date | null {
+
+  private parseTelegramTimestamp(dateStr: string, timeStr: string): Date | null {
     try {
-      // Convert DD.MM.YY to YYYY-MM-DD
       const [day, month, year] = dateStr.split('.');
-      const fullYear = `20${year}`; // Assuming 2000s
-      const [hours, minutes] = timeStr.split(':');
+      const [hours, minutes, seconds] = timeStr.split(':');
       
       return new Date(
-        parseInt(fullYear),
-        parseInt(month) - 1, // Month is 0-indexed
+        parseInt(year),
+        parseInt(month) - 1,
         parseInt(day),
         parseInt(hours),
-        parseInt(minutes)
+        parseInt(minutes),
+        parseInt(seconds)
       );
     } catch (error) {
-      console.warn('Failed to parse WhatsApp timestamp:', dateStr, timeStr, error);
+      console.warn('Failed to parse Telegram timestamp:', dateStr, timeStr, error);
       return null;
     }
   }
-  
-  private isMediaPlaceholder(content: string): boolean {
-    const mediaPlaceholders = [
-      '<Medien ausgeschlossen>', // German: Media omitted
-      '<Media omitted>',
-      '<media omitted>',
-      '<attached:',
-      '<image omitted>',
-      '<video omitted>',
-      '<audio omitted>',
-      '<document omitted>'
-    ];
-    
-    return mediaPlaceholders.some(placeholder => 
-      content.toLowerCase().includes(placeholder.toLowerCase())
-    );
-  }
-  
-  private isSystemMessage(content: string): boolean {
-    const systemMessagePatterns = [
-      /verschlüsselt/i, // German encryption message
-      /ende-zu-ende/i,
-      /encrypted/i,
-      /security code changed/i,
-      /joined using this group/i,
-      /left/i,
-      /created group/i,
-      /changed the group/i,
-      /added/i,
-      /removed/i
-    ];
-    
-    return systemMessagePatterns.some(pattern => pattern.test(content));
-  }
 }
 
-// Telegram message converter (example structure)
-class TelegramConverter extends MessageConverter {
-  platform = ChatPlatform.TELEGRAM;
-  
-  parseMessages(rawText: string): ParsedMessage[] {
-    // Implement Telegram-specific parsing logic
-    // This would depend on Telegram's export format
-    return [];
-  }
-}
-
-// Discord message converter (example structure)
+// Discord message converter
 class DiscordConverter extends MessageConverter {
   platform = ChatPlatform.DISCORD;
   
   parseMessages(rawText: string): ParsedMessage[] {
     // Implement Discord-specific parsing logic
     // This would depend on Discord's export format
-    return [];
+    const lines = rawText.split('\n').filter(line => line.trim());
+    const messages: ParsedMessage[] = [];
+    
+    // Discord pattern: [DD-Mon-YY HH:MM:SS] Sender: Message
+    const messagePattern = /^\[(\d{2}-\w{3}-\d{2})\s(\d{2}:\d{2}:\d{2})\]\s(.+)$/;
+    
+    for (const line of lines) {
+      const match = line.match(messagePattern);
+      if (!match) continue;
+      
+      const [, dateStr, timeStr, content] = match;
+      
+      // Parse timestamp
+      const timestamp = this.parseDiscordTimestamp(dateStr, timeStr);
+      if (!timestamp) continue;
+      
+      const colonIndex = content.indexOf(':');
+      
+      if (colonIndex > 0) {
+        const sender = content.substring(0, colonIndex).trim();
+        const messageContent = content.substring(colonIndex + 1).trim();
+        
+        if (messageContent) {
+          messages.push({
+            sender,
+            content: messageContent,
+            timestamp,
+            metadata: { platform: this.platform }
+          });
+        }
+      }
+    }
+    
+    return messages;
+  }
+
+  private parseDiscordTimestamp(dateStr: string, timeStr: string): Date | null {
+    try {
+      // Parse format like "31-Dec-23"
+      const [day, monthStr, year] = dateStr.split('-');
+      const [hours, minutes, seconds] = timeStr.split(':');
+      
+      const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+                         'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+      const monthIndex = monthNames.indexOf(monthStr);
+      
+      if (monthIndex === -1) return null;
+      
+      const fullYear = parseInt(year) + 2000; // Assuming 20xx
+      
+      return new Date(
+        fullYear,
+        monthIndex,
+        parseInt(day),
+        parseInt(hours),
+        parseInt(minutes),
+        parseInt(seconds)
+      );
+    } catch (error) {
+      console.warn('Failed to parse Discord timestamp:', dateStr, timeStr, error);
+      return null;
+    }
   }
 }
 
@@ -195,10 +464,7 @@ class GenericConverter extends MessageConverter {
             sender,
             content,
             timestamp: new Date(), // Use current time as fallback
-            metadata: {
-              platform: this.platform,
-              originalLine: line
-            }
+            metadata: { platform: this.platform }
           });
         }
       } else if (line.trim()) {
@@ -206,10 +472,7 @@ class GenericConverter extends MessageConverter {
           sender: 'Unknown',
           content: line.trim(),
           timestamp: new Date(),
-          metadata: {
-            platform: this.platform,
-            originalLine: line
-          }
+          metadata: { platform: this.platform }
         });
       }
     }
@@ -222,6 +485,7 @@ class GenericConverter extends MessageConverter {
 class MessageConverterFactory {
   private static converters: Map<ChatPlatform, MessageConverter> = new Map([
     [ChatPlatform.WHATSAPP, new WhatsAppConverter()],
+    [ChatPlatform.INSTAGRAM, new InstagramConverter()],
     [ChatPlatform.TELEGRAM, new TelegramConverter()],
     [ChatPlatform.DISCORD, new DiscordConverter()],
     [ChatPlatform.GENERIC, new GenericConverter()]
@@ -238,12 +502,24 @@ class MessageConverterFactory {
   static detectPlatform(rawText: string): ChatPlatform {
     // Auto-detect platform based on content patterns
     
-    // WhatsApp pattern: DD.MM.YY, HH:MM - 
-    if (/\d{2}\.\d{2}\.\d{2},\s\d{2}:\d{2}\s-\s/.test(rawText)) {
+    // WhatsApp patterns: 
+    // Old format: DD.MM.YY, HH:MM - 
+    // New format: [DD.MM.YYYY, HH:MM:SS] 
+    if (/\d{2}\.\d{2}\.\d{2},\s\d{2}:\d{2}\s-\s/.test(rawText) || 
+        /\[\d{1,2}\.\d{1,2}\.\d{4},\s\d{2}:\d{2}:\d{2}\]/.test(rawText)) {
       return ChatPlatform.WHATSAPP;
     }
     
-    // Add more detection patterns for other platforms
+    // Instagram: Try to parse as JSON array
+    try {
+      const parsed = JSON.parse(rawText);
+      if (Array.isArray(parsed) && parsed.length > 0 && parsed[0].sender_name) {
+        return ChatPlatform.INSTAGRAM;
+      }
+    } catch {
+      // Not valid JSON, continue with other checks
+    }
+    
     // Telegram pattern: [DD.MM.YYYY HH:MM:SS] 
     if (/\[\d{2}\.\d{2}\.\d{4}\s\d{2}:\d{2}:\d{2}\]/.test(rawText)) {
       return ChatPlatform.TELEGRAM;
@@ -254,7 +530,7 @@ class MessageConverterFactory {
       return ChatPlatform.DISCORD;
     }
     
-    return ChatPlatform.GENERIC;
+    throw new Error("Platform couldn't be identified");
   }
   
   static convertMessages(

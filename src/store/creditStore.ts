@@ -13,6 +13,7 @@ interface CreditState {
 interface CreditActions {
   fetchCredits: () => Promise<UserCredit[]>;
   fetchSubscription: () => Promise<Subscription | null>;
+  initialize: () => Promise<void>;
 }
 
 export type CreditStore = CreditState & CreditActions;
@@ -26,6 +27,29 @@ export const useCreditStore = create<CreditStore>((set) => {
     subscription: null,
     isLoading: false,
     error: null,
+
+    initialize: async () => {
+      const authState = useAuthStore.getState();
+      if (authState.isAuthenticated && authState.accessToken) {
+        try {
+          await Promise.all([
+            (() => {
+              return networkService.fetchCredits().then(credits => {
+                set({ credits });
+              });
+            })(),
+            (() => {
+              return networkService.fetchSubscription().then(subscription => {
+                set({ subscription });
+              });
+            })()
+          ]);
+        } catch (error) {
+          console.error('Credit store initialization failed:', error);
+          set({ error: error as Error });
+        }
+      }
+    },
 
     fetchCredits: async () => {
       try {

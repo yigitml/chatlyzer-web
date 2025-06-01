@@ -141,12 +141,31 @@ export default function UserDashboard() {
       setIsAnalyzing(true);
       setErrorMessage(null);
       setSuccessMessage(null);
-      await createAnalysis({ 
-        chatId: selectedChatId,
-        analysisType: selectedAnalysisType
-      });
+      
+      // Run all analysis types
+      const analysisTypes: AnalysisType[] = [
+        "VibeCheck", 
+        "ChatStats", 
+        "RedFlag", 
+        "GreenFlag", 
+        "SimpOMeter", 
+        "GhostRisk", 
+        "MainCharacterEnergy", 
+        "EmotionalDepth"
+      ];
+      
+      // Create all analyses
+      await Promise.all(
+        analysisTypes.map(analysisType =>
+          createAnalysis({ 
+            chatId: selectedChatId,
+            analysisType 
+          })
+        )
+      );
+      
       await fetchAnalyzes({ chatId: selectedChatId });
-      setSuccessMessage(`${selectedAnalysisType} analysis complete! The tea has been spilled ☕`);
+      setSuccessMessage(`All analyses complete! The full tea has been spilled ☕✨`);
       
       setTimeout(() => {
         setSuccessMessage(null);
@@ -624,57 +643,46 @@ export default function UserDashboard() {
                   <CardHeader>
                     <CardTitle className="text-white">Analyze: {selectedChat?.title} 🔍</CardTitle>
                     <CardDescription className="text-gray-300">
-                      Choose your poison - each analysis hits different 💯
+                      Get the full rundown - all vibes, stats, flags, and energy levels at once 💯
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="analysis-type" className="text-white">Analysis Type</Label>
-                        <Select
-                          value={selectedAnalysisType}
-                          onValueChange={(value: AnalysisType) => setSelectedAnalysisType(value)}
-                        >
-                          <SelectTrigger className="bg-white/10 border-purple-400/30 text-white">
-                            <SelectValue placeholder="Pick your vibe check" />
-                          </SelectTrigger>
-                          <SelectContent className="bg-gray-900 border-purple-400/20">
-                            {(["VibeCheck", "ChatStats", "RedFlag", "GreenFlag", "SimpOMeter", "GhostRisk", "MainCharacterEnergy", "EmotionalDepth"] as AnalysisType[]).map((analysisKey) => {
-                              const info = getAnalysisInfo(analysisKey);
-                              return (
-                                <SelectItem key={analysisKey} value={analysisKey} className="text-white hover:bg-white/10">
-                                  {info.emoji} {analysisKey.replace(/([A-Z])/g, ' $1').trim()} - {info.description}
-                                </SelectItem>
-                              );
-                            })}
-                          </SelectContent>
-                        </Select>
-                        <p className="text-xs text-gray-400">
-                          {getAnalysisInfo(selectedAnalysisType).description}
-                        </p>
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+                        {(["VibeCheck", "ChatStats", "RedFlag", "GreenFlag", "SimpOMeter", "GhostRisk", "MainCharacterEnergy", "EmotionalDepth"] as AnalysisType[]).map((analysisKey) => {
+                          const info = getAnalysisInfo(analysisKey);
+                          return (
+                            <div key={analysisKey} className={`p-3 rounded-lg bg-gradient-to-r ${info.color} bg-opacity-20 border border-white/10 text-center`}>
+                              <div className="text-lg mb-1">{info.emoji}</div>
+                              <div className="text-xs text-white font-medium">
+                                {analysisKey.replace(/([A-Z])/g, ' $1').trim()}
+                              </div>
+                            </div>
+                          );
+                        })}
                       </div>
 
                       <Button
                         onClick={handleAnalyzeChat}
-                        disabled={isAnalyzing || totalCredits <= 0}
-                        className={`w-full bg-gradient-to-r ${getAnalysisInfo(selectedAnalysisType).color} hover:opacity-80 transition-all duration-200 hover:scale-105`}
+                        disabled={isAnalyzing || totalCredits < 8}
+                        className="w-full bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 transition-all duration-200 hover:scale-105 py-6 text-lg"
                       >
                         {isAnalyzing ? (
                           <>
-                            <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
-                            Analyzing the vibes...
+                            <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin mr-3"></div>
+                            Analyzing all the vibes...
                           </>
                         ) : (
                           <>
-                            <Zap className="h-4 w-4 mr-2" />
-                            {getAnalysisInfo(selectedAnalysisType).emoji} Start Analysis (1 credit)
+                            <Zap className="h-5 w-5 mr-3" />
+                            🔮 Run Full Analysis (8 credits)
                           </>
                         )}
                       </Button>
 
-                      {totalCredits <= 0 && (
+                      {totalCredits < 8 && (
                         <p className="text-sm text-red-400 text-center">
-                          No credits remaining! Get more to continue analyzing 💸
+                          Need 8 credits for full analysis! Get more to continue 💸
                         </p>
                       )}
 

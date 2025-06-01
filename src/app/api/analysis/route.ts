@@ -8,10 +8,45 @@ import type {
   AnalysisDeleteRequest,
   AnalysisType,
 } from "@/types/api/apiRequest";
-import { analyzeChat } from "@/lib/openai";
-import { ChatlyzerSchemas } from "@/schemas/zodSchemas";
+import { analyzeAllChatTypes } from "@/lib/openai";
 import { consumeUserCredits } from "@/utils/consumeUserCredits";
 import { CreditType } from "@prisma/client";
+
+// Analysis type mapping for database storage
+const ANALYSIS_TYPES: AnalysisType[] = [
+  'ChatStats',
+  'RedFlag', 
+  'GreenFlag',
+  'VibeCheck',
+  'SimpOMeter',
+  'GhostRisk',
+  'MainCharacterEnergy',
+  'EmotionalDepth'
+];
+
+// Mapping from analysis types to schema property names
+const ANALYSIS_TYPE_TO_SCHEMA_KEY: Record<AnalysisType, string> = {
+  'ChatStats': 'chatStats',
+  'RedFlag': 'redFlag',
+  'GreenFlag': 'greenFlag',
+  'VibeCheck': 'vibeCheck',
+  'SimpOMeter': 'simpOMeter',
+  'GhostRisk': 'ghostRisk',
+  'MainCharacterEnergy': 'mainCharacterEnergy',
+  'EmotionalDepth': 'emotionalDepth'
+};
+
+// Mapping from analysis types to their type literals
+const ANALYSIS_TYPE_TO_TYPE_LITERAL: Record<AnalysisType, string> = {
+  'ChatStats': 'chat_stats',
+  'RedFlag': 'red_flag',
+  'GreenFlag': 'green_flag',
+  'VibeCheck': 'vibe_check',
+  'SimpOMeter': 'simp_o_meter',
+  'GhostRisk': 'ghost_risk',
+  'MainCharacterEnergy': 'main_character_energy',
+  'EmotionalDepth': 'emotional_depth'
+};
 
 export const GET = withProtectedRoute(async (request: NextRequest) => {
   try {
@@ -58,47 +93,64 @@ export const POST = withProtectedRoute(async (request: NextRequest) => {
    const authenticatedUserId = request.user!.id;
    const data: AnalysisPostRequest = await request.json();
 
-   /*
-   const existinganalysis = await prisma.analysis.findFirst({
+   // Check if analyses already exist for this chat
+   const existingAnalyses = await prisma.analysis.findMany({
     where: {
       chatId: data.chatId,
+      userId: authenticatedUserId,
     }
    });
 
-   if (existinganalysis) {
-    return ApiResponse.error("Analysis already exists").toResponse();
+   if (existingAnalyses.length > 0) {
+    return ApiResponse.error("Analyses already exist for this chat").toResponse();
    }
-   */
 
-   const creditConsumption = await consumeUserCredits(authenticatedUserId, CreditType.ANALYSIS, 1);
+   // Consume 8 credits for comprehensive analysis
+   const creditConsumption = await consumeUserCredits(authenticatedUserId, CreditType.ANALYSIS, 8);
 
    if (!creditConsumption) {
     return ApiResponse.error("Insufficient credits").toResponse();
    }
 
-   const selectedSchema = ChatlyzerSchemas[data.analysisType];
-   if (!selectedSchema) {
-     return ApiResponse.error("Invalid analysis type").toResponse();
-   }
+   // Perform comprehensive analysis
+   const comprehensiveAnalysisData = await analyzeAllChatTypes(data.chatId);
 
-   const analysisData = await analyzeChat(data.chatId, selectedSchema);
-
-   const analysis = await prisma.analysis.create({
-    data: {
-      chatId: data.chatId,
-      userId: authenticatedUserId,
-      result: analysisData,
-    }
+   // Create analysis records for each type
+   const analysisPromises = ANALYSIS_TYPES.map(async (analysisType) => {
+     const schemaKey = ANALYSIS_TYPE_TO_SCHEMA_KEY[analysisType];
+     const analysisResult = comprehensiveAnalysisData.analyses[schemaKey as keyof typeof comprehensiveAnalysisData.analyses];
+     
+     console.log(`Processing ${analysisType} (${schemaKey}):`, !!analysisResult);
+     
+     if (!analysisResult) {
+       throw new Error(`Analysis result for ${analysisType} is missing or undefined`);
+     }
+     
+     // Add the type field back to the analysis result
+     const analysisWithType = {
+       type: ANALYSIS_TYPE_TO_TYPE_LITERAL[analysisType],
+       ...analysisResult
+     };
+     
+     return prisma.analysis.create({
+       data: {
+         chatId: data.chatId,
+         userId: authenticatedUserId,
+         result: analysisWithType,
+       }
+     });
    });
 
+   const analyses = await Promise.all(analysisPromises);
+
    return ApiResponse.success(
-    analysis,
-    "analysis created successfully!",
+    analyses,
+    "Comprehensive analysis completed successfully!",
     200
    ).toResponse();
 
   } catch (error) {
-    console.error("Error proccessing POST /api/analysis", error);
+    console.error("Error processing POST /api/analysis", error);
     return ApiResponse.error(`Failed to process request`, 500).toResponse();
   }
 });
@@ -133,7 +185,7 @@ export const PUT = withProtectedRoute(async (request: NextRequest) => {
       200
     ).toResponse();
   } catch (error) {
-    console.error("Error proccessing PUT /api/analysis");
+    console.error("Error processing PUT /api/analysis");
     return ApiResponse.error(`Failed to process request`, 500).toResponse();
   }
 });
@@ -168,7 +220,7 @@ export const DELETE = withProtectedRoute(async (request: NextRequest) => {
         200
       ).toResponse();
   } catch (error) {
-    console.error("Error proccessing DELETE /api/analysis");
+    console.error("Error processing DELETE /api/analysis");
     return ApiResponse.error(`Failed to process request`, 500).toResponse();
   }
 });

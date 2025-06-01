@@ -55,15 +55,17 @@ export const POST = withProtectedRoute(async (request: NextRequest) => {
       return ApiResponse.error("Chat already exists", 400).toResponse();
     }
 
+    const messages = data.messages
+    const participants = messages ? [...new Set(messages.map(message => message.sender))] : [];
+
     const chat = await prisma.chat.create({
       data: {
         title: data.title,
+        participants: participants,
         userId: authenticatedUserId,
       }
     });
 
-    const messages = data.messages
-    
     if (messages) {
       messages.forEach(async (message) => {
         await prisma.message.create({

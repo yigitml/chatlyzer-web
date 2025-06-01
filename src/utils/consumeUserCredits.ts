@@ -16,8 +16,7 @@ export async function consumeUserCredits(
     },
   });
 
-  // TODO : re implement minimum balance logic
-  if (!userCredit || !userCredit.amount/* || !userCredit.minimumBalance*/) {
+  if (!userCredit || userCredit.amount == null || userCredit.minimumBalance == null) {
     throw new Error("User credit data not found");
   }
 

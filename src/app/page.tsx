@@ -1,8 +1,21 @@
+"use client"
 import Image from "next/image"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
+import { useEffect } from "react"
 import { ArrowRight, Zap, Skull, Heart, Brain, Ghost, Star, AlertTriangle, CheckCircle, MessageCircle, Send, Twitter } from "lucide-react"
+import { useAuthStore } from "@/store/authStore"
 
 export default function Home() {
+  const router = useRouter()
+  const { isAuthenticated, isInitialized } = useAuthStore()
+
+  useEffect(() => {
+    if (isInitialized && isAuthenticated) {
+      router.push("/home")
+    }
+  }, [isAuthenticated, isInitialized, router])
+
   return (
     <div className="min-h-screen text-white bg-gradient-to-br from-gray-900 via-purple-900 to-violet-900">
       {/* Navigation */}

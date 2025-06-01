@@ -19,12 +19,6 @@ export type MiddlewareHandler = (
 export function combineMiddleware(...middlewares: MiddlewareHandler[]) {
   return async (req: NextRequest): Promise<NextResponse> => {
     try {
-      const url = req.nextUrl.clone();
-      if (url.protocol !== "https:") {
-        // TODO: Fix this
-        // return NextResponse.redirect(url);
-      }
-
       let currentRequest = req as AuthenticatedRequest;
       let result: NextResponse = NextResponse.next();
 

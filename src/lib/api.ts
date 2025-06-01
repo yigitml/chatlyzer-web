@@ -55,12 +55,6 @@ export const createApiClient = (getToken: () => string | null) => {
                          response.statusText || 
                          `HTTP Error ${response.status}`;
 
-    console.error("API Error:", {
-      status: response.status,
-      statusText: response.statusText,
-      errorData
-    });
-
     const error = new Error(errorMessage) as Error & {
       status?: number;
       data?: any;
