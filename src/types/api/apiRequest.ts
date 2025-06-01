@@ -48,7 +48,6 @@ export interface AnalysisGetRequest {
 
 export interface AnalysisPostRequest {
   chatId: string;
-  analysisType: AnalysisType;
 }
 
 export type AnalysisType = 

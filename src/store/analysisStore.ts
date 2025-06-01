@@ -13,7 +13,7 @@ interface AnalysisState {
 interface AnalysisActions {
   fetchAnalyzes: (params?: AnalysisGetRequest) => Promise<Analysis[]>;
   fetchAnalysis: (id: string) => Promise<Analysis | null>;
-  createAnalysis: (data: AnalysisPostRequest) => Promise<Analysis>;
+  createAnalysis: (data: AnalysisPostRequest) => Promise<Analysis[]>;
   updateAnalysis: (data: AnalysisPutRequest) => Promise<Analysis>;
   deleteAnalysis: (data: AnalysisDeleteRequest) => Promise<void>;
 }
@@ -58,12 +58,12 @@ export const useAnalysisStore = create<AnalysisStore>((set, get) => {
     createAnalysis: async (data) => {
       try {
         set({ isLoading: true, error: null });
-        const analysis = await networkService.createAnalysis(data);
+        const analyses = await networkService.createAnalysis(data);
         set((state) => ({ 
-          analyzes: [...state.analyzes, analysis],
+          analyzes: [...state.analyzes, ...analyses],
           isLoading: false 
         }));
-        return analysis;
+        return analyses;
       } catch (error) {
         set({ error: error as Error, isLoading: false });
         throw error;

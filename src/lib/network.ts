@@ -139,7 +139,7 @@ export class NetworkService {
     return response.data;
   }
 
-  async createAnalysis(data: AnalysisPostRequest): Promise<Analysis> {
+  async createAnalysis(data: AnalysisPostRequest): Promise<Analysis[]> {
     const response = await this.api.post(API_ENDPOINTS.ANALYSIS, data);
     return response.data;
   }

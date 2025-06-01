@@ -142,27 +142,10 @@ export default function UserDashboard() {
       setErrorMessage(null);
       setSuccessMessage(null);
       
-      // Run all analysis types
-      const analysisTypes: AnalysisType[] = [
-        "VibeCheck", 
-        "ChatStats", 
-        "RedFlag", 
-        "GreenFlag", 
-        "SimpOMeter", 
-        "GhostRisk", 
-        "MainCharacterEnergy", 
-        "EmotionalDepth"
-      ];
-      
-      // Create all analyses
-      await Promise.all(
-        analysisTypes.map(analysisType =>
-          createAnalysis({ 
-            chatId: selectedChatId,
-            analysisType 
-          })
-        )
-      );
+      // Single API call that processes all analysis types
+      await createAnalysis({ 
+        chatId: selectedChatId
+      });
       
       await fetchAnalyzes({ chatId: selectedChatId });
       setSuccessMessage(`All analyses complete! The full tea has been spilled ☕✨`);

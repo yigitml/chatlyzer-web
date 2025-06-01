@@ -69,7 +69,7 @@ export interface AppContextType {
   deleteChat: (data: ChatDeleteRequest) => Promise<void>;
 
   fetchAnalyzes: (params?: AnalysisGetRequest) => Promise<Analysis[]>;
-  createAnalysis: (data: AnalysisPostRequest) => Promise<Analysis>;
+  createAnalysis: (data: AnalysisPostRequest) => Promise<Analysis[]>;
   updateAnalysis: (data: AnalysisPutRequest) => Promise<Analysis>;
   deleteAnalysis: (data: AnalysisDeleteRequest) => Promise<void>;
 

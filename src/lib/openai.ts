@@ -5,10 +5,8 @@ import { zodResponseFormat } from "openai/helpers/zod";
 import { z } from "zod";
 import { AnalysisType } from "@/types/api/apiRequest";
 
-// ===== CONSTANTS =====
-
 const MODELS = {
-  MAIN: "gpt-4.1-nano",
+  MAIN: "gpt-4o-mini",
   LANGUAGE_DETECTION: "gpt-4.1-nano"
 } as const;
 
@@ -54,8 +52,6 @@ const COMPREHENSIVE_ANALYSIS_PROMPT = `You are an expert chat analyzer capable o
 8. **Emotional Depth**: Analyze for emotional depth, vulnerability, empathy, meaningful topics, and genuine emotional connection between participants.
 
 Provide a complete analysis for ALL categories in the exact format specified in the schema.`;
-
-// ===== UTILITY FUNCTIONS =====
 
 const formatTimestamp = (timestamp: Date | string): string => {
   const date = new Date(timestamp);
@@ -108,16 +104,22 @@ const parseOpenAIResponse = (responseContent: string | null) => {
   return parsedContent.analysis || parsedContent.all_analyses || parsedContent;
 };
 
-// ===== CORE FUNCTIONS =====
-
 const detectChatLanguage = async (chat: any, openai: OpenAI): Promise<string> => {
-  // Take only a small sample: max 5 messages, max 200 characters total
-  const sampleSize = Math.min(5, chat.messages.length);
+  const totalMessages = chat.messages.length;
+  
+  if (totalMessages === 0) {
+    return 'en';
+  }
+  
+  const n = Math.floor(totalMessages / 2);
+  const startIndex = Math.max(0, n - 10);
+  const endIndex = Math.min(totalMessages, n + 11);
+  
   const sampleMessages = chat.messages
-    .slice(0, sampleSize)
+    .slice(startIndex, endIndex)
     .map((msg: any) => msg.content)
     .join(' ')
-    .slice(0, 200); // Limit to 200 characters max
+    .slice(0, 200);
 
   if (!sampleMessages.trim()) {
     return 'en';
@@ -161,8 +163,6 @@ const fetchChatData = async (chatId: string) => {
 
   return chatJson;
 };
-
-// ===== EXPORTED FUNCTIONS =====
 
 export async function analyzeChat<T extends ChatlyzerSchemaType>(
   chatId: string, 
