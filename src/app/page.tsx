@@ -10,7 +10,7 @@ export default function Home() {
         <div className="flex items-center gap-2">
           <Image src="/favicon.ico" alt="Chatlyzer" width={32} height={32} className="w-8 h-8" />
           <span className="font-bold text-xl bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">
-            Chatlyzer
+            Chatlyzer AI
           </span>
         </div>
 
