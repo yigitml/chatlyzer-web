@@ -20,7 +20,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import Image from "next/image";
 import Link from "next/link";
 
-// Helper function to get analysis descriptions and emojis
 function getAnalysisInfo(analysisType: AnalysisType): { description: string; emoji: string; color: string } {
   const info: Record<AnalysisType, { description: string; emoji: string; color: string }> = {
     VibeCheck: { description: "Overall mood, energy, and social chemistry", emoji: "🔮", color: "from-cyan-500 to-blue-500" },
@@ -35,11 +34,9 @@ function getAnalysisInfo(analysisType: AnalysisType): { description: string; emo
   return info[analysisType] || { description: "", emoji: "🔍", color: "from-gray-500 to-gray-600" };
 }
 
-// Helper function to extract analysis type from result JSON
 function getAnalysisTypeFromResult(result: any): string {
   if (!result) return "Unknown";
   
-  // Handle both object and string formats
   if (typeof result === 'string') {
     try {
       const parsed = JSON.parse(result);
@@ -49,7 +46,6 @@ function getAnalysisTypeFromResult(result: any): string {
     }
   }
   
-  // Handle object format
   return result.type || result.analysisType || "Unknown";
 }
 
@@ -67,7 +63,6 @@ export default function UserDashboard() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   
-  // Create Chat Modal State
   const [isCreateChatModalOpen, setIsCreateChatModalOpen] = useState(false);
   const [isCreatingChat, setIsCreatingChat] = useState(false);
   const [chatTitle, setChatTitle] = useState("");
@@ -75,14 +70,9 @@ export default function UserDashboard() {
   const [newMessageSender, setNewMessageSender] = useState("");
   const [newMessageContent, setNewMessageContent] = useState("");
   
-  // WhatsApp Import State
   const [whatsappImportText, setWhatsappImportText] = useState("");
   const [importMode, setImportMode] = useState<"manual" | "whatsapp">("manual");
-  
-  // Analysis State
-  const [selectedAnalysisType, setSelectedAnalysisType] = useState<AnalysisType>("VibeCheck");
 
-  // Get total credits
   const totalCredits = credits.reduce((sum, credit) => sum + credit.amount, 0);
 
   useEffect(() => {
@@ -133,6 +123,12 @@ export default function UserDashboard() {
 
     fetchChatData();
   }, [selectedChatId, fetchMessages, fetchAnalyzes]);
+
+  useEffect(() => {
+    if (chats.length > 0 && !selectedChatId) {
+      setSelectedChatId(chats[0].id);
+    }
+  }, [chats, selectedChatId]);
   
   const handleAnalyzeChat = async () => {
     if (!selectedChatId) return;
