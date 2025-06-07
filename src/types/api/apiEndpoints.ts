@@ -10,8 +10,3 @@ export const API_ENDPOINTS = {
   SUBSCRIPTION: "/subscription",
   CREDIT: "/credit",
 } as const;
-
-export const LOCAL_STORAGE_KEYS = {
-  ACCESS_TOKEN: "accessToken",
-  EXPIRES_AT: "expiresAt",
-} as const;
