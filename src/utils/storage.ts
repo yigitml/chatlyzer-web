@@ -71,4 +71,10 @@ export function removeStorageItem(key: string): boolean {
     console.error(`Error removing item ${key} from localStorage:`, error);
     return false;
   }
-} 
+}
+
+export const LOCAL_STORAGE_KEYS = {
+  ACCESS_TOKEN: "accessToken",
+  EXPIRES_AT: "expiresAt",
+  SELECTED_CHAT_ID: "selectedChatId",
+} as const;
