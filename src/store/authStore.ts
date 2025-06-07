@@ -1,7 +1,7 @@
 import { create } from "zustand";
 import { User } from "@prisma/client";
 import { createNetworkService } from "@/lib/network";
-import { LOCAL_STORAGE_KEYS } from "@/types/api/apiEndpoints";
+import { LOCAL_STORAGE_KEYS } from "@/utils/storage";
 import { AuthWebPostRequest, UserPutRequest } from "@/types/api/apiRequest";
 
 interface AuthState {
