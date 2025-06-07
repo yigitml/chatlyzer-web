@@ -35,9 +35,6 @@ export interface PhotoPagination {
 export interface AppContextType {
   isInitialized: boolean;
 
-  activeTab: string;
-  tabs: { name: string; text: string[] }[];
-
   accessToken: string | null;
   user: User | null;
 
@@ -49,8 +46,6 @@ export interface AppContextType {
   selectedChat: Chat | null;
 
   analyzes: Analysis[];
-
-  setActiveTab: (tab: string) => void;
 
   login: (data: AuthWebPostRequest) => Promise<User>;
   logout: () => Promise<void>;
