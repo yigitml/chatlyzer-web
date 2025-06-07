@@ -1,6 +1,5 @@
 const getBaseUrl = () => {
   const env = process.env.NODE_ENV;
-  
   if (env === 'production') {
     return 'https://chatlyzerai.com/api';
   } else if (env === 'development') {
