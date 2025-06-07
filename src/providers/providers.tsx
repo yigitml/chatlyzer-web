@@ -2,8 +2,6 @@
 
 import { ErrorBoundary } from "react-error-boundary";
 import { ThemeProvider as NextThemesProvider } from "next-themes";
-import { QueryClientProvider } from "@tanstack/react-query";
-import { queryClient } from "@/lib/react-query";
 import { GoogleOAuthProvider } from "@react-oauth/google";
 import { useRouter } from "next/navigation";
 import { useState, useEffect } from "react"; 
@@ -73,7 +71,6 @@ export default function Providers({ children }: ProvidersProps) {
     <PostHogProvider>
       <ErrorBoundary FallbackComponent={RootErrorFallback}>
         <GoogleOAuthProvider clientId={googleClientId}>
-          <QueryClientProvider client={queryClient}>
             <NextThemesProvider
               attribute="class"
               defaultTheme="dark"
@@ -84,7 +81,6 @@ export default function Providers({ children }: ProvidersProps) {
                 {children}
               </StoreProvider>
             </NextThemesProvider>
-          </QueryClientProvider>
         </GoogleOAuthProvider>
       </ErrorBoundary>
     </PostHogProvider>
