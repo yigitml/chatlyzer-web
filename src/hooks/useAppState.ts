@@ -2,7 +2,6 @@
 
 import {
   useAuthStore,
-  useUIStore,
   useMessageStore,
   useChatStore,
   useAnalysisStore,
@@ -12,7 +11,6 @@ import { AppContextType } from "@/types/app";
 
 export function useAppState(): AppContextType {
   const auth = useAuthStore();
-  const ui = useUIStore();
   const message = useMessageStore();
   const chat = useChatStore();
   const credit = useCreditStore();
@@ -20,8 +18,6 @@ export function useAppState(): AppContextType {
 
   return {
     isInitialized: auth.isInitialized,
-    activeTab: ui.activeTab,
-    tabs: ui.tabs,
     accessToken: auth.accessToken,
     user: auth.user,
     analyzes: analysis.analyzes,
@@ -35,8 +31,6 @@ export function useAppState(): AppContextType {
     logout: auth.logout,
     fetchUser: auth.fetchUser,
     updateUser: auth.updateUser,
-
-    setActiveTab: ui.setActiveTab,
 
     fetchAnalyzes: analysis.fetchAnalyzes,
     createAnalysis: analysis.createAnalysis,
