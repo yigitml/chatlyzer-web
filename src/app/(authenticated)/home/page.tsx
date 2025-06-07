@@ -6,80 +6,454 @@ import { useChatStore } from "@/store/chatStore";
 import { useMessageStore } from "@/store/messageStore";
 import { useAnalysisStore } from "@/store/analysisStore";
 import { useCreditStore } from "@/store/creditStore";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Plus, X, FileText, Upload, Zap, Crown, Sparkles, TrendingUp, Heart, Ghost, AlertTriangle, CheckCircle, Brain, Star, BarChart3, Settings, LogOut, MessageCircle } from "lucide-react";
+import { Plus, X, FileText, Upload, Zap, Crown, Sparkles, MessageCircle, Edit2, Check, ChevronLeft, ChevronRight, BarChart3, CheckCircle, XCircle, Bolt } from "lucide-react";
 import { ChatPostRequest, AnalysisType } from "@/types/api/apiRequest";
 import { convertChatExport, ChatPlatform } from "@/utils/messageConverter";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import Image from "next/image";
 import Link from "next/link";
+import { Chat } from "@prisma/client";
+import { getStorageItem, setStorageItem, LOCAL_STORAGE_KEYS } from "@/utils/storage";
 
-function getAnalysisInfo(analysisType: AnalysisType): { description: string; emoji: string; color: string } {
-  const info: Record<AnalysisType, { description: string; emoji: string; color: string }> = {
-    VibeCheck: { description: "Overall mood, energy, and social chemistry", emoji: "🔮", color: "from-cyan-500 to-blue-500" },
-    ChatStats: { description: "Message counts, patterns, and statistics", emoji: "📊", color: "from-orange-500 to-red-500" },
-    RedFlag: { description: "Toxic patterns and warning signs", emoji: "🚩", color: "from-red-500 to-pink-500" },
-    GreenFlag: { description: "Healthy relationship indicators", emoji: "✅", color: "from-green-500 to-emerald-500" },
-    SimpOMeter: { description: "One-sided romantic investment levels", emoji: "💕", color: "from-pink-500 to-rose-500" },
-    GhostRisk: { description: "Likelihood of being left on read", emoji: "👻", color: "from-purple-500 to-violet-500" },
-    MainCharacterEnergy: { description: "Dramatic flair and personality presence", emoji: "⭐", color: "from-yellow-500 to-amber-500" },
-    EmotionalDepth: { description: "Vulnerability and genuine connection", emoji: "💙", color: "from-blue-500 to-indigo-500" }
+// Type conversion utilities
+const snakeToCamelCase = (str: string): string => {
+  return str.replace(/_([a-z])/g, (_, letter) => letter.toUpperCase());
+};
+
+const normalizeAnalysisType = (type: string): AnalysisType | null => {
+  // Convert snake_case to camelCase first
+  const camelCase = snakeToCamelCase(type);
+  // Handle specific mappings
+  const typeMap: Record<string, AnalysisType> = {
+    'vibeCheck': 'VibeCheck',
+    'vibe_check': 'VibeCheck',
+    'chatStats': 'ChatStats', 
+    'chat_stats': 'ChatStats',
+    'redFlag': 'RedFlag',
+    'red_flag': 'RedFlag',
+    'greenFlag': 'GreenFlag',
+    'green_flag': 'GreenFlag',
+    'simpOMeter': 'SimpOMeter',
+    'simp_o_meter': 'SimpOMeter',
+    'simp_meter': 'SimpOMeter',
+    'ghostRisk': 'GhostRisk',
+    'ghost_risk': 'GhostRisk',
+    'mainCharacterEnergy': 'MainCharacterEnergy',
+    'main_character_energy': 'MainCharacterEnergy',
+    'emotionalDepth': 'EmotionalDepth',
+    'emotional_depth': 'EmotionalDepth'
   };
-  return info[analysisType] || { description: "", emoji: "🔍", color: "from-gray-500 to-gray-600" };
-}
-
-function getAnalysisTypeFromResult(result: any): string {
-  if (!result) return "Unknown";
   
-  if (typeof result === 'string') {
+  return typeMap[camelCase] || typeMap[type] || null;
+};
+
+// Analysis type configuration
+const ANALYSIS_CONFIG: Record<AnalysisType, { emoji: string; title: string; description: string }> = {
+  VibeCheck: { emoji: "🔮", title: "Vibe Check", description: "Overall energy & chemistry" },
+  ChatStats: { emoji: "📊", title: "Chat Stats", description: "Numbers & patterns" },
+  RedFlag: { emoji: "🚩", title: "Red Flags", description: "Warning signs detected" },
+  GreenFlag: { emoji: "✅", title: "Green Flags", description: "Healthy relationship vibes" },
+  SimpOMeter: { emoji: "💕", title: "Simp-O-Meter", description: "One-sided energy levels" },
+  GhostRisk: { emoji: "👻", title: "Ghost Risk", description: "Left on read probability" },
+  MainCharacterEnergy: { emoji: "⭐", title: "Main Character", description: "Dramatic flair detected" },
+  EmotionalDepth: { emoji: "💙", title: "Emotional Depth", description: "Genuine connection level" }
+};
+
+// Modular Components
+const LoadingSpinner = ({ size = "sm" }: { size?: "sm" | "lg" }) => (
+  <div className={`border-2 border-white/20 border-t-white rounded-full animate-spin ${size === "lg" ? "w-8 h-8" : "w-4 h-4"}`} />
+);
+
+const StatusBadge = ({ children, variant = "default" }: { children: React.ReactNode; variant?: "default" | "success" | "error" }) => {
+  const variants = {
+    default: "bg-white/10 text-white",
+    success: "bg-green-500/20 text-green-300 border border-green-500/30",
+    error: "bg-red-500/20 text-red-300 border border-red-500/30"
+  };
+  
+  return (
+    <div className={`px-3 py-1 rounded-full text-sm font-medium ${variants[variant]}`}>
+      {children}
+    </div>
+  );
+};
+
+// Toast Component
+const Toast = ({ message, type, onClose }: { message: string; type: "success" | "error"; onClose: () => void }) => (
+  <div className="fixed top-6 right-6 z-50 animate-in slide-in-from-right duration-300">
+    <div className={`flex items-center gap-3 px-4 py-3 rounded-lg shadow-lg backdrop-blur-sm border ${
+      type === "success" 
+        ? "bg-green-500/20 border-green-500/30 text-green-300" 
+        : "bg-red-500/20 border-red-500/30 text-red-300"
+    }`}>
+      {type === "success" ? (
+        <CheckCircle className="w-5 h-5 flex-shrink-0" />
+      ) : (
+        <XCircle className="w-5 h-5 flex-shrink-0" />
+      )}
+      <span className="text-sm font-medium">{message}</span>
+      <Button
+        variant="ghost"
+        size="sm"
+        onClick={onClose}
+        className="h-auto p-1 text-white/60 hover:text-white"
+      >
+        <X className="w-4 h-4" />
+      </Button>
+    </div>
+  </div>
+);
+
+// Skeleton Components
+const SkeletonCard = () => (
+  <div className="bg-white/5 border-white/20 rounded-lg border p-4">
+    <div className="animate-pulse space-y-3">
+      <div className="flex items-center gap-3">
+        <div className="w-8 h-8 bg-white/20 rounded-full"></div>
+        <div className="space-y-2">
+          <div className="h-4 bg-white/20 rounded w-24"></div>
+          <div className="h-3 bg-white/15 rounded w-32"></div>
+        </div>
+      </div>
+      <div className="space-y-2">
+        <div className="h-3 bg-white/15 rounded w-full"></div>
+        <div className="h-3 bg-white/15 rounded w-3/4"></div>
+        <div className="h-3 bg-white/10 rounded w-1/2"></div>
+      </div>
+    </div>
+  </div>
+);
+
+const SkeletonAnalysisGrid = () => (
+  <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-2 sm:gap-3">
+    {Array.from({ length: 8 }).map((_, i) => (
+      <div key={i} className="animate-pulse bg-white/10 rounded-xl p-2 sm:p-3 md:p-4 h-16 sm:h-20 flex flex-col items-center justify-center">
+        <div className="w-4 h-4 sm:w-6 sm:h-6 bg-white/20 rounded mb-1 sm:mb-2"></div>
+        <div className="h-2 sm:h-3 bg-white/15 rounded w-8 sm:w-12"></div>
+      </div>
+    ))}
+  </div>
+);
+
+const ChatCard = ({ 
+  chat, 
+  isSelected, 
+  isEditing, 
+  editTitle, 
+  onSelect, 
+  onEdit, 
+  onSave, 
+  onCancel, 
+  onTitleChange, 
+  isUpdating 
+}: {
+  chat: Chat;
+  isSelected: boolean;
+  isEditing: boolean;
+  editTitle: string;
+  onSelect: () => void;
+  onEdit: () => void;
+  onSave: () => void;
+  onCancel: () => void;
+  onTitleChange: (title: string) => void;
+  isUpdating: boolean;
+}) => (
+  <div className={`group p-4 rounded-xl transition-all cursor-pointer ${
+    isSelected ? 'bg-white/10 border border-white/20' : 'hover:bg-white/5'
+  }`}>
+    {isEditing ? (
+      <div className="space-y-3">
+        <Input
+          value={editTitle}
+          onChange={(e) => onTitleChange(e.target.value)}
+          className="bg-white/10 border-white/20 text-white"
+          placeholder="Chat title..."
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') onSave();
+            if (e.key === 'Escape') onCancel();
+          }}
+          autoFocus
+        />
+        <div className="flex gap-2">
+          <Button size="sm" onClick={onSave} disabled={isUpdating || !editTitle.trim()}>
+            {isUpdating ? <LoadingSpinner /> : <Check className="w-3 h-3" />}
+          </Button>
+          <Button size="sm" variant="ghost" onClick={onCancel} disabled={isUpdating}>
+            <X className="w-3 h-3" />
+          </Button>
+        </div>
+      </div>
+    ) : (
+      <div onClick={onSelect}>
+        <div className="flex items-center justify-between">
+          <div className="flex-1 min-w-0">
+            <h3 className="font-medium text-white truncate">{chat.title || "Untitled Chat"}</h3>
+            <p className="text-sm text-white/60 mt-1">
+              {new Date(chat.createdAt).toLocaleDateString()}
+            </p>
+          </div>
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={(e) => {
+              e.stopPropagation();
+              onEdit();
+            }}
+            className="opacity-0 group-hover:opacity-100 transition-opacity text-white/60 hover:text-white"
+          >
+            <Edit2 className="w-4 h-4" />
+          </Button>
+        </div>
+      </div>
+    )}
+  </div>
+);
+
+// Analysis Preview Card
+const AnalysisPreviewCard = ({ 
+  analysisType, 
+  analysisData, 
+  isSelected, 
+  onClick 
+}: { 
+  analysisType: AnalysisType; 
+  analysisData: any; 
+  isSelected: boolean;
+  onClick: () => void;
+}) => {
+  const config = ANALYSIS_CONFIG[analysisType];
+  
+  // Extract preview data based on analysis type
+  const getPreviewData = () => {
+    if (!analysisData?.result) return null;
+    
     try {
-      const parsed = JSON.parse(result);
-      return parsed.type || parsed.analysisType || "Unknown";
+      const result = typeof analysisData.result === 'string' 
+        ? JSON.parse(analysisData.result) 
+        : analysisData.result;
+      
+      switch (analysisType) {
+        case 'VibeCheck':
+          return {
+            overall: result.overallVibe || result.mood || 'Unknown',
+            score: result.score || result.vibeScore || 0
+          };
+        case 'RedFlag':
+        case 'GreenFlag':
+          return {
+            count: result.flags?.length || result.traits?.length || 0,
+            severity: result.severity || result.level || 'Medium'
+          };
+        case 'SimpOMeter':
+          return {
+            score: result.simpScore || result.score || 0
+          };
+        case 'GhostRisk':
+          return {
+            risk: result.riskLevel || result.level || 'Unknown',
+            probability: result.probability || result.score || 0
+          };
+        case 'MainCharacterEnergy':
+          return {
+            score: result.mceScore || result.score || 0
+          };
+        case 'EmotionalDepth':
+          return {
+            score: result.depthScore || result.score || 0
+          };
+        default:
+          return { summary: 'Analysis completed' };
+      }
+    } catch {
+      return { summary: 'Analysis completed' };
+    }
+  };
+
+  const previewData = getPreviewData();
+  
+  return (
+    <div 
+      onClick={onClick}
+      className={`text-center p-2 sm:p-3 md:p-4 rounded-xl cursor-pointer transition-all ${
+        analysisData 
+          ? isSelected
+            ? 'bg-gradient-to-br from-purple-500/30 to-pink-500/30 border border-purple-400/50 scale-105'
+            : 'bg-white/10 border border-white/20 hover:bg-white/15 hover:border-purple-400/30'
+          : 'bg-white/5 border border-white/10'
+      }`}
+    >
+      <div className="text-lg sm:text-xl md:text-2xl mb-1 sm:mb-2">{config.emoji}</div>
+      <div className="text-xs sm:text-sm text-white/80 font-medium mb-1 truncate">{config.title}</div>
+      {analysisData && previewData ? (
+        <div className="text-xs text-white/60">
+          {Object.entries(previewData).slice(0, 1).map(([key, value]) => (
+            <div key={key} className="truncate">{typeof value === 'number' ? value.toLocaleString() : value}</div>
+          ))}
+        </div>
+      ) : (
+        <div className="text-xs text-white/40">No data</div>
+      )}
+    </div>
+  );
+};
+
+// Full Analysis Result Card
+const AnalysisResultCard = ({ analysis }: { analysis: any }) => {
+  const getAnalysisType = () => {
+    try {
+      const result = typeof analysis.result === 'string' 
+        ? JSON.parse(analysis.result) 
+        : analysis.result;
+      const rawType = result?.type || result?.analysisType;
+      if (rawType) {
+        return normalizeAnalysisType(rawType) || "Unknown";
+      }
+      return "Unknown";
     } catch {
       return "Unknown";
     }
-  }
+  };
   
-  return result.type || result.analysisType || "Unknown";
-}
+  const analysisType = getAnalysisType();
+  const config = ANALYSIS_CONFIG[analysisType as AnalysisType] || { emoji: "🔍", title: "Analysis", description: "" };
+  
+  return (
+    <Card className="bg-white/5 border-white/20">
+      <CardHeader className="pb-3">
+        <div className="flex items-center gap-3">
+          <span className="text-2xl">{config.emoji}</span>
+          <div>
+            <CardTitle className="text-white text-lg">{config.title}</CardTitle>
+            <p className="text-white/60 text-sm">{config.description}</p>
+          </div>
+        </div>
+      </CardHeader>
+      <CardContent>
+        <div className="bg-black/20 rounded-lg p-4 border border-white/10">
+          <pre className="text-sm text-white/80 whitespace-pre-wrap font-mono overflow-x-auto">
+            {JSON.stringify(analysis.result, null, 2)}
+          </pre>
+        </div>
+      </CardContent>
+    </Card>
+  );
+};
+
+// Credits display component
+const CreditsDisplay = ({ credits }: { credits: number }) => {
+  return (
+    <div className="flex items-center gap-2 bg-white/10 rounded-full px-3 py-1">
+      <Zap className="w-4 h-4 text-green-400 flex-shrink-0" />
+      <span className="font-mono text-sm text-white whitespace-nowrap">{credits.toLocaleString()}</span>
+    </div>
+  );
+};
 
 export default function UserDashboard() {
   const hasFetchedData = useRef(false);
   
+  // Store hooks
   const { user, isInitialized } = useAuthStore();
-  const { chats, fetchChats, createChat } = useChatStore();
+  const { chats, fetchChats, createChat, updateChat } = useChatStore();
   const { messages, fetchMessages } = useMessageStore();
   const { analyzes, fetchAnalyzes, createAnalysis } = useAnalysisStore();
   const { credits, subscription, fetchCredits, fetchSubscription } = useCreditStore();
   
+  // UI State
   const [selectedChatId, setSelectedChatId] = useState<string | null>(null);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
+  const [selectedAnalysisType, setSelectedAnalysisType] = useState<AnalysisType | null>(null);
+  const [isLoadingChatData, setIsLoadingChatData] = useState(false);
   
-  const [isCreateChatModalOpen, setIsCreateChatModalOpen] = useState(false);
+  // Edit Chat State
+  const [editingChatId, setEditingChatId] = useState<string | null>(null);
+  const [editingTitle, setEditingTitle] = useState("");
+  const [isUpdatingTitle, setIsUpdatingTitle] = useState(false);
+  
+  // Create Chat Modal State
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isCreatingChat, setIsCreatingChat] = useState(false);
   const [chatTitle, setChatTitle] = useState("");
   const [chatMessages, setChatMessages] = useState<{ sender: string; content: string; timestamp?: Date }[]>([]);
   const [newMessageSender, setNewMessageSender] = useState("");
   const [newMessageContent, setNewMessageContent] = useState("");
-  
   const [whatsappImportText, setWhatsappImportText] = useState("");
   const [importMode, setImportMode] = useState<"manual" | "whatsapp">("manual");
 
   const totalCredits = credits.reduce((sum, credit) => sum + credit.amount, 0);
+  const selectedChat = chats.find(chat => chat.id === selectedChatId);
+  const selectedChatMessages = selectedChatId ? messages.filter(msg => msg.chatId === selectedChatId) : [];
+  const selectedChatAnalyzes = selectedChatId ? analyzes.filter(analysis => analysis.chatId === selectedChatId) : [];
 
-  useEffect(() => {
-    const fetchData = async () => {
-      if (hasFetchedData.current) {
-        return;
+  // Helper function to select chat with storage update
+  const selectChat = (chatId: string | null) => {
+    // Update state optimistically
+    setSelectedChatId(chatId);
+    // Update storage
+    if (chatId) {
+      setStorageItem(LOCAL_STORAGE_KEYS.SELECTED_CHAT_ID, chatId);
+    }
+  };
+
+  // Group analyses by type
+  const analysesByType = selectedChatAnalyzes.reduce((acc, analysis) => {
+    try {
+      const result = typeof analysis.result === 'string' 
+        ? JSON.parse(analysis.result) 
+        : analysis.result;
+      const rawType = result?.type || result?.analysisType;
+      if (rawType) {
+        const normalizedType = normalizeAnalysisType(rawType);
+        if (normalizedType) {
+          acc[normalizedType] = analysis;
+        }
       }
+    } catch {
+      // Skip invalid analysis results
+    }
+    return acc;
+  }, {} as Record<AnalysisType, any>);
+
+  // Toast system
+  const showToast = (message: string, type: "success" | "error") => {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), 4000);
+  };
+
+  // Optimistic credit update
+  const updateCreditsOptimistically = async (creditsUsed: number) => {
+    // Optimistic update - subtract credits immediately
+    const optimisticCredits = credits.map(credit => ({
+      ...credit,
+      amount: credit.amount - creditsUsed
+    }));
+    
+    // We would update the store here if we had a setter
+    // For now, we'll refetch after a delay
+    setTimeout(async () => {
+      try {
+        await fetchCredits();
+      } catch (error) {
+        console.error("Failed to refetch credits:", error);
+      }
+    }, 2000);
+  };
+
+  // Data fetching
+  useEffect(() => {
+    const abortController = new AbortController();
+    
+    const fetchData = async () => {
+      if (hasFetchedData.current || !user?.id) return;
       
       try {
         hasFetchedData.current = true;
@@ -91,102 +465,103 @@ export default function UserDashboard() {
         ]);
       } catch (error) {
         hasFetchedData.current = false;
-        const message = error instanceof Error ? error.message : "Failed to load data";
-        console.error('Error fetching initial data:', error);
-        setErrorMessage(message);
+        // Only show error if not aborted
+        if (!abortController.signal.aborted && error instanceof Error && error.name !== 'AbortError') {
+          showToast(error.message || "Failed to load data", "error");
+        }
       }
     };
 
-    if (user && user.id) {
-      fetchData();
-    }
+    fetchData();
+    
+    return () => {
+      abortController.abort();
+    };
   }, [user, fetchChats, fetchAnalyzes, fetchCredits, fetchSubscription]);
 
   useEffect(() => {
-    if (!selectedChatId) {
-      return;
-    }
+    if (!selectedChatId) return;
+    
+    const abortController = new AbortController();
     
     const fetchChatData = async () => {
       try {
+        setIsLoadingChatData(true);
+        // Clear previous data to ensure loading state is visible
+        setSelectedAnalysisType(null);
+        
         await Promise.all([
           fetchMessages({ chatId: selectedChatId }),
           fetchAnalyzes({ chatId: selectedChatId })
         ]);
-        setErrorMessage(null);
       } catch (error) {
-        const message = error instanceof Error ? error.message : "Failed to load chat data";
-        console.error('Error fetching chat data:', error);
-        setErrorMessage(message);
+        // Only show error if not aborted
+        if (!abortController.signal.aborted && error instanceof Error && error.name !== 'AbortError') {
+          showToast(error.message || "Failed to load chat data", "error");
+        }
+      } finally {
+        // Add small delay to ensure skeleton is visible
+        if (!abortController.signal.aborted) {
+          setTimeout(() => {
+            setIsLoadingChatData(false);
+          }, 100);
+        }
       }
     };
 
     fetchChatData();
+    
+    // Cleanup function
+    return () => {
+      abortController.abort();
+    };
   }, [selectedChatId, fetchMessages, fetchAnalyzes]);
 
   useEffect(() => {
-    if (chats.length > 0 && !selectedChatId) {
-      setSelectedChatId(chats[0].id);
+    if (chats.length > 0) {
+      // Get stored selected chat ID
+      const storedChatId = getStorageItem(LOCAL_STORAGE_KEYS.SELECTED_CHAT_ID, null);
+      
+      // Check if stored chat exists in current chat list
+      const storedChatExists = storedChatId && chats.some(chat => chat.id === storedChatId);
+      
+      if (storedChatExists && selectedChatId !== storedChatId) {
+        // Select the stored chat if it exists and is different from current
+        selectChat(storedChatId);
+      } else if (!selectedChatId && !storedChatExists) {
+        // Select first chat if no current selection and no valid stored chat
+        selectChat(chats[0].id);
+      }
     }
   }, [chats, selectedChatId]);
-  
+
+  // Handlers
   const handleAnalyzeChat = async () => {
     if (!selectedChatId) return;
     
     try {
       setIsAnalyzing(true);
-      setErrorMessage(null);
-      setSuccessMessage(null);
-      
-      // Single API call that processes all analysis types
-      await createAnalysis({ 
-        chatId: selectedChatId
-      });
-      
+      updateCreditsOptimistically(8); // Optimistic update
+      await createAnalysis({ chatId: selectedChatId });
       await fetchAnalyzes({ chatId: selectedChatId });
-      setSuccessMessage(`All analyses complete! The full tea has been spilled ☕✨`);
-      
-      setTimeout(() => {
-        setSuccessMessage(null);
-      }, 3000);
+      showToast("Analysis complete! The tea has been spilled ☕", "success");
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Failed to analyze chat";
-      console.error('Error analyzing chat:', error);
-      setErrorMessage(message);
+      showToast(error instanceof Error ? error.message : "Analysis failed", "error");
+      // Refetch credits on error to get correct amount
+      await fetchCredits();
     } finally {
       setIsAnalyzing(false);
     }
   };
 
-  const handleAddMessage = () => {
-    if (!newMessageSender.trim() || !newMessageContent.trim()) return;
-    
-    const newMessage = {
-      sender: newMessageSender.trim(),
-      content: newMessageContent.trim(),
-      timestamp: new Date()
-    };
-    
-    setChatMessages(prev => [...prev, newMessage]);
-    setNewMessageSender("");
-    setNewMessageContent("");
-  };
-
-  const handleRemoveMessage = (index: number) => {
-    setChatMessages(prev => prev.filter((_, i) => i !== index));
-  };
-
   const handleCreateChat = async () => {
     if (!chatTitle.trim()) {
-      setErrorMessage("Chat title is required bestie");
+      showToast("Chat title is required bestie", "error");
       return;
     }
 
     try {
       setIsCreatingChat(true);
-      setErrorMessage(null);
-      setSuccessMessage(null);
-
       const chatData: ChatPostRequest = {
         title: chatTitle.trim(),
         messages: chatMessages.length > 0 ? chatMessages.map(msg => ({
@@ -199,32 +574,48 @@ export default function UserDashboard() {
 
       const newChat = await createChat(chatData);
       await fetchChats();
-      setSelectedChatId(newChat.id);
-      await fetchMessages({ chatId: newChat.id });
+      selectChat(newChat.id);
       
+      // Reset form
       setChatTitle("");
       setChatMessages([]);
       setNewMessageSender("");
       setNewMessageContent("");
-      setIsCreateChatModalOpen(false);
+      setWhatsappImportText("");
+      setImportMode("manual");
+      setIsCreateModalOpen(false);
       
-      setSuccessMessage("Chat created successfully! Ready for analysis ✨");
-      
-      setTimeout(() => {
-        setSuccessMessage(null);
-      }, 3000);
+      showToast("Chat created! Ready for analysis ✨", "success");
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Failed to create chat";
-      console.error('Error creating chat:', error);
-      setErrorMessage(message);
+      showToast(error instanceof Error ? error.message : "Failed to create chat", "error");
     } finally {
       setIsCreatingChat(false);
     }
   };
 
+  const handleEditChatTitle = async (chatId: string) => {
+    if (!editingTitle.trim()) {
+      showToast("Chat title cannot be empty", "error");
+      return;
+    }
+
+    try {
+      setIsUpdatingTitle(true);
+      await updateChat({ id: chatId, title: editingTitle.trim() });
+      await fetchChats();
+      setEditingChatId(null);
+      setEditingTitle("");
+      showToast("Title updated ✨", "success");
+    } catch (error) {
+      showToast(error instanceof Error ? error.message : "Failed to update title", "error");
+    } finally {
+      setIsUpdatingTitle(false);
+    }
+  };
+
   const handleWhatsAppImport = () => {
     if (!whatsappImportText.trim()) {
-      setErrorMessage("Please paste WhatsApp chat export text");
+      showToast("Please paste WhatsApp chat export", "error");
       return;
     }
 
@@ -232,7 +623,7 @@ export default function UserDashboard() {
       const convertedMessages = convertChatExport(whatsappImportText, ChatPlatform.WHATSAPP);
       
       if (convertedMessages.length === 0) {
-        setErrorMessage("No valid messages found in the WhatsApp export");
+        showToast("No valid messages found", "error");
         return;
       }
 
@@ -245,40 +636,37 @@ export default function UserDashboard() {
       setChatMessages(formattedMessages);
       
       const participants = [...new Set(formattedMessages.map(msg => msg.sender))];
-      const participantNames = participants.slice(0, 2).join(" & ");
-      const titleSuffix = participants.length > 2 ? ` + ${participants.length - 2} others` : "";
-      const autoTitle = `WhatsApp: ${participantNames}${titleSuffix}`;
-      
+      const autoTitle = `WhatsApp: ${participants.slice(0, 2).join(" & ")}${participants.length > 2 ? ` +${participants.length - 2}` : ""}`;
       setChatTitle(autoTitle);
-      setSuccessMessage(`Imported ${convertedMessages.length} messages from WhatsApp! 🎉`);
       
-      setTimeout(() => {
-        setSuccessMessage(null);
-      }, 3000);
+      showToast(`Imported ${convertedMessages.length} messages 🎉`, "success");
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Failed to parse WhatsApp export";
-      console.error('Error parsing WhatsApp export:', error);
-      setErrorMessage(message);
+      showToast(error instanceof Error ? error.message : "Failed to parse WhatsApp export", "error");
     }
   };
 
-  const resetCreateChatForm = () => {
-    setChatTitle("");
-    setChatMessages([]);
+  const addMessage = () => {
+    if (!newMessageSender.trim() || !newMessageContent.trim()) return;
+    
+    setChatMessages(prev => [...prev, {
+      sender: newMessageSender.trim(),
+      content: newMessageContent.trim(),
+      timestamp: new Date()
+    }]);
     setNewMessageSender("");
     setNewMessageContent("");
-    setWhatsappImportText("");
-    setImportMode("manual");
-    setErrorMessage(null);
-    setSuccessMessage(null);
+  };
+
+  const removeMessage = (index: number) => {
+    setChatMessages(prev => prev.filter((_, i) => i !== index));
   };
 
   if (!isInitialized) {
     return (
-      <div className="min-h-screen text-white bg-gradient-to-br from-gray-900 via-purple-900 to-violet-900 flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-8 h-8 border-2 border-purple-400 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-purple-300">Loading the vibes... ✨</p>
+      <div className="min-h-screen bg-black flex items-center justify-center">
+        <div className="flex flex-col items-center">
+          <LoadingSpinner size="lg" />
+          <p className="text-white/60 mt-4">Loading...</p>
         </div>
       </div>
     );
@@ -286,9 +674,9 @@ export default function UserDashboard() {
 
   if (!user) {
     return (
-      <div className="min-h-screen text-white bg-gradient-to-br from-gray-900 via-purple-900 to-violet-900 flex items-center justify-center">
+      <div className="min-h-screen bg-black flex items-center justify-center">
         <div className="text-center">
-          <h1 className="text-2xl font-bold mb-4">Not authenticated bestie 💀</h1>
+          <h1 className="text-2xl font-bold text-white mb-4">Not authenticated</h1>
           <Link href="/auth/sign-in" className="text-purple-400 hover:text-purple-300">
             Sign in to continue
           </Link>
@@ -297,478 +685,394 @@ export default function UserDashboard() {
     );
   }
 
-  const selectedChat = chats.find(chat => chat.id === selectedChatId);
-  const selectedChatMessages = selectedChatId ? messages.filter(msg => msg.chatId === selectedChatId) : [];
-  const selectedChatAnalyzes = selectedChatId ? analyzes.filter(analysis => analysis.chatId === selectedChatId) : [];
-
   return (
-    <div className="min-h-screen text-white bg-gradient-to-br from-gray-900 via-purple-900 to-violet-900">
-      {/* Navigation */}
-      <header className="container mx-auto px-4 py-6 flex items-center justify-between border-b border-white/10">
-        <Link href="/" className="flex items-center gap-2">
-          <Image src="/favicon.ico" alt="Chatlyzer" width={32} height={32} className="w-8 h-8" />
-          <span className="font-bold text-xl bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">
-            Chatlyzer
-          </span>
-        </Link>
+    <div className="min-h-screen bg-black text-white">
+      {/* Header */}
+      <header className="border-b border-white/10 px-3 sm:px-6 py-4">
+        <div className="flex items-center justify-between">
+          <Link href="/" className="flex items-center gap-2 sm:gap-3 min-w-0">
+            <Image src="/favicon.ico" alt="Chatlyzer" width={28} height={28} className="flex-shrink-0" />
+            <span className="font-bold text-lg sm:text-xl truncate">Chatlyzer</span>
+          </Link>
 
-        <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2 bg-white/10 rounded-full px-4 py-2 backdrop-blur-sm">
-            <Crown className="w-4 h-4 text-yellow-400" />
-            <span className="text-sm font-medium">{totalCredits} credits</span>
+          <div className="flex items-center gap-2 sm:gap-4 flex-shrink-0">
+            <CreditsDisplay credits={totalCredits} />
+            
+            <Link href="/profile">
+              <Avatar className="w-8 h-8 cursor-pointer hover:ring-2 hover:ring-white/20 transition-all flex-shrink-0">
+                <AvatarImage src={user.image || ""} alt={user.name || "User"} />
+                <AvatarFallback>{user.name?.substring(0, 2).toUpperCase() || "U"}</AvatarFallback>
+              </Avatar>
+            </Link>
           </div>
-          
-          <Avatar>
-            <AvatarImage src={user.image || ""} alt={user.name || "User"} />
-            <AvatarFallback>{user.name?.substring(0, 2).toUpperCase() || "U"}</AvatarFallback>
-          </Avatar>
         </div>
       </header>
 
-      <div className="container mx-auto px-4 py-8">
-        {/* Welcome Section */}
-        <div className="text-center mb-12">
-          <div className="inline-flex items-center gap-2 text-purple-300 bg-white/10 rounded-full px-4 py-2 mb-6 backdrop-blur-sm">
-            <Sparkles className="w-4 h-4" />
-            <span>Welcome back {user.name?.split(' ')[0] || 'bestie'} ✨</span>
-          </div>
-          
-          <h1 className="text-4xl md:text-6xl font-bold mb-6">
-            Ready to
-            <br />
-            <span className="bg-gradient-to-r from-purple-400 via-pink-400 to-red-400 bg-clip-text text-transparent">
-              spill the tea?
-            </span> ☕
-          </h1>
-          
-          <p className="text-xl text-gray-300 max-w-2xl mx-auto mb-8">
-            Upload your chats, get the insights, avoid the red flags. It's giving main character energy 💅
-          </p>
-        </div>
+      {/* Toast */}
+      {toast && (
+        <Toast
+          message={toast.message}
+          type={toast.type}
+          onClose={() => setToast(null)}
+        />
+      )}
 
-        {/* Quick Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-12">
-          <Card className="bg-white/5 border-purple-400/20 backdrop-blur-sm hover:bg-white/10 transition-all duration-200 hover:scale-105">
-            <CardContent className="p-6">
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full flex items-center justify-center">
-                  <Upload className="w-6 h-6 text-white" />
-                </div>
+      <div className="flex h-[calc(100vh-73px)] relative">
+        {/* Mobile Sidebar Overlay */}
+        {!sidebarCollapsed && (
+          <div 
+            className="fixed inset-0 bg-black/50 z-40 lg:hidden"
+            onClick={() => setSidebarCollapsed(true)}
+          />
+        )}
+        
+        {/* Sidebar */}
+        <div className={`transition-all duration-300 border-r border-white/10 bg-black z-50 ${
+          sidebarCollapsed 
+            ? 'w-16' 
+            : 'w-80 lg:w-80 md:w-72 sm:w-64 lg:relative fixed lg:translate-x-0'
+        } ${sidebarCollapsed ? '' : 'max-w-[80vw]'} ${!sidebarCollapsed ? 'lg:relative fixed inset-y-0 left-0' : ''}`}>
+          <div className="p-4">
+            <div className="flex items-center justify-between mb-6">
+              {!sidebarCollapsed && (
                 <div>
-                  <p className="text-2xl font-bold text-white">{chats.length}</p>
-                  <p className="text-sm text-gray-400">Chats uploaded</p>
+                  <h2 className="font-semibold text-white">Your Chats</h2>
+                  <p className="text-sm text-white/60">{chats.length} conversations</p>
                 </div>
-              </div>
-            </CardContent>
-          </Card>
+              )}
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+                className="text-white/60 hover:text-white"
+              >
+                {sidebarCollapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
+              </Button>
+            </div>
 
-          <Card className="bg-white/5 border-purple-400/20 backdrop-blur-sm hover:bg-white/10 transition-all duration-200 hover:scale-105">
-            <CardContent className="p-6">
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 bg-gradient-to-r from-cyan-500 to-blue-500 rounded-full flex items-center justify-center">
-                  <BarChart3 className="w-6 h-6 text-white" />
-                </div>
-                <div>
-                  <p className="text-2xl font-bold text-white">{analyzes.length}</p>
-                  <p className="text-sm text-gray-400">Analyses completed</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-white/5 border-purple-400/20 backdrop-blur-sm hover:bg-white/10 transition-all duration-200 hover:scale-105">
-            <CardContent className="p-6">
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 bg-gradient-to-r from-yellow-500 to-amber-500 rounded-full flex items-center justify-center">
-                  <Crown className="w-6 h-6 text-white" />
-                </div>
-                <div>
-                  <p className="text-2xl font-bold text-white">{totalCredits}</p>
-                  <p className="text-sm text-gray-400">Credits remaining</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-white/5 border-purple-400/20 backdrop-blur-sm hover:bg-white/10 transition-all duration-200 hover:scale-105">
-            <CardContent className="p-6">
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 bg-gradient-to-r from-green-500 to-emerald-500 rounded-full flex items-center justify-center">
-                  <TrendingUp className="w-6 h-6 text-white" />
-                </div>
-                <div>
-                  <p className="text-2xl font-bold text-white">{subscription ? "Premium" : "Free"}</p>
-                  <p className="text-sm text-gray-400">Current plan</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Main Content */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Chats Section */}
-          <div className="lg:col-span-1">
-            <Card className="bg-white/5 border-purple-400/20 backdrop-blur-sm">
-              <CardHeader className="flex flex-row items-center justify-between">
-                <CardTitle className="text-white">Your Chats 💬</CardTitle>
-                <Dialog open={isCreateChatModalOpen} onOpenChange={setIsCreateChatModalOpen}>
+            {!sidebarCollapsed && (
+              <>
+                <Dialog open={isCreateModalOpen} onOpenChange={setIsCreateModalOpen}>
                   <DialogTrigger asChild>
-                    <Button 
-                      size="sm" 
-                      onClick={resetCreateChatForm}
-                      className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600"
-                    >
-                      <Plus className="h-4 w-4 mr-1" />
-                      Upload
+                    <Button className="w-full mb-6 bg-white/10 hover:bg-white/20 text-white border-0">
+                      <Plus className="w-4 h-4 mr-2" />
+                      New Chat
                     </Button>
                   </DialogTrigger>
-                  <DialogContent className="sm:max-w-[600px] max-h-[80vh] overflow-y-auto bg-gray-900 border-purple-400/20 text-white">
+                  <DialogContent className="sm:max-w-[600px] bg-gray-900 border-white/20 text-white">
                     <DialogHeader>
-                      <DialogTitle className="text-white">Upload New Chat ⚡</DialogTitle>
-                      <DialogDescription className="text-gray-300">
-                        Time to expose some conversations bestie. You can manually add messages or import from WhatsApp.
+                      <DialogTitle>Create New Chat</DialogTitle>
+                      <DialogDescription className="text-white/60">
+                        Upload your conversation for analysis
                       </DialogDescription>
                     </DialogHeader>
-                    <div className="space-y-4">
-                      {/* Chat Title */}
-                      <div className="space-y-2">
-                        <Label htmlFor="chat-title" className="text-white">Chat Title *</Label>
+                    
+                    <div className="space-y-6">
+                      <div>
+                        <Label htmlFor="title">Chat Title</Label>
                         <Input
-                          id="chat-title"
-                          placeholder="Give this chat a name..."
+                          id="title"
                           value={chatTitle}
                           onChange={(e) => setChatTitle(e.target.value)}
-                          className="bg-white/10 border-purple-400/30 text-white placeholder:text-gray-400"
+                          placeholder="Give this chat a name..."
+                          className="bg-white/10 border-white/20 text-white mt-2"
                         />
                       </div>
 
-                      {/* Import Mode Toggle */}
-                      <div className="space-y-2">
-                        <Label className="text-white">How are we doing this?</Label>
-                        <div className="flex space-x-2">
-                          <Button
-                            type="button"
-                            variant={importMode === "manual" ? "default" : "outline"}
-                            size="sm"
-                            onClick={() => setImportMode("manual")}
-                            className={importMode === "manual" ? "bg-gradient-to-r from-purple-500 to-pink-500" : "border-purple-400/30 text-white hover:bg-white/10"}
-                          >
-                            <Plus className="h-4 w-4 mr-1" />
-                            Manual Entry
-                          </Button>
-                          <Button
-                            type="button"
-                            variant={importMode === "whatsapp" ? "default" : "outline"}
-                            size="sm"
-                            onClick={() => setImportMode("whatsapp")}
-                            className={importMode === "whatsapp" ? "bg-gradient-to-r from-purple-500 to-pink-500" : "border-purple-400/30 text-white hover:bg-white/10"}
-                          >
-                            <FileText className="h-4 w-4 mr-1" />
-                            WhatsApp Import
-                          </Button>
-                        </div>
+                      <div className="flex gap-2">
+                        <Button
+                          variant={importMode === "manual" ? "default" : "outline"}
+                          onClick={() => setImportMode("manual")}
+                          className="flex-1"
+                        >
+                          Manual Entry
+                        </Button>
+                        <Button
+                          variant={importMode === "whatsapp" ? "default" : "outline"}
+                          onClick={() => setImportMode("whatsapp")}
+                          className="flex-1"
+                        >
+                          WhatsApp Import
+                        </Button>
                       </div>
 
-                      {/* WhatsApp Import Section */}
-                      {importMode === "whatsapp" && (
-                        <div className="space-y-2">
-                          <Label htmlFor="whatsapp-import" className="text-white">WhatsApp Chat Export</Label>
+                      {importMode === "whatsapp" ? (
+                        <div>
+                          <Label>WhatsApp Export</Label>
                           <Textarea
-                            id="whatsapp-import"
-                            placeholder="Paste your WhatsApp chat export here...&#10;Example:&#10;11.04.25, 00:15 - John: Hello there&#10;11.04.25, 00:16 - Jane: Hi John!"
                             value={whatsappImportText}
                             onChange={(e) => setWhatsappImportText(e.target.value)}
-                            rows={8}
-                            className="font-mono text-sm bg-white/10 border-purple-400/30 text-white placeholder:text-gray-400"
+                            placeholder="Paste your WhatsApp chat export here..."
+                            rows={6}
+                            className="bg-white/10 border-white/20 text-white font-mono text-sm mt-2"
                           />
                           <Button
-                            type="button"
                             onClick={handleWhatsAppImport}
                             disabled={!whatsappImportText.trim()}
-                            className="w-full bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600"
+                            className="w-full mt-3"
                           >
-                            <FileText className="h-4 w-4 mr-2" />
-                            Parse WhatsApp Export ✨
+                            Parse Export
                           </Button>
                         </div>
-                      )}
-
-                      {/* Manual Messages Section */}
-                      {importMode === "manual" && (
-                        <div className="space-y-2">
-                          <Label className="text-white">Messages (Optional)</Label>
-                        
-                        {/* Existing Messages */}
-                        {chatMessages.length > 0 && (
-                          <div className="space-y-2 max-h-32 overflow-y-auto">
-                            {chatMessages.map((message, index) => (
-                              <div key={index} className="flex items-start space-x-2 p-2 bg-white/10 rounded border border-purple-400/20">
-                                <div className="flex-1">
-                                  <p className="text-sm font-medium text-purple-300">{message.sender}</p>
-                                  <p className="text-sm text-gray-300">{message.content}</p>
+                      ) : (
+                        <div>
+                          <Label>Messages (Optional)</Label>
+                          {chatMessages.length > 0 && (
+                            <div className="space-y-2 max-h-32 overflow-y-auto mt-2">
+                              {chatMessages.map((msg, i) => (
+                                <div key={i} className="flex items-center gap-2 p-2 bg-white/5 rounded">
+                                  <div className="flex-1 min-w-0">
+                                    <p className="text-sm font-medium text-purple-300">{msg.sender}</p>
+                                    <p className="text-sm text-white/80 truncate">{msg.content}</p>
+                                  </div>
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    onClick={() => removeMessage(i)}
+                                  >
+                                    <X className="w-3 h-3" />
+                                  </Button>
                                 </div>
-                                <Button
-                                  size="sm"
-                                  variant="ghost"
-                                  onClick={() => handleRemoveMessage(index)}
-                                  className="text-gray-400 hover:text-red-400"
-                                >
-                                  <X className="h-3 w-3" />
-                                </Button>
-                              </div>
-                            ))}
+                              ))}
+                            </div>
+                          )}
+                          <div className="grid grid-cols-2 gap-2 mt-3">
+                            <Input
+                              placeholder="Sender..."
+                              value={newMessageSender}
+                              onChange={(e) => setNewMessageSender(e.target.value)}
+                              className="bg-white/10 border-white/20 text-white"
+                            />
+                            <Input
+                              placeholder="Message..."
+                              value={newMessageContent}
+                              onChange={(e) => setNewMessageContent(e.target.value)}
+                              className="bg-white/10 border-white/20 text-white"
+                            />
                           </div>
-                        )}
-
-                        {/* Add New Message */}
-                        <div className="grid grid-cols-2 gap-2">
-                          <Input
-                            placeholder="Sender name..."
-                            value={newMessageSender}
-                            onChange={(e) => setNewMessageSender(e.target.value)}
-                            className="bg-white/10 border-purple-400/30 text-white placeholder:text-gray-400"
-                          />
-                          <Input
-                            placeholder="Message content..."
-                            value={newMessageContent}
-                            onChange={(e) => setNewMessageContent(e.target.value)}
-                            className="bg-white/10 border-purple-400/30 text-white placeholder:text-gray-400"
-                          />
-                        </div>
-                        <Button
-                          type="button"
-                          size="sm"
-                          variant="outline"
-                          onClick={handleAddMessage}
-                          disabled={!newMessageSender.trim() || !newMessageContent.trim()}
-                          className="w-full border-purple-400/30 text-white hover:bg-white/10"
-                        >
-                          Add Message
-                        </Button>
-                        </div>
-                      )}
-
-                      {/* Error/Success Messages */}
-                      {errorMessage && (
-                        <div className="p-3 bg-red-500/20 border border-red-500/30 text-red-300 rounded-lg">
-                          <p className="text-sm">{errorMessage}</p>
-                        </div>
-                      )}
-
-                      {successMessage && (
-                        <div className="p-3 bg-green-500/20 border border-green-500/30 text-green-300 rounded-lg">
-                          <p className="text-sm">{successMessage}</p>
+                          <Button
+                            onClick={addMessage}
+                            disabled={!newMessageSender.trim() || !newMessageContent.trim()}
+                            variant="outline"
+                            className="w-full mt-2"
+                          >
+                            Add Message
+                          </Button>
                         </div>
                       )}
                     </div>
 
                     <DialogFooter>
                       <Button
-                        type="button"
                         variant="outline"
-                        onClick={() => setIsCreateChatModalOpen(false)}
-                        className="border-purple-400/30 text-white hover:bg-white/10"
+                        onClick={() => setIsCreateModalOpen(false)}
                       >
                         Cancel
                       </Button>
                       <Button
-                        type="button"
                         onClick={handleCreateChat}
                         disabled={!chatTitle.trim() || isCreatingChat}
-                        className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600"
                       >
-                        {isCreatingChat ? "Creating..." : "Create Chat ✨"}
+                        {isCreatingChat ? (
+                          <div className="flex items-center justify-center gap-2">
+                            <LoadingSpinner />
+                            <span>Creating...</span>
+                          </div>
+                        ) : (
+                          "Create Chat"
+                        )}
                       </Button>
                     </DialogFooter>
                   </DialogContent>
                 </Dialog>
-              </CardHeader>
-              <CardContent>
-                {chats.length > 0 ? (
-                  <div className="space-y-3">
-                    {chats.map(chat => (
-                      <div 
-                        key={chat.id} 
-                        className={`p-4 rounded-lg cursor-pointer transition-all duration-200 hover:scale-105 ${
-                          selectedChatId === chat.id 
-                            ? 'bg-gradient-to-r from-purple-500/20 to-pink-500/20 border border-purple-400/30' 
-                            : 'bg-white/5 hover:bg-white/10 border border-gray-700'
-                        }`}
-                        onClick={() => setSelectedChatId(chat.id)}
-                      >
-                        <p className="font-medium text-white">{chat.title || "Untitled Chat"}</p>
-                        <p className="text-sm text-gray-400">Created: {new Date(chat.createdAt).toLocaleDateString()}</p>
+
+                <div className="space-y-2">
+                  {chats.length > 0 ? (
+                    chats.map(chat => (
+                      <ChatCard
+                        key={chat.id}
+                        chat={chat}
+                        isSelected={selectedChatId === chat.id}
+                        isEditing={editingChatId === chat.id}
+                        editTitle={editingTitle}
+                        onSelect={() => selectChat(chat.id)}
+                        onEdit={() => {
+                          setEditingChatId(chat.id);
+                          setEditingTitle(chat.title || "");
+                        }}
+                        onSave={() => handleEditChatTitle(chat.id)}
+                        onCancel={() => {
+                          setEditingChatId(null);
+                          setEditingTitle("");
+                        }}
+                        onTitleChange={setEditingTitle}
+                        isUpdating={isUpdatingTitle}
+                      />
+                    ))
+                  ) : (
+                    <div className="text-center py-12">
+                      <MessageCircle className="w-12 h-12 text-white/20 mx-auto mb-4" />
+                      <p className="text-white/60 text-sm">No chats yet</p>
+                      <p className="text-white/40 text-xs">Create your first chat to get started</p>
+                    </div>
+                  )}
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+
+        {/* Main Content */}
+        <div className="flex-1 overflow-auto min-w-0">
+                      {selectedChatId ? (
+              <div className="p-3 sm:p-4 md:p-6 space-y-4 md:space-y-6">
+              {isLoadingChatData ? (
+                // Skeleton Loading State
+                <div className="space-y-6">
+                  <div className="animate-pulse">
+                    <div className="h-8 bg-white/20 rounded w-64 mb-2"></div>
+                    <div className="h-4 bg-white/15 rounded w-48"></div>
+                  </div>
+                  
+                  <SkeletonAnalysisGrid />
+                  
+                                      <div className="space-y-4">
+                      <div className="h-6 bg-white/15 rounded w-32 sm:w-48 animate-pulse"></div>
+                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                        <SkeletonCard />
+                        <SkeletonCard />
                       </div>
+                    </div>
+                </div>
+              ) : (
+                <>
+                  {/* Chat Header */}
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div className="min-w-0">
+                      <h1 className="text-xl sm:text-2xl font-bold text-white truncate">{selectedChat?.title}</h1>
+                      <p className="text-sm sm:text-base text-white/60">
+                        {selectedChatMessages.length} messages • {selectedChatAnalyzes.length > 0 ? 'Analysis complete' : 'Ready for analysis'}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Analysis Types Preview - Now Selectable */}
+                  <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-2 sm:gap-3">
+                    {(Object.keys(ANALYSIS_CONFIG) as AnalysisType[]).map(analysisType => (
+                      <AnalysisPreviewCard
+                        key={analysisType}
+                        analysisType={analysisType}
+                        analysisData={analysesByType[analysisType]}
+                        isSelected={selectedAnalysisType === analysisType}
+                        onClick={() => {
+                          if (analysesByType[analysisType]) {
+                            setSelectedAnalysisType(
+                              selectedAnalysisType === analysisType ? null : analysisType
+                            );
+                          }
+                        }}
+                      />
                     ))}
                   </div>
-                ) : (
-                  <div className="text-center py-8">
-                    <Upload className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                    <p className="text-gray-400 mb-2">No chats uploaded yet</p>
-                    <p className="text-sm text-gray-500">Upload your first chat to get started!</p>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </div>
 
-          {/* Analysis Section */}
-          <div className="lg:col-span-2">
-            {selectedChatId ? (
-              <div className="space-y-6">
-                {/* Analysis Controls */}
-                <Card className="bg-white/5 border-purple-400/20 backdrop-blur-sm">
-                  <CardHeader>
-                    <CardTitle className="text-white">Analyze: {selectedChat?.title} 🔍</CardTitle>
-                    <CardDescription className="text-gray-300">
-                      Get the full rundown - all vibes, stats, flags, and energy levels at once 💯
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
+                  {/* Analysis Results or Call to Action */}
+                  {selectedChatAnalyzes.length > 0 ? (
                     <div className="space-y-4">
-                      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
-                        {(["VibeCheck", "ChatStats", "RedFlag", "GreenFlag", "SimpOMeter", "GhostRisk", "MainCharacterEnergy", "EmotionalDepth"] as AnalysisType[]).map((analysisKey) => {
-                          const info = getAnalysisInfo(analysisKey);
-                          return (
-                            <div key={analysisKey} className={`p-3 rounded-lg bg-gradient-to-r ${info.color} bg-opacity-20 border border-white/10 text-center`}>
-                              <div className="text-lg mb-1">{info.emoji}</div>
-                              <div className="text-xs text-white font-medium">
-                                {analysisKey.replace(/([A-Z])/g, ' $1').trim()}
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-
-                      <Button
-                        onClick={handleAnalyzeChat}
-                        disabled={isAnalyzing || totalCredits < 8}
-                        className="w-full bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 transition-all duration-200 hover:scale-105 py-6 text-lg"
-                      >
-                        {isAnalyzing ? (
-                          <>
-                            <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin mr-3"></div>
-                            Analyzing all the vibes...
-                          </>
-                        ) : (
-                          <>
-                            <Zap className="h-5 w-5 mr-3" />
-                            🔮 Run Full Analysis (8 credits)
-                          </>
-                        )}
-                      </Button>
-
-                      {totalCredits < 8 && (
-                        <p className="text-sm text-red-400 text-center">
-                          Need 8 credits for full analysis! Get more to continue 💸
-                        </p>
-                      )}
-
-                      {/* Error/Success Messages */}
-                      {errorMessage && (
-                        <div className="p-3 bg-red-500/20 border border-red-500/30 text-red-300 rounded-lg">
-                          <p className="text-sm font-medium">{errorMessage}</p>
-                        </div>
-                      )}
-                      {successMessage && (
-                        <div className="p-3 bg-green-500/20 border border-green-500/30 text-green-300 rounded-lg">
-                          <p className="text-sm font-medium">{successMessage}</p>
+                      <h2 className="text-lg font-semibold text-white flex items-center gap-2">
+                        <BarChart3 className="w-5 h-5" />
+                        {selectedAnalysisType ? 
+                          `${ANALYSIS_CONFIG[selectedAnalysisType]?.title} Results` : 
+                          'Analysis Results'
+                        }
+                      </h2>
+                      
+                      {selectedAnalysisType ? (
+                        // Show specific analysis
+                        analysesByType[selectedAnalysisType] && (
+                          <AnalysisResultCard analysis={analysesByType[selectedAnalysisType]} />
+                        )
+                      ) : (
+                                                 // Show all analyses
+                         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                          {selectedChatAnalyzes.map(analysis => (
+                            <AnalysisResultCard key={analysis.id} analysis={analysis} />
+                          ))}
                         </div>
                       )}
                     </div>
-                  </CardContent>
-                </Card>
-
-                {/* Chat Messages Preview */}
-                <Card className="bg-white/5 border-purple-400/20 backdrop-blur-sm">
-                  <CardHeader>
-                    <CardTitle className="text-white">Messages Preview 💬</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    {selectedChatMessages.length > 0 ? (
-                      <div className="space-y-3 max-h-60 overflow-y-auto">
-                        {selectedChatMessages.slice(0, 10).map(message => (
-                          <div key={message.id} className="p-3 rounded-lg bg-white/5 border border-gray-700">
-                            <div className="flex justify-between items-start mb-1">
-                              <p className="font-medium text-sm text-purple-300">{message.sender}</p>
-                              <p className="text-xs text-gray-500">{new Date(message.timestamp).toLocaleString()}</p>
+                  ) : (
+                    <Card className="bg-white/5 border-white/20">
+                      <CardContent className="p-12 text-center">
+                        <Sparkles className="w-16 h-16 text-white/20 mx-auto mb-4" />
+                        <h3 className="text-xl font-semibold text-white mb-2">Ready to spill the tea?</h3>
+                        <p className="text-white/60 mb-6">
+                          Run an analysis to get insights on this conversation
+                        </p>
+                        <Button
+                          onClick={handleAnalyzeChat}
+                          disabled={isAnalyzing || totalCredits < 8}
+                          className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600"
+                        >
+                          {isAnalyzing ? (
+                            <div className="flex items-center justify-center gap-2">
+                              <LoadingSpinner />
+                              <span>Analyzing...</span>
                             </div>
-                            <p className="text-sm text-gray-300 whitespace-pre-wrap">{message.content}</p>
-                          </div>
-                        ))}
-                        {selectedChatMessages.length > 10 && (
-                          <p className="text-sm text-gray-400 text-center py-2">
-                            ... and {selectedChatMessages.length - 10} more messages
-                          </p>
-                        )}
-                      </div>
-                    ) : (
-                      <div className="text-center py-8">
-                        <MessageCircle className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                        <p className="text-gray-400">No messages in this chat</p>
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
+                          ) : (
+                            "Start Analysis"
+                          )}
+                        </Button>
+                      </CardContent>
+                    </Card>
+                  )}
 
-                {/* Analysis Results */}
-                <Card className="bg-white/5 border-purple-400/20 backdrop-blur-sm">
-                  <CardHeader>
-                    <CardTitle className="text-white">Analysis Results 📈</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    {selectedChatAnalyzes.length > 0 ? (
-                      <div className="space-y-4">
-                        {selectedChatAnalyzes.map(analysis => {
-                          const analysisType = getAnalysisTypeFromResult(analysis.result);
-                          const info = getAnalysisInfo(analysisType as AnalysisType);
-                          
-                          return (
-                            <div key={analysis.id} className="p-4 rounded-lg bg-gradient-to-r from-purple-500/10 to-pink-500/10 border border-purple-400/20">
-                              <div className="flex justify-between items-start mb-3">
-                                <div className="flex items-center gap-2">
-                                  <span className="text-lg">{info.emoji}</span>
-                                  <p className="font-medium text-white">{analysisType.replace(/([A-Z])/g, ' $1').trim()}</p>
-                                </div>
-                                <p className="text-xs text-gray-400">{new Date(analysis.createdAt).toLocaleString()}</p>
+                  {/* Messages Preview */}
+                  {selectedChatMessages.length > 0 && (
+                    <Card className="bg-white/5 border-white/20">
+                      <CardHeader>
+                        <CardTitle className="text-white">Messages Preview</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="space-y-3 max-h-60 overflow-y-auto">
+                          {selectedChatMessages.slice(0, 5).map(message => (
+                            <div key={message.id} className="p-3 bg-white/5 rounded-lg">
+                              <div className="flex justify-between items-start mb-1">
+                                <span className="text-sm font-medium text-purple-300">{message.sender}</span>
+                                <span className="text-xs text-white/40">
+                                  {new Date(message.timestamp).toLocaleString()}
+                                </span>
                               </div>
-                              <div className="bg-white/5 rounded-lg p-3 border border-gray-700">
-                                <pre className="text-sm text-gray-300 whitespace-pre-wrap font-sans">
-                                  {JSON.stringify(analysis.result, null, 2)}
-                                </pre>
-                              </div>
+                              <p className="text-sm text-white/80">{message.content}</p>
                             </div>
-                          );
-                        })}
-                      </div>
-                    ) : (
-                      <div className="text-center py-8">
-                        <BarChart3 className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                        <p className="text-gray-400 mb-2">No analyses yet</p>
-                        <p className="text-sm text-gray-500">Run an analysis to see the results here!</p>
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
+                          ))}
+                          {selectedChatMessages.length > 5 && (
+                            <p className="text-center text-white/40 text-sm py-2">
+                              +{selectedChatMessages.length - 5} more messages
+                            </p>
+                          )}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )}
+                </>
+              )}
+            </div>
+                      ) : (
+              <div className="flex items-center justify-center h-full p-4">
+                <div className="text-center max-w-md">
+                  <Sparkles className="w-16 sm:w-20 h-16 sm:h-20 text-white/20 mx-auto mb-4 sm:mb-6" />
+                  <h2 className="text-xl sm:text-2xl font-bold text-white mb-4">Select a chat to analyze</h2>
+                  <p className="text-sm sm:text-base text-white/60 mb-6 sm:mb-8">Choose a conversation from the sidebar to get started</p>
+                <Button
+                  onClick={() => setIsCreateModalOpen(true)}
+                  className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600"
+                >
+                  <Plus className="w-4 h-4 mr-2" />
+                  Create Your First Chat
+                </Button>
               </div>
-            ) : (
-              <Card className="bg-white/5 border-purple-400/20 backdrop-blur-sm">
-                <CardContent className="p-12">
-                  <div className="text-center">
-                    <Sparkles className="w-16 h-16 text-purple-400 mx-auto mb-6" />
-                    <h3 className="text-2xl font-bold text-white mb-4">Select a chat to analyze</h3>
-                    <p className="text-gray-400 mb-6">
-                      Choose a conversation from the left to start getting those insights ✨
-                    </p>
-                    <p className="text-sm text-gray-500">
-                      Or upload a new chat to get started!
-                    </p>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-          </div>
+            </div>
+          )}
         </div>
       </div>
     </div>
