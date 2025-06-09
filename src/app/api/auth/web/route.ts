@@ -68,8 +68,8 @@ export async function POST(request: NextRequest) {
         data: {
           userId: user.id,
           type: "ANALYSIS",
-          totalAmount: 1,
-          amount: 1,
+          totalAmount: 128,
+          amount: 8,
           subscriptionId: subscription.id,
         },
       });
