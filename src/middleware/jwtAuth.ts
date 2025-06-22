@@ -52,10 +52,5 @@ export function jwtAuth(): MiddlewareHandler {
   };
 }
 
-export const withProtectedRoute = (
-  handler: (request: AuthenticatedRequest) => Promise<NextResponse>,
-) => {
-  return combineMiddleware(jwtAuth(), async (req: AuthenticatedRequest) =>
-    handler(req),
-  );
-};
+export const withProtectedRoute = (handler: (request: AuthenticatedRequest) => Promise<NextResponse>) =>
+  combineMiddleware(jwtAuth())(handler);

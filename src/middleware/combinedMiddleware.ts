@@ -16,15 +16,18 @@ export type MiddlewareHandler = (
   request: AuthenticatedRequest,
 ) => Promise<NextResponse> | NextResponse;
 
-export function combineMiddleware(...middlewares: MiddlewareHandler[]) {
-  return async (req: NextRequest): Promise<NextResponse> => {
-    try {
+export function combineMiddleware(
+  ...middlewares: MiddlewareHandler[]
+): (handler: (req: AuthenticatedRequest) => Promise<NextResponse>) => (req: NextRequest) => Promise<NextResponse> {
+  return (handler) => {
+    return async (req: NextRequest): Promise<NextResponse> => {
       let currentRequest = req as AuthenticatedRequest;
-      let result: NextResponse = NextResponse.next();
 
       for (const middleware of middlewares) {
-        result = await middleware(currentRequest);
-        if (result.status !== 200 && result.status !== 201) {
+        const result = await middleware(currentRequest);
+
+        // If middleware returns anything other than NextResponse.next(), short-circuit
+        if (!result || result.status !== 200) {
           return result;
         }
 
@@ -34,15 +37,7 @@ export function combineMiddleware(...middlewares: MiddlewareHandler[]) {
         }
       }
 
-      result.headers.set(
-        "Content-Security-Policy",
-        "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; font-src 'self';",
-      );
-
-      return result;
-    } catch (error) {
-      console.error("Middleware error:", error);
-      return NextResponse.json(ApiResponse.error("Internal server error", 500));
-    }
+      return handler(currentRequest);
+    };
   };
 }
