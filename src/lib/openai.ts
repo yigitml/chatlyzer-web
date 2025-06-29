@@ -176,14 +176,16 @@ export async function analyzeChat<T extends ChatlyzerSchemaType>(
     const analysisType = getAnalysisTypeFromSchema(schema);
     const detectedLanguage = await detectChatLanguage(minimalChat, openai);
     const systemPrompt = createSystemPrompt(analysisType, detectedLanguage);
+    const content = `Analyze this chat and provide a complete ${analysisType} analysis following the exact format in your instructions:\nChat: ${JSON.stringify(minimalChat)}`;
 
+    console.log(content);
     const response = await openai.chat.completions.create({
       model: MODELS.MAIN,
       messages: [
         { role: "system", content: systemPrompt },
         { 
           role: "user", 
-          content: `Analyze this chat and provide a complete ${analysisType} analysis following the exact format in your instructions:\nChat: ${JSON.stringify(minimalChat)}`
+          content: content
         }
       ],
       response_format: zodResponseFormat(schema, "analysis")
