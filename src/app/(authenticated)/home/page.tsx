@@ -13,8 +13,8 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Plus, X, FileText, Upload, Zap, Crown, Sparkles, MessageCircle, Edit2, Check, ChevronLeft, ChevronRight, BarChart3, CheckCircle, XCircle, Bolt } from "lucide-react";
-import { ChatPostRequest, AnalysisType } from "@/types/api/apiRequest";
+import { Plus, X, FileText, Upload, Zap, Crown, Sparkles, MessageCircle, Edit2, Check, ChevronLeft, ChevronRight, BarChart3, CheckCircle, XCircle, Bolt, Trash2 } from "lucide-react";
+import { ChatPostRequest, ChatDeleteRequest, AnalysisType } from "@/types/api/apiRequest";
 import { convertChatExport, ChatPlatform } from "@/utils/messageConverter";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import Image from "next/image";
@@ -304,7 +304,587 @@ const AnalysisPreviewCard = ({
   );
 };
 
-// Full Analysis Result Card
+// Credits display component
+const CreditsDisplay = ({ credits }: { credits: number }) => {
+  return (
+    <div className="flex items-center gap-2 bg-white/10 rounded-full px-3 py-1">
+      <Zap className="w-4 h-4 text-green-400 flex-shrink-0" />
+      <span className="font-mono text-sm text-white whitespace-nowrap">{credits.toLocaleString()}</span>
+    </div>
+  );
+};
+
+// Analysis UI Components
+const MetricCard = ({ title, value, icon }: { title: string; value: string; icon: string }) => (
+  <div className="bg-white/5 rounded-xl p-4 text-center border border-white/10">
+    <div className="text-2xl mb-2">{icon}</div>
+    <div className="text-xl font-bold text-white">{value}</div>
+    <div className="text-sm text-white/60">{title}</div>
+  </div>
+);
+
+const ScoreCard = ({ 
+  title, 
+  score, 
+  maxScore, 
+  description, 
+  isPercentage = false 
+}: { 
+  title: string; 
+  score: number; 
+  maxScore: number; 
+  description: string; 
+  isPercentage?: boolean;
+}) => {
+  const percentage = (score / maxScore) * 100;
+  const displayValue = isPercentage ? `${Math.round(score)}%` : `${score}/${maxScore}`;
+  
+  return (
+    <div className="bg-white/5 rounded-xl p-4 border border-white/10">
+      <div className="flex justify-between items-center mb-2">
+        <h3 className="font-semibold text-white">{title}</h3>
+        <span className="text-lg font-bold text-purple-400">{displayValue}</span>
+      </div>
+      <p className="text-sm text-white/60 mb-3">{description}</p>
+      <div className="w-full bg-white/10 rounded-full h-2">
+        <div 
+          className="bg-gradient-to-r from-purple-500 to-pink-500 h-2 rounded-full transition-all duration-300"
+          style={{ width: `${Math.min(percentage, 100)}%` }}
+        />
+      </div>
+    </div>
+  );
+};
+
+const InsightCard = ({ title, items, icon }: { title: string; items: string[]; icon: string }) => (
+  <div className="bg-white/5 rounded-xl p-4 border border-white/10">
+    <div className="flex items-center gap-2 mb-3">
+      <span className="text-lg">{icon}</span>
+      <h3 className="font-semibold text-white">{title}</h3>
+    </div>
+    <div className="space-y-1">
+      {items.map((item, index) => (
+        <div key={index} className="text-sm text-white/80">• {item}</div>
+      ))}
+    </div>
+  </div>
+);
+
+const WarningCard = ({ 
+  title, 
+  description, 
+  severity, 
+  examples = [], 
+  isGreenFlag = false 
+}: { 
+  title: string; 
+  description: string; 
+  severity: number; 
+  examples?: any[]; 
+  isGreenFlag?: boolean;
+}) => {
+  const colorClass = isGreenFlag ? 'border-green-500/30 bg-green-500/10' : 'border-red-500/30 bg-red-500/10';
+  const textColorClass = isGreenFlag ? 'text-green-300' : 'text-red-300';
+  
+  return (
+    <div className={`rounded-xl p-4 border ${colorClass}`}>
+      <div className="flex justify-between items-center mb-2">
+        <h3 className={`font-bold ${textColorClass}`}>{title}</h3>
+        <span className={`text-sm font-bold ${textColorClass}`}>{severity}/10</span>
+      </div>
+      <p className="text-white/80 text-sm mb-3">{description}</p>
+      {examples.length > 0 && (
+        <div className="space-y-2">
+          <p className="text-xs font-semibold text-white/60">Examples:</p>
+          {examples.slice(0, 2).map((example, index) => (
+            <MessageExampleCard key={index} example={example} />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
+const ComparisonCard = ({ 
+  title, 
+  user1Name, 
+  user1Value, 
+  user2Name, 
+  user2Value, 
+  icon 
+}: { 
+  title: string; 
+  user1Name: string; 
+  user1Value: string; 
+  user2Name: string; 
+  user2Value: string; 
+  icon: string;
+}) => {
+  const val1 = parseInt(user1Value) || 0;
+  const val2 = parseInt(user2Value) || 0;
+  const total = val1 + val2;
+  const user1Percentage = total > 0 ? (val1 / total) * 100 : 50;
+  
+  return (
+    <div className="bg-white/5 rounded-xl p-4 border border-white/10">
+      <div className="flex items-center gap-2 mb-3">
+        <span className="text-lg">{icon}</span>
+        <h3 className="font-semibold text-white">{title}</h3>
+      </div>
+      <div className="flex justify-between items-center mb-3">
+        <div className="text-left">
+          <div className="text-sm font-medium text-white">{user1Name}</div>
+          <div className="text-xs text-purple-400">{user1Value} ({Math.round(user1Percentage)}%)</div>
+        </div>
+        <div className="text-right">
+          <div className="text-sm font-medium text-white">{user2Name}</div>
+          <div className="text-xs text-pink-400">{user2Value} ({Math.round(100 - user1Percentage)}%)</div>
+        </div>
+      </div>
+      <div className="w-full bg-white/10 rounded-full h-2 flex overflow-hidden">
+        <div 
+          className="bg-purple-500 h-full"
+          style={{ width: `${user1Percentage}%` }}
+        />
+        <div 
+          className="bg-pink-500 h-full"
+          style={{ width: `${100 - user1Percentage}%` }}
+        />
+      </div>
+    </div>
+  );
+};
+
+const MessageExampleCard = ({ example }: { example: any }) => (
+  <div className="bg-white/5 rounded-lg p-3 border border-white/10">
+    <div className="flex justify-between items-center mb-1">
+      <span className="text-xs font-medium text-purple-300">{example.sender}</span>
+      <span className="text-xs text-white/40">{example.timestamp}</span>
+    </div>
+    <p className="text-sm text-white/80">{example.contentSnippet || example.content}</p>
+  </div>
+);
+
+const TimelineCard = ({ phases }: { phases: any[] }) => (
+  <div className="bg-white/5 rounded-xl p-4 border border-white/10">
+    <div className="flex items-center gap-2 mb-4">
+      <span className="text-lg">📈</span>
+      <h3 className="font-semibold text-white">Conversation Timeline</h3>
+    </div>
+    <div className="space-y-3">
+      {phases.map((phase, index) => (
+        <div key={index} className="flex items-center gap-3">
+          <span className="text-lg">{getPhaseEmoji(phase.phase)}</span>
+          <div className="flex-1">
+            <div className="text-sm font-medium text-white">{phase.phase}</div>
+            <div className="text-xs text-white/60">
+              {phase.start} {phase.end && `- ${phase.end}`}
+            </div>
+          </div>
+        </div>
+      ))}
+    </div>
+  </div>
+);
+
+// Helper functions
+const getPhaseEmoji = (phase: string) => {
+  const phaseEmojis: Record<string, string> = {
+    'intro': '👋',
+    'honeymoon': '💕',
+    'drift': '🌊',
+    'real talk': '💭',
+    'dry spell': '🏜️',
+    'rekindled': '🔥'
+  };
+  return phaseEmojis[phase?.toLowerCase()] || '📅';
+};
+
+const getVibeEmoji = (vibe: string) => {
+  const vibeEmojis: Record<string, string> = {
+    'positive': '😊',
+    'flirty': '😘',
+    'funny': '😂',
+    'awkward': '😬',
+    'chaotic': '🤪',
+    'dry': '😐'
+  };
+  return vibeEmojis[vibe?.toLowerCase()] || '😐';
+};
+
+const getSimpLevel = (score: number) => {
+  if (score <= 3) return 'Balanced';
+  if (score <= 6) return 'Mild Simp';
+  if (score <= 8) return 'Major Simp';
+  return 'Ultra Simp';
+};
+
+const getGhostRiskLevel = (riskLevel: string) => {
+  return riskLevel || 'Unknown';
+};
+
+const getMainCharacterLevel = (score: number) => {
+  if (score <= 3) return 'Background Character';
+  if (score <= 6) return 'Supporting Character';
+  if (score <= 8) return 'Main Character';
+  return 'The Protagonist';
+};
+
+const getEmotionalDepthLevel = (score: number) => {
+  if (score <= 3) return 'Surface Level';
+  if (score <= 6) return 'Some Depth';
+  if (score <= 8) return 'Deep Connection';
+  return 'Soul Baring';
+};
+
+// Analysis Builders
+const VibeCheckAnalysisBuilder = ({ data }: { data: any }) => {
+  const overallVibe = data.overallVibe || 'neutral';
+  const emojiScore = data.emojiScore || 0;
+  const humorDetected = data.humorDetected || false;
+  const keywords = data.keywords || [];
+  const moodDescriptors = data.moodDescriptors || [];
+  const messageRefs = data.messageRefs || [];
+
+  return (
+    <div className="space-y-4">
+      <div className="grid grid-cols-2 gap-4">
+        <MetricCard 
+          title="Overall Vibe" 
+          value={overallVibe.charAt(0).toUpperCase() + overallVibe.slice(1)} 
+          icon={getVibeEmoji(overallVibe)} 
+        />
+        <MetricCard 
+          title="Humor Detected" 
+          value={humorDetected ? "Yes" : "No"} 
+          icon={humorDetected ? "😂" : "😐"} 
+        />
+      </div>
+      
+      <ScoreCard
+        title="Emoji Score"
+        score={emojiScore}
+        maxScore={10}
+        description="How expressive is the conversation"
+      />
+      
+      {keywords.length > 0 && (
+        <InsightCard title="Keywords" items={keywords} icon="🔑" />
+      )}
+      
+      {moodDescriptors.length > 0 && (
+        <InsightCard title="Mood Descriptors" items={moodDescriptors} icon="🎭" />
+      )}
+      
+      {messageRefs.slice(0, 3).map((ref: any, index: number) => (
+        <MessageExampleCard key={index} example={ref} />
+      ))}
+    </div>
+  );
+};
+
+const RedFlagAnalysisBuilder = ({ data }: { data: any }) => {
+  const flags = data.flags || [];
+  
+  return (
+    <div className="space-y-4">
+      <MetricCard 
+        title="Red Flags Detected" 
+        value={flags.length.toString()} 
+        icon="🚩" 
+      />
+      
+      {flags.map((flag: any, index: number) => (
+        <WarningCard
+          key={index}
+          title={flag.label || 'Unknown Flag'}
+          description={flag.explanation || ''}
+          severity={flag.severity || 0}
+          examples={flag.messageRefs || []}
+          isGreenFlag={false}
+        />
+      ))}
+    </div>
+  );
+};
+
+const GreenFlagAnalysisBuilder = ({ data }: { data: any }) => {
+  const traits = data.traits || [];
+  
+  return (
+    <div className="space-y-4">
+      <MetricCard 
+        title="Green Flags Detected" 
+        value={traits.length.toString()} 
+        icon="✅" 
+      />
+      
+      {traits.map((trait: any, index: number) => (
+        <WarningCard
+          key={index}
+          title={trait.label || 'Unknown Trait'}
+          description={trait.explanation || ''}
+          severity={trait.positivityScore || 0}
+          examples={trait.messageRefs || []}
+          isGreenFlag={true}
+        />
+      ))}
+    </div>
+  );
+};
+
+const SimpOMeterAnalysisBuilder = ({ data }: { data: any }) => {
+  const simpScore = data.simpScore || 0;
+  const behaviors = data.behaviorsDetected || [];
+  const messageRefs = data.messageRefs || [];
+
+  return (
+    <div className="space-y-4">
+      <ScoreCard
+        title="Simp Score"
+        score={simpScore}
+        maxScore={10}
+        description={getSimpLevel(simpScore)}
+      />
+      
+      {behaviors.length > 0 && (
+        <InsightCard title="Behaviors Detected" items={behaviors} icon="🎭" />
+      )}
+      
+      {messageRefs.slice(0, 3).map((ref: any, index: number) => (
+        <MessageExampleCard key={index} example={ref} />
+      ))}
+    </div>
+  );
+};
+
+const GhostRiskAnalysisBuilder = ({ data }: { data: any }) => {
+  const riskLevel = data.riskLevel || 'unknown';
+  const riskScore = data.riskScore || 0;
+  const signals = data.signals || [];
+
+  return (
+    <div className="space-y-4">
+      <div className="grid grid-cols-2 gap-4">
+        <MetricCard 
+          title="Risk Level" 
+          value={getGhostRiskLevel(riskLevel)} 
+          icon="👻" 
+        />
+        <MetricCard 
+          title="Risk Score" 
+          value={`${Math.round(riskScore)}/10`} 
+          icon="📊" 
+        />
+      </div>
+      
+      {signals.map((signal: any, index: number) => (
+        <WarningCard
+          key={index}
+          title={signal.label || 'Unknown Signal'}
+          description={signal.explanation || ''}
+          severity={riskScore}
+          examples={signal.messageRefs || []}
+          isGreenFlag={false}
+        />
+      ))}
+    </div>
+  );
+};
+
+const MainCharacterEnergyAnalysisBuilder = ({ data }: { data: any }) => {
+  const mceScore = data.mceScore || 0;
+  const traits = data.traits || [];
+  const standoutMoments = data.standoutMoments || [];
+
+  return (
+    <div className="space-y-4">
+      <ScoreCard
+        title="Main Character Energy"
+        score={mceScore}
+        maxScore={10}
+        description={getMainCharacterLevel(mceScore)}
+      />
+      
+      {traits.length > 0 && (
+        <InsightCard title="Dramatic Traits" items={traits} icon="🎭" />
+      )}
+      
+      {standoutMoments.slice(0, 3).map((moment: any, index: number) => (
+        <MessageExampleCard key={index} example={moment} />
+      ))}
+    </div>
+  );
+};
+
+const EmotionalDepthAnalysisBuilder = ({ data }: { data: any }) => {
+  const depthScore = data.depthScore || 0;
+  const topicsTouched = data.topicsTouched || [];
+  const vulnerableMoments = data.vulnerableMoments || [];
+
+  return (
+    <div className="space-y-4">
+      <ScoreCard
+        title="Emotional Depth"
+        score={depthScore}
+        maxScore={10}
+        description={getEmotionalDepthLevel(depthScore)}
+      />
+      
+      {topicsTouched.length > 0 && (
+        <InsightCard title="Topics Discussed" items={topicsTouched} icon="🧠" />
+      )}
+      
+      {vulnerableMoments.map((moment: any, index: number) => (
+        <div key={index} className="bg-white/5 rounded-xl p-4 border border-white/10">
+          <h4 className="font-semibold text-white mb-2">{moment.description}</h4>
+          {moment.messageRefs?.slice(0, 2).map((ref: any, refIndex: number) => (
+            <MessageExampleCard key={refIndex} example={ref} />
+          ))}
+        </div>
+      ))}
+    </div>
+  );
+};
+
+const ChatStatsAnalysisBuilder = ({ data }: { data: any }) => {
+  const totals = data.totals || {};
+  const vibeBalance = data.vibeBalance || {};
+  const userRoles = data.userRoles || [];
+  const initiatorStats = data.initiatorStats || {};
+  const conversationPhases = data.conversationPhases || [];
+
+  return (
+    <div className="space-y-6">
+      {/* Overview Section */}
+      <div>
+        <h3 className="text-lg font-semibold text-white mb-3 flex items-center gap-2">
+          <span>📊</span> Overview
+        </h3>
+        <div className="grid grid-cols-3 gap-4">
+          <MetricCard 
+            title="Messages" 
+            value={totals.messageCount?.toString() || "0"} 
+            icon="💬" 
+          />
+          <MetricCard 
+            title="Words" 
+            value={totals.wordCount?.toString() || "0"} 
+            icon="📝" 
+          />
+          <MetricCard 
+            title="Emojis" 
+            value={totals.emojiCount?.toString() || "0"} 
+            icon="😊" 
+          />
+        </div>
+      </div>
+
+      {/* Balance Section */}
+      {Object.keys(vibeBalance).length > 0 && (
+        <div>
+          <h3 className="text-lg font-semibold text-white mb-3 flex items-center gap-2">
+            <span>⚖️</span> Conversation Balance
+          </h3>
+          <div className="space-y-4">
+            <ScoreCard
+              title="Mutual Effort"
+              score={vibeBalance.mutualEffortScore || 0}
+              maxScore={10}
+              description="Conversation energy balance"
+            />
+            <ScoreCard
+              title="Emotional Balance"
+              score={vibeBalance.emotionalBalance || 0}
+              maxScore={10}
+              description="Emotional sharing balance"
+            />
+            <ScoreCard
+              title="Engagement Level"
+              score={vibeBalance.dryVsJuicyRatio || 0}
+              maxScore={100}
+              description="% of engaging messages"
+              isPercentage={true}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* User Comparison */}
+      {totals.messagesPerUser && totals.messagesPerUser.length >= 2 && (
+        <div>
+          <h3 className="text-lg font-semibold text-white mb-3 flex items-center gap-2">
+            <span>👥</span> User Activity
+          </h3>
+          <div className="space-y-4">
+            <ComparisonCard
+              title="Messages Sent"
+              user1Name={totals.messagesPerUser[0]?.username || "User 1"}
+              user1Value={totals.messagesPerUser[0]?.messageCount?.toString() || "0"}
+              user2Name={totals.messagesPerUser[1]?.username || "User 2"}
+              user2Value={totals.messagesPerUser[1]?.messageCount?.toString() || "0"}
+              icon="💬"
+            />
+            {totals.wordsPerUser && totals.wordsPerUser.length >= 2 && (
+              <ComparisonCard
+                title="Words Written"
+                user1Name={totals.wordsPerUser[0]?.username || "User 1"}
+                user1Value={totals.wordsPerUser[0]?.wordCount?.toString() || "0"}
+                user2Name={totals.wordsPerUser[1]?.username || "User 2"}
+                user2Value={totals.wordsPerUser[1]?.wordCount?.toString() || "0"}
+                icon="📝"
+              />
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Behavior Insights */}
+      {userRoles.length > 0 && (
+        <div>
+          <h3 className="text-lg font-semibold text-white mb-3 flex items-center gap-2">
+            <span>🎭</span> Behavior Insights
+          </h3>
+          <InsightCard
+            title="User Personalities"
+            items={userRoles.map((role: any) => 
+              `${role.username}: ${role.role?.charAt(0).toUpperCase() + role.role?.slice(1) || 'Unknown'}`
+            )}
+            icon="🎭"
+          />
+        </div>
+      )}
+
+      {/* Initiator Stats */}
+      {Object.keys(initiatorStats).length > 0 && (
+        <div className="grid grid-cols-2 gap-4">
+          <MetricCard 
+            title="Conversation Starter" 
+            value={initiatorStats.mostLikelyToStartConvo || "Unknown"} 
+            icon="🚀" 
+          />
+          <MetricCard 
+            title="Gets Ghosted Most" 
+            value={initiatorStats.mostGhosted || "Unknown"} 
+            icon="👻" 
+          />
+        </div>
+      )}
+
+      {/* Timeline */}
+      {conversationPhases.length > 0 && (
+        <div>
+          <h3 className="text-lg font-semibold text-white mb-3 flex items-center gap-2">
+            <span>📈</span> Conversation Journey
+          </h3>
+          <TimelineCard phases={conversationPhases} />
+        </div>
+      )}
+    </div>
+  );
+};
+
+// Updated Analysis Result Card with structured display
 const AnalysisResultCard = ({ analysis }: { analysis: any }) => {
   const getAnalysisType = () => {
     try {
@@ -321,8 +901,48 @@ const AnalysisResultCard = ({ analysis }: { analysis: any }) => {
     }
   };
   
+  const getAnalysisData = () => {
+    try {
+      return typeof analysis.result === 'string' 
+        ? JSON.parse(analysis.result) 
+        : analysis.result;
+    } catch {
+      return {};
+    }
+  };
+  
   const analysisType = getAnalysisType();
+  const analysisData = getAnalysisData();
   const config = ANALYSIS_CONFIG[analysisType as AnalysisType] || { emoji: "🔍", title: "Analysis", description: "" };
+  
+  const renderAnalysisContent = () => {
+    switch (analysisType) {
+      case 'VibeCheck':
+        return <VibeCheckAnalysisBuilder data={analysisData} />;
+      case 'RedFlag':
+        return <RedFlagAnalysisBuilder data={analysisData} />;
+      case 'GreenFlag':
+        return <GreenFlagAnalysisBuilder data={analysisData} />;
+      case 'SimpOMeter':
+        return <SimpOMeterAnalysisBuilder data={analysisData} />;
+      case 'GhostRisk':
+        return <GhostRiskAnalysisBuilder data={analysisData} />;
+      case 'MainCharacterEnergy':
+        return <MainCharacterEnergyAnalysisBuilder data={analysisData} />;
+      case 'EmotionalDepth':
+        return <EmotionalDepthAnalysisBuilder data={analysisData} />;
+      case 'ChatStats':
+        return <ChatStatsAnalysisBuilder data={analysisData} />;
+      default:
+        return (
+          <div className="bg-black/20 rounded-lg p-4 border border-white/10">
+            <pre className="text-sm text-white/80 whitespace-pre-wrap font-mono overflow-x-auto">
+              {JSON.stringify(analysisData, null, 2)}
+            </pre>
+          </div>
+        );
+    }
+  };
   
   return (
     <Card className="bg-white/5 border-white/20">
@@ -336,23 +956,9 @@ const AnalysisResultCard = ({ analysis }: { analysis: any }) => {
         </div>
       </CardHeader>
       <CardContent>
-        <div className="bg-black/20 rounded-lg p-4 border border-white/10">
-          <pre className="text-sm text-white/80 whitespace-pre-wrap font-mono overflow-x-auto">
-            {JSON.stringify(analysis.result, null, 2)}
-          </pre>
-        </div>
+        {renderAnalysisContent()}
       </CardContent>
     </Card>
-  );
-};
-
-// Credits display component
-const CreditsDisplay = ({ credits }: { credits: number }) => {
-  return (
-    <div className="flex items-center gap-2 bg-white/10 rounded-full px-3 py-1">
-      <Zap className="w-4 h-4 text-green-400 flex-shrink-0" />
-      <span className="font-mono text-sm text-white whitespace-nowrap">{credits.toLocaleString()}</span>
-    </div>
   );
 };
 
@@ -361,7 +967,7 @@ export default function UserDashboard() {
   
   // Store hooks
   const { user, isInitialized } = useAuthStore();
-  const { chats, fetchChats, createChat, updateChat } = useChatStore();
+  const { chats, fetchChats, createChat, updateChat, deleteChat } = useChatStore();
   const { messages, fetchMessages } = useMessageStore();
   const { analyzes, fetchAnalyzes, createAnalysis } = useAnalysisStore();
   const { credits, subscription, fetchCredits, fetchSubscription } = useCreditStore();
@@ -378,6 +984,10 @@ export default function UserDashboard() {
   const [editingChatId, setEditingChatId] = useState<string | null>(null);
   const [editingTitle, setEditingTitle] = useState("");
   const [isUpdatingTitle, setIsUpdatingTitle] = useState(false);
+  
+  // Delete Chat State
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isDeletingChat, setIsDeletingChat] = useState(false);
   
   // Create Chat Modal State
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -613,6 +1223,27 @@ export default function UserDashboard() {
     }
   };
 
+  const handleDeleteChat = async () => {
+    if (!selectedChatId) return;
+
+    try {
+      setIsDeletingChat(true);
+      const deleteRequest: ChatDeleteRequest = { id: selectedChatId };
+      await deleteChat(deleteRequest);
+      await fetchChats();
+      
+      // Clear selection since chat is deleted
+      selectChat(null);
+      
+      setIsDeleteDialogOpen(false);
+      showToast("Chat deleted 🗑️", "success");
+    } catch (error) {
+      showToast(error instanceof Error ? error.message : "Failed to delete chat", "error");
+    } finally {
+      setIsDeletingChat(false);
+    }
+  };
+
   const handleWhatsAppImport = () => {
     if (!whatsappImportText.trim()) {
       showToast("Please paste WhatsApp chat export", "error");
@@ -716,6 +1347,44 @@ export default function UserDashboard() {
           onClose={() => setToast(null)}
         />
       )}
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <DialogContent className="bg-gray-900 border-red-500/30 text-white">
+          <DialogHeader>
+            <DialogTitle className="text-red-400">Delete Chat</DialogTitle>
+            <DialogDescription className="text-white/60">
+              Are you sure you want to delete "{selectedChat?.title}"? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setIsDeleteDialogOpen(false)}
+              disabled={isDeletingChat}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleDeleteChat}
+              disabled={isDeletingChat}
+            >
+              {isDeletingChat ? (
+                <div className="flex items-center justify-center gap-2">
+                  <LoadingSpinner />
+                  <span>Deleting...</span>
+                </div>
+              ) : (
+                <>
+                  <Trash2 className="w-4 h-4 mr-2" />
+                  Delete
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <div className="flex h-[calc(100vh-73px)] relative">
         {/* Mobile Sidebar Overlay */}
@@ -954,6 +1623,14 @@ export default function UserDashboard() {
                         {selectedChatMessages.length} messages • {selectedChatAnalyzes.length > 0 ? 'Analysis complete' : 'Ready for analysis'}
                       </p>
                     </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setIsDeleteDialogOpen(true)}
+                      className="text-red-400 hover:text-red-300 hover:bg-red-500/10 flex-shrink-0"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
                   </div>
 
                   {/* Analysis Types Preview - Now Selectable */}
