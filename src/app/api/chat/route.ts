@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { withProtectedRoute } from "@/middleware/jwtAuth";
 import { ApiResponse } from "@/types/api/apiResponse";
-import { ChatPostRequest, ChatPutRequest } from "@/types/api/apiRequest";
+import { ChatPostRequest, ChatPutRequest, ChatDeleteRequest } from "@/types/api/apiRequest";
 import { InputJsonValue, JsonValue } from "@prisma/client/runtime/library";
 
 export const GET = withProtectedRoute(async (request: NextRequest) => {
@@ -118,7 +118,7 @@ export const PUT = withProtectedRoute(async (request: NextRequest) => {
 export const DELETE = withProtectedRoute(async (request: NextRequest) => {
   try {
     const authenticatedUserId = request.user!.id;
-    const { id } = await request.json();
+    const { id } : ChatDeleteRequest = await request.json();
 
     if (!id) {
       return ApiResponse.error("Chat ID is required", 400).toResponse();
