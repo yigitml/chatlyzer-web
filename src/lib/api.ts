@@ -115,11 +115,12 @@ export const createApiClient = (getToken: () => string | null) => {
       return handleResponse(response);
     },
 
-    delete: async (endpoint: string, params?: Record<string, any>) => {
-      const url = buildUrl(endpoint, params);
+    delete: async (endpoint: string, data?: any) => {
+      const url = buildUrl(endpoint);
       const response = await fetch(url, {
         method: "DELETE",
         headers: getDefaultHeaders(),
+        body: data ? JSON.stringify(data) : undefined,
       });
       return handleResponse(response);
     },
