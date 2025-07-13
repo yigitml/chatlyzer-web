@@ -7,7 +7,6 @@ import {
   AnalysisPostRequest, 
   AnalysisPutRequest, 
   AnalysisDeleteRequest,
-  PrivacyAnalysisGetRequest,
   PrivacyAnalysisPostRequest
 } from "@/types/api/apiRequest";
 
@@ -27,10 +26,7 @@ interface AnalysisActions {
   deleteAnalysis: (data: AnalysisDeleteRequest) => Promise<void>;
   
   // Privacy analysis actions
-  fetchPrivacyAnalyzes: (params?: PrivacyAnalysisGetRequest) => Promise<Analysis[]>;
   createPrivacyAnalysis: (data: PrivacyAnalysisPostRequest) => Promise<{ chat: Chat; analyses: Analysis[] }>;
-  updatePrivacyAnalysis: (data: AnalysisPutRequest) => Promise<Analysis>;
-  deletePrivacyAnalysis: (data: AnalysisDeleteRequest) => Promise<void>;
 }
 
 export type AnalysisStore = AnalysisState & AnalysisActions;
@@ -116,17 +112,6 @@ export const useAnalysisStore = create<AnalysisStore>((set, get) => {
     },
 
     // Privacy analysis methods
-    fetchPrivacyAnalyzes: async (params) => {
-      try {
-        set({ isPrivacyLoading: true, error: null });
-        const privacyAnalyzes = await networkService.fetchPrivacyAnalyzes(params);
-        set({ privacyAnalyzes, isPrivacyLoading: false });
-        return privacyAnalyzes;
-      } catch (error) {
-        set({ error: error as Error, isPrivacyLoading: false });
-        throw error;
-      }
-    },
 
     createPrivacyAnalysis: async (data) => {
       try {
@@ -137,35 +122,6 @@ export const useAnalysisStore = create<AnalysisStore>((set, get) => {
           isPrivacyLoading: false 
         }));
         return result;
-      } catch (error) {
-        set({ error: error as Error, isPrivacyLoading: false });
-        throw error;
-      }
-    },
-
-    updatePrivacyAnalysis: async (data) => {
-      try {
-        set({ isPrivacyLoading: true, error: null });
-        const updatedAnalysis = await networkService.updatePrivacyAnalysis(data);
-        set((state) => ({
-          privacyAnalyzes: state.privacyAnalyzes.map(analysis => analysis.id === data.id ? updatedAnalysis : analysis),
-          isPrivacyLoading: false
-        }));
-        return updatedAnalysis;
-      } catch (error) {
-        set({ error: error as Error, isPrivacyLoading: false });
-        throw error;
-      }
-    },
-
-    deletePrivacyAnalysis: async (data) => {
-      try {
-        set({ isPrivacyLoading: true, error: null });
-        await networkService.deletePrivacyAnalysis(data);
-        set((state) => ({
-          privacyAnalyzes: state.privacyAnalyzes.filter(analysis => analysis.id !== data.id),
-          isPrivacyLoading: false
-        }));
       } catch (error) {
         set({ error: error as Error, isPrivacyLoading: false });
         throw error;

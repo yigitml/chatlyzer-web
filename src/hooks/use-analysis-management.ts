@@ -10,7 +10,6 @@ export const useAnalysisManagement = () => {
     privacyAnalyzes,
     fetchAnalyzes, 
     createAnalysis,
-    fetchPrivacyAnalyzes,
     createPrivacyAnalysis,
     isLoading,
     isPrivacyLoading
@@ -69,7 +68,6 @@ export const useAnalysisManagement = () => {
     try {
       updateCreditsOptimistically(8);
       const result = await createPrivacyAnalysis(data);
-      await fetchPrivacyAnalyzes();
       showToast("Privacy analysis complete! Messages analyzed but not stored 🔒", "success");
       return result;
     } catch (error) {
@@ -120,7 +118,6 @@ export const useAnalysisManagement = () => {
     handleAnalyzeChat,
     handlePrivacyAnalysis,
     fetchAnalyzes,
-    fetchPrivacyAnalyzes,
     fetchCredits,
     
     // Computed
