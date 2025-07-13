@@ -1,20 +1,27 @@
 import { useState } from "react";
 import { useAnalysisStore } from "@/store/analysisStore";
 import { useCreditStore } from "@/store/creditStore";
-import { AnalysisType } from "@/types/api/apiRequest";
+import { AnalysisType, PrivacyAnalysisPostRequest } from "@/types/api/apiRequest";
 import { normalizeAnalysisType } from "@/types/analysis";
 
 export const useAnalysisManagement = () => {
-  const { analyzes, fetchAnalyzes, createAnalysis } = useAnalysisStore();
+  const { 
+    analyzes, 
+    privacyAnalyzes,
+    fetchAnalyzes, 
+    createAnalysis,
+    fetchPrivacyAnalyzes,
+    createPrivacyAnalysis,
+    isLoading,
+    isPrivacyLoading
+  } = useAnalysisStore();
   const { credits, fetchCredits } = useCreditStore();
   
-  const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [selectedAnalysisType, setSelectedAnalysisType] = useState<AnalysisType | null>(null);
+  const [isPrivacyMode, setIsPrivacyMode] = useState(false);
 
   // Optimistic credit update
   const updateCreditsOptimistically = async (creditsUsed: number) => {
-    // Optimistic update would go here if we had a setter
-    // For now, we'll refetch after a delay
     setTimeout(async () => {
       try {
         await fetchCredits();
@@ -38,23 +45,44 @@ export const useAnalysisManagement = () => {
     }
     
     try {
-      setIsAnalyzing(true);
-      updateCreditsOptimistically(8); // Optimistic update
+      updateCreditsOptimistically(8);
       await createAnalysis({ chatId });
       await fetchAnalyzes({ chatId });
       showToast("Analysis complete! The tea has been spilled ☕", "success");
     } catch (error) {
       showToast(error instanceof Error ? error.message : "Analysis failed", "error");
-      // Refetch credits on error to get correct amount
       await fetchCredits();
-    } finally {
-      setIsAnalyzing(false);
+    }
+  };
+
+  const handlePrivacyAnalysis = async (
+    data: PrivacyAnalysisPostRequest,
+    showToast: (message: string, type: "success" | "error") => void
+  ) => {
+    const totalCredits = credits.reduce((sum, credit) => sum + credit.amount, 0);
+    
+    if (totalCredits < 8) {
+      showToast("Insufficient credits for privacy analysis", "error");
+      return;
+    }
+    
+    try {
+      updateCreditsOptimistically(8);
+      const result = await createPrivacyAnalysis(data);
+      await fetchPrivacyAnalyzes();
+      showToast("Privacy analysis complete! Messages analyzed but not stored 🔒", "success");
+      return result;
+    } catch (error) {
+      showToast(error instanceof Error ? error.message : "Privacy analysis failed", "error");
+      await fetchCredits();
+      throw error;
     }
   };
 
   // Group analyses by type
-  const getAnalysesByType = (chatId: string) => {
-    const chatAnalyzes = analyzes.filter(analysis => analysis.chatId === chatId);
+  const getAnalysesByType = (chatId: string, isPrivacy: boolean = false) => {
+    const relevantAnalyzes = isPrivacy ? privacyAnalyzes : analyzes;
+    const chatAnalyzes = relevantAnalyzes.filter(analysis => analysis.chatId === chatId);
     
     return chatAnalyzes.reduce((acc, analysis) => {
       try {
@@ -78,16 +106,21 @@ export const useAnalysisManagement = () => {
   return {
     // State
     analyzes,
-    isAnalyzing,
+    privacyAnalyzes,
+    isAnalyzing: isLoading || isPrivacyLoading,
     selectedAnalysisType,
     credits,
+    isPrivacyMode,
     
     // Setters
     setSelectedAnalysisType,
+    setIsPrivacyMode,
     
     // Actions
     handleAnalyzeChat,
+    handlePrivacyAnalysis,
     fetchAnalyzes,
+    fetchPrivacyAnalyzes,
     fetchCredits,
     
     // Computed

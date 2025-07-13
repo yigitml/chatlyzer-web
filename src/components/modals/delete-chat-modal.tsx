@@ -20,7 +20,7 @@ export const DeleteChatModal = ({
 }: DeleteChatModalProps) => {
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="bg-gray-900 border-red-500/30 text-white">
+      <DialogContent className="bg-black border-red-500/30 text-white">
         <DialogHeader>
           <DialogTitle className="text-red-400">Delete Chat</DialogTitle>
           <DialogDescription className="text-white/60">

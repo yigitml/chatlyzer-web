@@ -10,6 +10,7 @@ import { Sidebar } from "@/components/layout/sidebar";
 import { MainContent } from "@/components/layout/main-content";
 import { CreateChatModal } from "@/components/modals/create-chat-modal";
 import { DeleteChatModal } from "@/components/modals/delete-chat-modal";
+import { CreatePrivacyAnalysisModal } from "@/components/modals/create-privacy-analysis-modal";
 import { useChatManagement } from "@/hooks/use-chat-management";
 import { useAnalysisManagement } from "@/hooks/use-analysis-management";
 import { useToast } from "@/hooks/use-toast";
@@ -162,13 +163,34 @@ export default function UserDashboard() {
       {/* Create Chat Modal */}
       <CreateChatModal
         isOpen={chatManagement.isCreateModalOpen}
-        onClose={() => chatManagement.setIsCreateModalOpen(false)}
+        onClose={chatManagement.closeCreateChatModal}
         onCreateChat={() => chatManagement.handleCreateChat(showToast)}
         isCreating={chatManagement.isCreatingChat}
         chatTitle={chatManagement.chatTitle}
         onTitleChange={chatManagement.setChatTitle}
         chatMessages={chatManagement.chatMessages}
         onMessagesChange={chatManagement.setChatMessages}
+        newMessageSender={chatManagement.newMessageSender}
+        onNewMessageSenderChange={chatManagement.setNewMessageSender}
+        newMessageContent={chatManagement.newMessageContent}
+        onNewMessageContentChange={chatManagement.setNewMessageContent}
+        whatsappImportText={chatManagement.whatsappImportText}
+        onWhatsappImportTextChange={chatManagement.setWhatsappImportText}
+        importMode={chatManagement.importMode}
+        onImportModeChange={chatManagement.setImportMode}
+        onShowToast={showToast}
+      />
+
+      {/* Create Privacy Analysis Modal */}
+      <CreatePrivacyAnalysisModal
+        isOpen={chatManagement.isPrivacyAnalysisModalOpen}
+        onClose={chatManagement.closePrivacyAnalysisModal}
+        onCreatePrivacyAnalysis={() => chatManagement.handleCreatePrivacyAnalysis(showToast)}
+        isCreating={chatManagement.isCreatingPrivacyAnalysis}
+        chatTitle={chatManagement.privacyAnalysisTitle}
+        onTitleChange={chatManagement.setPrivacyAnalysisTitle}
+        chatMessages={chatManagement.privacyAnalysisMessages}
+        onMessagesChange={chatManagement.setPrivacyAnalysisMessages}
         newMessageSender={chatManagement.newMessageSender}
         onNewMessageSenderChange={chatManagement.setNewMessageSender}
         newMessageContent={chatManagement.newMessageContent}
@@ -201,9 +223,10 @@ export default function UserDashboard() {
           editingTitle={chatManagement.editingTitle}
           isUpdatingTitle={chatManagement.isUpdatingTitle}
           onEditChat={chatManagement.startEditingChat}
-          onSaveEdit={(chatId) => chatManagement.handleEditChatTitle(chatId, showToast)}
+          onSaveEdit={(chatId: string) => chatManagement.handleEditChatTitle(chatId, showToast)}
           onCancelEdit={chatManagement.cancelEditingChat}
           onTitleChange={chatManagement.setEditingTitle}
+          onCreatePrivacyAnalysis={() => chatManagement.setIsPrivacyAnalysisModalOpen(true)}
         />
 
         {/* Main Content */}

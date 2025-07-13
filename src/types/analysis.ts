@@ -5,6 +5,10 @@ export const snakeToCamelCase = (str: string): string => {
   return str.replace(/_([a-z])/g, (_, letter) => letter.toUpperCase());
 };
 
+export const camelToSnakeCase = (str: string): string => {
+  return str.replace(/([A-Z])/g, '_$1').toLowerCase().replace(/^_/, '');
+};
+
 export const normalizeAnalysisType = (type: string): AnalysisType | null => {
   // Convert snake_case to camelCase first
   const camelCase = snakeToCamelCase(type);
@@ -42,6 +46,41 @@ export const ANALYSIS_CONFIG: Record<AnalysisType, { emoji: string; title: strin
   GhostRisk: { emoji: "👻", title: "Ghost Risk", description: "Left on read probability" },
   MainCharacterEnergy: { emoji: "⭐", title: "Main Character", description: "Dramatic flair detected" },
   EmotionalDepth: { emoji: "💙", title: "Emotional Depth", description: "Genuine connection level" }
+};
+
+// Utility functions for API route type conversion
+export const getAllAnalysisTypes = (): AnalysisType[] => {
+  return Object.keys(ANALYSIS_CONFIG) as AnalysisType[];
+};
+
+export const analysisTypeToSchemaKey = (analysisType: AnalysisType): string => {
+  // Convert AnalysisType to camelCase for schema property access
+  const typeToSchemaMap: Record<AnalysisType, string> = {
+    'ChatStats': 'chatStats',
+    'RedFlag': 'redFlag',
+    'GreenFlag': 'greenFlag',
+    'VibeCheck': 'vibeCheck',
+    'SimpOMeter': 'simpOMeter',
+    'GhostRisk': 'ghostRisk',
+    'MainCharacterEnergy': 'mainCharacterEnergy',
+    'EmotionalDepth': 'emotionalDepth'
+  };
+  return typeToSchemaMap[analysisType];
+};
+
+export const analysisTypeToTypeLiteral = (analysisType: AnalysisType): string => {
+  // Convert AnalysisType to snake_case for type literal
+  const typeToLiteralMap: Record<AnalysisType, string> = {
+    'ChatStats': 'chat_stats',
+    'RedFlag': 'red_flag',
+    'GreenFlag': 'green_flag',
+    'VibeCheck': 'vibe_check',
+    'SimpOMeter': 'simp_o_meter',
+    'GhostRisk': 'ghost_risk',
+    'MainCharacterEnergy': 'main_character_energy',
+    'EmotionalDepth': 'emotional_depth'
+  };
+  return typeToLiteralMap[analysisType];
 };
 
 // Helper functions

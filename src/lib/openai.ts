@@ -229,3 +229,47 @@ export async function analyzeAllChatTypes(chatId: string): Promise<z.infer<typeo
     throw new Error("Failed to perform comprehensive chat analysis");
   }
 }
+
+// Helper function to create minimal chat structure from raw messages
+const createMinimalChatFromMessages = (title: string, messages: any[]) => ({
+  title,
+  messages: messages.map((msg: any) => ({
+    sender: msg.sender,
+    timestamp: formatTimestamp(msg.timestamp),
+    content: msg.content,
+    ...(msg.metadata && { metadata: msg.metadata })
+  }))
+});
+
+export async function analyzeAllChatTypesPrivate(
+  chatTitle: string, 
+  messages: any[]
+): Promise<z.infer<typeof ChatlyzerSchemas.AllAnalyses>> {
+  try {
+    const minimalChat = createMinimalChatFromMessages(chatTitle, messages);
+    const openai = createOpenAIClient();
+    
+    const detectedLanguage = await detectChatLanguage(minimalChat, openai);
+    const languageInstruction = createLanguageInstruction(detectedLanguage);
+    
+    const systemPrompt = `${COMPREHENSIVE_ANALYSIS_PROMPT}\n\n${RATING_INSTRUCTION}\n\n${languageInstruction}`.trim();
+
+    const response = await openai.chat.completions.create({
+      model: MODELS.MAIN,
+      messages: [
+        { role: "system", content: systemPrompt },
+        { 
+          role: "user", 
+          content: `Analyze this chat comprehensively across all analysis types and provide the complete multi-faceted analysis:\nChat: ${JSON.stringify(minimalChat)}`
+        }
+      ],
+      response_format: zodResponseFormat(ChatlyzerSchemas.AllAnalyses, "all_analyses")
+    });
+    
+    const analysisData = parseOpenAIResponse(response.choices[0].message.content);
+    return ChatlyzerSchemas.AllAnalyses.parse(analysisData);
+  } catch (error) {
+    console.error("Error in analyzeAllChatTypesPrivate:", error);
+    throw new Error("Failed to perform comprehensive privacy chat analysis");
+  }
+}

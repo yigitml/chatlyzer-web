@@ -132,3 +132,13 @@ export interface UserPutRequest {
   isFirstModelCreated?: boolean;
   isTourCompleted?: boolean;
 }
+
+export interface PrivacyAnalysisPostRequest {
+  title: string;
+  messages: {
+    sender: string;
+    timestamp: Date | string;
+    content: string;
+    metadata?: any;
+  }[];
+}

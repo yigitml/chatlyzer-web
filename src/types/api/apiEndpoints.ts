@@ -6,6 +6,7 @@ export const API_ENDPOINTS = {
   CHAT: "/chat",
   MESSAGE: "/message",
   ANALYSIS: "/analysis",
+  PRIVACY_ANALYSIS: "/privacy-analysis",
   FILE: "/file",
   SUBSCRIPTION: "/subscription",
   CREDIT: "/credit",

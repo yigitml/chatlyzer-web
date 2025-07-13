@@ -1,11 +1,13 @@
-import React from "react";
+"use client";
+
+import React, { useState } from "react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { LoadingSpinner } from "@/components/common/loading-spinner";
-import { X } from "lucide-react";
+import { Shield, Trash2 } from "lucide-react";
 import { convertChatExport, ChatPlatform } from "@/utils/messageConverter";
 
 interface Message {
@@ -14,10 +16,10 @@ interface Message {
   timestamp?: Date;
 }
 
-interface CreateChatModalProps {
+interface CreatePrivacyAnalysisModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onCreateChat: () => void;
+  onCreatePrivacyAnalysis: () => void;
   isCreating: boolean;
   chatTitle: string;
   onTitleChange: (title: string) => void;
@@ -34,10 +36,10 @@ interface CreateChatModalProps {
   onShowToast: (message: string, type: "success" | "error") => void;
 }
 
-export const CreateChatModal = ({
+export const CreatePrivacyAnalysisModal = ({
   isOpen,
   onClose,
-  onCreateChat,
+  onCreatePrivacyAnalysis,
   isCreating,
   chatTitle,
   onTitleChange,
@@ -51,17 +53,20 @@ export const CreateChatModal = ({
   onWhatsappImportTextChange,
   importMode,
   onImportModeChange,
-  onShowToast
-}: CreateChatModalProps) => {
+  onShowToast,
+}: CreatePrivacyAnalysisModalProps) => {
   const addMessage = () => {
-    if (!newMessageSender.trim() || !newMessageContent.trim()) return;
-    
+    if (!newMessageSender.trim() || !newMessageContent.trim()) {
+      onShowToast("Both sender and content are required", "error");
+      return;
+    }
+
     const newMessage: Message = {
       sender: newMessageSender.trim(),
       content: newMessageContent.trim(),
-      timestamp: new Date()
+      timestamp: new Date(),
     };
-    
+
     onMessagesChange([...chatMessages, newMessage]);
     onNewMessageSenderChange("");
     onNewMessageContentChange("");
@@ -123,24 +128,40 @@ export const CreateChatModal = ({
     onClose();
   };
 
+  const canCreateAnalysis = chatTitle.trim() && chatMessages.length > 0;
+
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
       <DialogContent className="sm:max-w-[600px] bg-black border-white/20 text-white">
         <DialogHeader>
-          <DialogTitle>Create New Chat</DialogTitle>
+          <div className="flex items-center gap-3">
+            <Shield className="w-5 h-5 text-green-400" />
+            <DialogTitle>Create Privacy Analysis</DialogTitle>
+          </div>
           <DialogDescription className="text-white/60">
-            Upload your conversation for analysis
+            Analyze your conversation privately - messages never stored
           </DialogDescription>
         </DialogHeader>
-        
+
         <div className="space-y-6">
+          <div className="bg-green-900/20 border border-green-500/30 rounded-lg p-4">
+            <div className="flex items-center gap-2 mb-2">
+              <Shield className="w-4 h-4 text-green-400" />
+              <h3 className="text-green-400 font-semibold text-sm">Privacy Mode</h3>
+            </div>
+            <p className="text-green-300 text-sm">
+              Your messages will be analyzed but <strong>never stored</strong> in our database. 
+              Only the analysis results and chat title will be saved for your reference.
+            </p>
+          </div>
+
           <div>
-            <Label htmlFor="title">Chat Title</Label>
+            <Label htmlFor="title">Analysis Title</Label>
             <Input
               id="title"
               value={chatTitle}
               onChange={(e) => onTitleChange(e.target.value)}
-              placeholder="Give this chat a name..."
+              placeholder="e.g., Private Chat Analysis"
               className="bg-white/10 border-white/20 text-white mt-2"
             />
           </div>
@@ -185,18 +206,18 @@ export const CreateChatModal = ({
               <Label>Messages (Optional)</Label>
               {chatMessages.length > 0 && (
                 <div className="space-y-2 max-h-32 overflow-y-auto mt-2">
-                  {chatMessages.map((msg, i) => (
-                    <div key={i} className="flex items-center gap-2 p-2 bg-white/5 rounded">
+                  {chatMessages.map((message, index) => (
+                    <div key={index} className="flex items-center gap-2 p-2 bg-white/5 rounded">
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-purple-300">{msg.sender}</p>
-                        <p className="text-sm text-white/80 truncate">{msg.content}</p>
+                        <p className="text-sm font-medium text-purple-300">{message.sender}</p>
+                        <p className="text-sm text-white/80 truncate">{message.content}</p>
                       </div>
                       <Button
                         size="sm"
                         variant="ghost"
-                        onClick={() => removeMessage(i)}
+                        onClick={() => removeMessage(index)}
                       >
-                        <X className="w-3 h-3" />
+                        <Trash2 className="w-3 h-3" />
                       </Button>
                     </div>
                   ))}
@@ -236,16 +257,20 @@ export const CreateChatModal = ({
             Cancel
           </Button>
           <Button
-            onClick={onCreateChat}
-            disabled={!chatTitle.trim() || isCreating}
+            onClick={onCreatePrivacyAnalysis}
+            disabled={!canCreateAnalysis || isCreating}
+            className="bg-green-600 hover:bg-green-700"
           >
             {isCreating ? (
               <div className="flex items-center justify-center gap-2">
-                <LoadingSpinner />
+                <LoadingSpinner size="sm" />
                 <span>Creating...</span>
               </div>
             ) : (
-              "Create Chat"
+              <div className="flex items-center gap-2">
+                <Shield className="w-4 h-4" />
+                <span>Create Privacy Analysis (8 credits)</span>
+              </div>
             )}
           </Button>
         </DialogFooter>

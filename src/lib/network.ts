@@ -17,6 +17,8 @@ import {
   AnalysisPutRequest,
   AnalysisDeleteRequest,
   SubscriptionDeleteRequest,
+  PrivacyAnalysisPostRequest,
+  PrivacyAnalysisGetRequest,
 } from "@/types/api/apiRequest";
 import { API_ENDPOINTS } from "@/types/api/apiEndpoints";
 import {
@@ -170,6 +172,27 @@ export class NetworkService {
   async deleteSubscription(data: SubscriptionDeleteRequest): Promise<void> {
     await this.api.delete(API_ENDPOINTS.SUBSCRIPTION, data);
   } 
+
+  // ===== Privacy Analysis API =====
+
+  async fetchPrivacyAnalyzes(params?: PrivacyAnalysisGetRequest): Promise<Analysis[]> {
+    const response = await this.api.get(API_ENDPOINTS.PRIVACY_ANALYSIS, params);
+    return response.data;
+  }
+
+  async createPrivacyAnalysis(data: PrivacyAnalysisPostRequest): Promise<{ chat: Chat; analyses: Analysis[] }> {
+    const response = await this.api.post(API_ENDPOINTS.PRIVACY_ANALYSIS, data);
+    return response.data;
+  }
+
+  async updatePrivacyAnalysis(data: AnalysisPutRequest): Promise<Analysis> {
+    const response = await this.api.put(API_ENDPOINTS.PRIVACY_ANALYSIS, data);
+    return response.data;
+  }
+
+  async deletePrivacyAnalysis(data: AnalysisDeleteRequest): Promise<void> {
+    await this.api.delete(API_ENDPOINTS.PRIVACY_ANALYSIS, data);
+  }
 }
 
 export const createNetworkService = (

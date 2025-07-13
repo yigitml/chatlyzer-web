@@ -1,9 +1,8 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { SkeletonCard, SkeletonAnalysisGrid } from "@/components/common/skeleton";
-import { AnalysisPreviewCard } from "@/components/analysis/analysis-preview-card";
 import { AnalysisResultCard } from "@/components/analysis/analysis-result-card";
-import { Plus, Sparkles, Trash2, BarChart3 } from "lucide-react";
+import { Plus, Sparkles, Trash2, BarChart3, MessageCircle } from "lucide-react";
 import { AnalysisType } from "@/types/api/apiRequest";
 import { ANALYSIS_CONFIG } from "@/types/analysis";
 import { Chat } from "@prisma/client";
@@ -37,6 +36,13 @@ export const MainContent = ({
   onCreateChat,
   onSelectAnalysisType
 }: MainContentProps) => {
+  const hasAnalyses = selectedChatAnalyzes.length > 0;
+  
+  // Filter analyses based on selected type
+  const filteredAnalyses = selectedAnalysisType 
+    ? Object.entries(analysesByType).filter(([type]) => type === selectedAnalysisType)
+    : Object.entries(analysesByType);
+
   if (!selectedChat) {
     return (
       <div className="flex items-center justify-center h-full p-4">
@@ -49,7 +55,7 @@ export const MainContent = ({
             className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600"
           >
             <Plus className="w-4 h-4 mr-2" />
-            Create Your First Chat
+            Create New Chat
           </Button>
         </div>
       </div>
@@ -57,145 +63,149 @@ export const MainContent = ({
   }
 
   return (
-    <div className="p-3 sm:p-4 md:p-6 space-y-4 md:space-y-6">
-      {isLoadingChatData ? (
-        // Skeleton Loading State
-        <div className="space-y-6">
-          <div className="animate-pulse">
-            <div className="h-8 bg-white/20 rounded w-64 mb-2"></div>
-            <div className="h-4 bg-white/15 rounded w-48"></div>
-          </div>
-          
-          <SkeletonAnalysisGrid />
-          
-          <div className="space-y-4">
-            <div className="h-6 bg-white/15 rounded w-32 sm:w-48 animate-pulse"></div>
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-              <SkeletonCard />
-              <SkeletonCard />
+    <div className="flex flex-col h-full">
+      {/* Header */}
+      <div className="border-b border-white/10 p-4 sm:p-6">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div className="flex flex-col gap-2">
+            <h1 className="text-lg sm:text-xl font-semibold text-white truncate">
+              {selectedChat.title || "Untitled Chat"}
+            </h1>
+            {/* Chat info inline with title */}
+            <div className="flex items-center gap-4 text-sm text-white/60">
+              <span>{selectedChatMessages.length} messages</span>
+              <span>{Array.isArray(selectedChat.participants) ? selectedChat.participants.length : 0} participants</span>
+              <span>{selectedChatAnalyzes.length} analyses</span>
             </div>
           </div>
-        </div>
-      ) : (
-        <>
-          {/* Chat Header */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div className="min-w-0">
-              <h1 className="text-xl sm:text-2xl font-bold text-white truncate">{selectedChat.title}</h1>
-              <p className="text-sm sm:text-base text-white/60">
-                {selectedChatMessages.length} messages • {selectedChatAnalyzes.length > 0 ? 'Analysis complete' : 'Ready for analysis'}
-              </p>
-            </div>
+          
+          <div className="flex items-center gap-2 sm:gap-3">
+            {/* Only show Analyze Chat button when no analyses exist */}
+            {!hasAnalyses && (
+              <Button
+                onClick={onAnalyzeChat}
+                disabled={isAnalyzing || totalCredits < 8}
+                className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-sm"
+              >
+                {isAnalyzing ? (
+                  <>
+                    <Sparkles className="w-4 h-4 mr-2 animate-spin" />
+                    Analyzing...
+                  </>
+                ) : (
+                  <>
+                    <BarChart3 className="w-4 h-4 mr-2" />
+                    Analyze Chat (8)
+                  </>
+                )}
+              </Button>
+            )}
+            
             <Button
-              variant="ghost"
+              variant="outline"
               size="sm"
               onClick={onDeleteChat}
-              className="text-red-400 hover:text-red-300 hover:bg-red-500/10 flex-shrink-0"
+              className="text-red-400 hover:text-red-300 border-red-400/20"
             >
               <Trash2 className="w-4 h-4" />
             </Button>
           </div>
+        </div>
+      </div>
 
-          {/* Analysis Types Preview - Now Selectable */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-2 sm:gap-3">
-            {(Object.keys(ANALYSIS_CONFIG) as AnalysisType[]).map(analysisType => (
-              <AnalysisPreviewCard
-                key={analysisType}
-                analysisType={analysisType}
-                analysisData={analysesByType[analysisType]}
-                isSelected={selectedAnalysisType === analysisType}
-                onClick={() => {
-                  if (analysesByType[analysisType]) {
-                    onSelectAnalysisType(
-                      selectedAnalysisType === analysisType ? null : analysisType
-                    );
-                  }
-                }}
-              />
-            ))}
+      {/* Content */}
+      <div className="flex-1 overflow-auto p-4 sm:p-6">
+        {isLoadingChatData ? (
+          <div className="space-y-6">
+            <SkeletonCard />
+            <SkeletonAnalysisGrid />
           </div>
-
-          {/* Analysis Results or Call to Action */}
-          {selectedChatAnalyzes.length > 0 ? (
-            <div className="space-y-4">
-              <h2 className="text-lg font-semibold text-white flex items-center gap-2">
-                <BarChart3 className="w-5 h-5" />
-                {selectedAnalysisType ? 
-                  `${ANALYSIS_CONFIG[selectedAnalysisType]?.title} Results` : 
-                  'Analysis Results'
-                }
-              </h2>
-              
-              {selectedAnalysisType ? (
-                // Show specific analysis
-                analysesByType[selectedAnalysisType] && (
-                  <AnalysisResultCard analysis={analysesByType[selectedAnalysisType]} />
-                )
-              ) : (
-                // Show all analyses
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                  {selectedChatAnalyzes.map(analysis => (
-                    <AnalysisResultCard key={analysis.id} analysis={analysis} />
+        ) : (
+          <div className="space-y-6">
+            {/* Analysis Results */}
+            {hasAnalyses && (
+              <div className="space-y-4">
+                {/* Analysis Type Toggles - Fill Width */}
+                <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-5 gap-2">
+                  <Button
+                    variant={selectedAnalysisType === null ? "default" : "outline"}
+                    size="default"
+                    onClick={() => onSelectAnalysisType(null)}
+                    className="w-full text-sm font-medium"
+                  >
+                    All
+                  </Button>
+                  {Object.entries(ANALYSIS_CONFIG).map(([type, config]) => {
+                    const hasThisAnalysis = analysesByType[type as AnalysisType];
+                    if (!hasThisAnalysis) return null;
+                    
+                    return (
+                      <Button
+                        key={type}
+                        variant={selectedAnalysisType === type ? "default" : "outline"}
+                        size="default"
+                        onClick={() => onSelectAnalysisType(
+                          selectedAnalysisType === type ? null : type as AnalysisType
+                        )}
+                        className="w-full text-sm font-medium flex items-center gap-2"
+                      >
+                        <span>{config.emoji}</span>
+                        <span>{config.title}</span>
+                      </Button>
+                    );
+                  })}
+                </div>
+                
+                {/* Analysis Results Grid - Responsive based on count */}
+                <div className={`grid gap-4 ${
+                  filteredAnalyses.length === 1 
+                    ? 'grid-cols-1' 
+                    : 'grid-cols-1 md:grid-cols-2'
+                }`}>
+                  {filteredAnalyses.map(([type, analysis]) => (
+                    <AnalysisResultCard
+                      key={type}
+                      analysis={analysis}
+                    />
                   ))}
                 </div>
-              )}
-            </div>
-          ) : (
-            <Card className="bg-white/5 border-white/20">
-              <CardContent className="p-12 text-center">
-                <Sparkles className="w-16 h-16 text-white/20 mx-auto mb-4" />
-                <h3 className="text-xl font-semibold text-white mb-2">Ready to spill the tea?</h3>
-                <p className="text-white/60 mb-6">
-                  Run an analysis to get insights on this conversation
-                </p>
+                
+                {filteredAnalyses.length === 0 && selectedAnalysisType && (
+                  <div className="text-center py-8">
+                    <p className="text-white/60">No results for {ANALYSIS_CONFIG[selectedAnalysisType]?.title}</p>
+                  </div>
+                )}
+              </div>
+            )}
+            
+            {/* No Analyses State */}
+            {!hasAnalyses && (
+              <div className="text-center py-12">
+                <BarChart3 className="w-16 h-16 text-white/20 mx-auto mb-4" />
+                <h3 className="text-lg font-medium text-white mb-2">No Analysis Yet</h3>
+                <p className="text-white/60 mb-6">Analyze this chat to see insights</p>
                 <Button
                   onClick={onAnalyzeChat}
                   disabled={isAnalyzing || totalCredits < 8}
                   className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600"
                 >
                   {isAnalyzing ? (
-                    <div className="flex items-center justify-center gap-2">
-                      <div className="border-2 border-white/20 border-t-white rounded-full animate-spin w-4 h-4" />
-                      <span>Analyzing...</span>
-                    </div>
+                    <>
+                      <Sparkles className="w-4 h-4 mr-2 animate-spin" />
+                      Analyzing...
+                    </>
                   ) : (
-                    "Start Analysis"
+                    <>
+                      <BarChart3 className="w-4 h-4 mr-2" />
+                      Start Analysis (8 credits)
+                    </>
                   )}
                 </Button>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Messages Preview */}
-          {selectedChatMessages.length > 0 && (
-            <Card className="bg-white/5 border-white/20">
-              <CardHeader>
-                <CardTitle className="text-white">Messages Preview</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3 max-h-60 overflow-y-auto">
-                  {selectedChatMessages.slice(0, 5).map(message => (
-                    <div key={message.id} className="p-3 bg-white/5 rounded-lg">
-                      <div className="flex justify-between items-start mb-1">
-                        <span className="text-sm font-medium text-purple-300">{message.sender}</span>
-                        <span className="text-xs text-white/40">
-                          {new Date(message.timestamp).toLocaleString()}
-                        </span>
-                      </div>
-                      <p className="text-sm text-white/80">{message.content}</p>
-                    </div>
-                  ))}
-                  {selectedChatMessages.length > 5 && (
-                    <p className="text-center text-white/40 text-sm py-2">
-                      +{selectedChatMessages.length - 5} more messages
-                    </p>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          )}
-        </>
-      )}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
     </div>
   );
 }; 

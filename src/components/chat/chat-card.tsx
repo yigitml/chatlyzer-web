@@ -2,7 +2,7 @@ import { Chat } from "@prisma/client";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { LoadingSpinner } from "@/components/common/loading-spinner";
-import { Edit2, Check, X } from "lucide-react";
+import { Edit2, Check, X, Shield } from "lucide-react"; // Add Shield import
 
 interface ChatCardProps {
   chat: Chat;
@@ -15,67 +15,92 @@ interface ChatCardProps {
   onCancel: () => void;
   onTitleChange: (title: string) => void;
   isUpdating: boolean;
+  isPrivacy: boolean;
 }
 
-export const ChatCard = ({ 
-  chat, 
-  isSelected, 
-  isEditing, 
-  editTitle, 
-  onSelect, 
-  onEdit, 
-  onSave, 
-  onCancel, 
-  onTitleChange, 
-  isUpdating 
+export const ChatCard = ({
+  chat,
+  isSelected,
+  isEditing,
+  editTitle,
+  onSelect,
+  onEdit,
+  onSave,
+  onCancel,
+  onTitleChange,
+  isUpdating,
+  isPrivacy
 }: ChatCardProps) => (
-  <div className={`group p-4 rounded-xl transition-all cursor-pointer ${
-    isSelected ? 'bg-white/10 border border-white/20' : 'hover:bg-white/5'
-  }`}>
-    {isEditing ? (
-      <div className="space-y-3">
-        <Input
-          value={editTitle}
-          onChange={(e) => onTitleChange(e.target.value)}
-          className="bg-white/10 border-white/20 text-white"
-          placeholder="Chat title..."
-          onKeyDown={(e) => {
-            if (e.key === 'Enter') onSave();
-            if (e.key === 'Escape') onCancel();
-          }}
-          autoFocus
-        />
-        <div className="flex gap-2">
-          <Button size="sm" onClick={onSave} disabled={isUpdating || !editTitle.trim()}>
-            {isUpdating ? <LoadingSpinner /> : <Check className="w-3 h-3" />}
-          </Button>
-          <Button size="sm" variant="ghost" onClick={onCancel} disabled={isUpdating}>
-            <X className="w-3 h-3" />
-          </Button>
-        </div>
-      </div>
-    ) : (
-      <div onClick={onSelect}>
-        <div className="flex items-center justify-between">
-          <div className="flex-1 min-w-0">
-            <h3 className="font-medium text-white truncate">{chat.title || "Untitled Chat"}</h3>
-            <p className="text-sm text-white/60 mt-1">
-              {new Date(chat.createdAt).toLocaleDateString()}
+  <div className={`
+    p-3 rounded-lg cursor-pointer transition-all duration-200 border
+    ${isSelected 
+      ? 'bg-white/10 border-white/30' 
+      : 'bg-white/5 border-white/10 hover:bg-white/8 hover:border-white/20'
+    }
+  `}>
+    <div className="flex items-center justify-between">
+      <div className="flex-1 min-w-0">
+        {isEditing ? (
+          <div className="flex items-center gap-2">
+            <Input
+              value={editTitle}
+              onChange={(e) => onTitleChange(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  onSave();
+                } else if (e.key === 'Escape') {
+                  e.preventDefault();
+                  onCancel();
+                }
+              }}
+              className="text-sm bg-white/10 border-white/20 text-white"
+              autoFocus
+            />
+            <div className="flex gap-1">
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={onSave}
+                disabled={isUpdating}
+                className="h-6 w-6 p-0 text-green-400 hover:text-green-300"
+              >
+                {isUpdating ? <LoadingSpinner size="sm" /> : <Check className="w-3 h-3" />}
+              </Button>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={onCancel}
+                className="h-6 w-6 p-0 text-red-400 hover:text-red-300"
+              >
+                <X className="w-3 h-3" />
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <div onClick={onSelect} className="flex items-center gap-2">
+            {isPrivacy && <Shield className="w-4 h-4 text-green-400 flex-shrink-0" />}
+            <p className="text-white text-sm font-medium truncate">
+              {chat.title || "Untitled Chat"}
             </p>
           </div>
-          <Button
-            size="sm"
-            variant="ghost"
-            onClick={(e) => {
-              e.stopPropagation();
-              onEdit();
-            }}
-            className="opacity-0 group-hover:opacity-100 transition-opacity text-white/60 hover:text-white"
-          >
-            <Edit2 className="w-4 h-4" />
-          </Button>
-        </div>
+        )}
       </div>
+      
+      {!isEditing && (
+        <Button
+          size="sm"
+          variant="ghost"
+          onClick={onEdit}
+          className="h-6 w-6 p-0 text-white/40 hover:text-white/60"
+        >
+          <Edit2 className="w-3 h-3" />
+        </Button>
+      )}
+    </div>
+    
+    {isPrivacy && (
+      <p className="text-green-400 text-xs mt-1">Privacy Mode</p>
     )}
   </div>
-); 
+);

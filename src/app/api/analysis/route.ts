@@ -11,42 +11,11 @@ import type {
 import { analyzeAllChatTypes } from "@/lib/openai";
 import { consumeUserCredits } from "@/utils/consumeUserCredits";
 import { CreditType } from "@prisma/client";
-
-// Analysis type mapping for database storage
-const ANALYSIS_TYPES: AnalysisType[] = [
-  'ChatStats',
-  'RedFlag', 
-  'GreenFlag',
-  'VibeCheck',
-  'SimpOMeter',
-  'GhostRisk',
-  'MainCharacterEnergy',
-  'EmotionalDepth'
-];
-
-// Mapping from analysis types to schema property names
-const ANALYSIS_TYPE_TO_SCHEMA_KEY: Record<AnalysisType, string> = {
-  'ChatStats': 'chatStats',
-  'RedFlag': 'redFlag',
-  'GreenFlag': 'greenFlag',
-  'VibeCheck': 'vibeCheck',
-  'SimpOMeter': 'simpOMeter',
-  'GhostRisk': 'ghostRisk',
-  'MainCharacterEnergy': 'mainCharacterEnergy',
-  'EmotionalDepth': 'emotionalDepth'
-};
-
-// Mapping from analysis types to their type literals
-const ANALYSIS_TYPE_TO_TYPE_LITERAL: Record<AnalysisType, string> = {
-  'ChatStats': 'chat_stats',
-  'RedFlag': 'red_flag',
-  'GreenFlag': 'green_flag',
-  'VibeCheck': 'vibe_check',
-  'SimpOMeter': 'simp_o_meter',
-  'GhostRisk': 'ghost_risk',
-  'MainCharacterEnergy': 'main_character_energy',
-  'EmotionalDepth': 'emotional_depth'
-};
+import { 
+  getAllAnalysisTypes, 
+  analysisTypeToSchemaKey, 
+  analysisTypeToTypeLiteral 
+} from "@/types/analysis";
 
 export const GET = withProtectedRoute(async (request: NextRequest) => {
   try {
@@ -115,9 +84,12 @@ export const POST = withProtectedRoute(async (request: NextRequest) => {
    // Perform comprehensive analysis
    const comprehensiveAnalysisData = await analyzeAllChatTypes(data.chatId);
 
+   // Get all analysis types using utility function
+   const analysisTypes = getAllAnalysisTypes();
+
    // Create analysis records for each type
-   const analysisPromises = ANALYSIS_TYPES.map(async (analysisType) => {
-     const schemaKey = ANALYSIS_TYPE_TO_SCHEMA_KEY[analysisType];
+   const analysisPromises = analysisTypes.map(async (analysisType) => {
+     const schemaKey = analysisTypeToSchemaKey(analysisType);
      const analysisResult = comprehensiveAnalysisData.analyses[schemaKey as keyof typeof comprehensiveAnalysisData.analyses];
      
      console.log(`Processing ${analysisType} (${schemaKey}):`, !!analysisResult);
@@ -128,7 +100,7 @@ export const POST = withProtectedRoute(async (request: NextRequest) => {
      
      // Add the type field back to the analysis result
      const analysisWithType = {
-       type: ANALYSIS_TYPE_TO_TYPE_LITERAL[analysisType],
+       type: analysisTypeToTypeLiteral(analysisType),
        ...analysisResult
      };
      
