@@ -23,7 +23,7 @@ function RootErrorFallback({
 
   return (
     <div className="fixed inset-0 bg-black/80 flex items-center justify-center p-4">
-      <div className="bg-gray-900 border border-gray-700 rounded-lg p-6 max-w-md w-full space-y-6 text-center">
+      <div className="bg-black border border-gray-700 rounded-lg p-6 max-w-md w-full space-y-6 text-center">
         <div className="h-12 w-12 mx-auto text-red-500">
           <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -54,7 +54,7 @@ function RootErrorFallback({
           </button>
           <button
             onClick={() => router.push("/")}
-            className="w-full px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded transition duration-200"
+            className="w-full px-4 py-2 bg-black hover:bg-black text-white rounded transition duration-200"
           >
             Go to Homepage
           </button>

@@ -31,7 +31,6 @@ import {
   Shield,
   Trash2
 } from "lucide-react";
-import Image from "next/image";
 import Link from "next/link";
 
 // Components
@@ -99,7 +98,7 @@ const CreditsDisplay = ({ credits }: { credits: number }) => {
 };
 
 export default function ProfilePage() {
-  const { user, isInitialized } = useAuthStore();
+  const { user, isInitialized, updateUser, setUser, deleteUser } = useAuthStore();
   const { chats, fetchChats } = useChatStore();
   const { messages, fetchMessages } = useMessageStore();
   const { analyzes, fetchAnalyzes } = useAnalysisStore();
@@ -160,12 +159,17 @@ export default function ProfilePage() {
 
     try {
       setIsUpdating(true);
-      // Here you would typically call an API to update the user profile
-      // For now, we'll just simulate the update
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      // Call the actual API to update the user profile
+      const updatedUser = await updateUser({ name: editedName.trim() });
+      
+      // Update the user state with the updated data
+      setUser(updatedUser);
+      
       setIsEditing(false);
       showToast("Profile updated successfully ✨", "success");
     } catch (error) {
+      console.error("Failed to update profile:", error);
       showToast("Failed to update profile", "error");
     } finally {
       setIsUpdating(false);
@@ -174,7 +178,7 @@ export default function ProfilePage() {
 
   const handleDeleteAccount = async () => {
     try {
-      // Here you would call the delete account API
+      await deleteUser();
       showToast("Account deletion initiated", "success");
       setIsDeleteModalOpen(false);
     } catch (error) {
@@ -247,27 +251,33 @@ export default function ProfilePage() {
                 </AvatarFallback>
               </Avatar>
               
-              <div className="flex-1 space-y-4">
+              <div className="flex-1 space-y-2">
+                {/* Name Row */}
                 {isEditing ? (
-                  <div className="space-y-3">
-                    <div>
-                      <Label htmlFor="name" className="text-white/80">Display Name</Label>
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2">
                       <Input
-                        id="name"
                         value={editedName}
                         onChange={(e) => setEditedName(e.target.value)}
-                        className="bg-white/10 border-white/20 text-white mt-1"
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' && editedName.trim() && !isUpdating) {
+                            handleSaveProfile();
+                          } else if (e.key === 'Escape') {
+                            setIsEditing(false);
+                            setEditedName(user.name || "");
+                          }
+                        }}
+                        className="bg-white/10 border-white/20 text-white text-xl font-semibold focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500/50 transition-all flex-1"
                         placeholder="Enter your name..."
+                        autoFocus
                       />
-                    </div>
-                    <div className="flex gap-2">
                       <Button 
                         onClick={handleSaveProfile} 
                         disabled={isUpdating || !editedName.trim()}
                         size="sm"
+                        className="px-3"
                       >
                         {isUpdating ? <LoadingSpinner /> : <Save className="w-4 h-4" />}
-                        {isUpdating ? "Saving..." : "Save"}
                       </Button>
                       <Button 
                         variant="ghost" 
@@ -277,39 +287,39 @@ export default function ProfilePage() {
                         }}
                         size="sm"
                         disabled={isUpdating}
+                        className="px-3"
                       >
                         <X className="w-4 h-4" />
-                        Cancel
                       </Button>
                     </div>
                   </div>
                 ) : (
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-3">
-                      <h2 className="text-xl font-semibold text-white">{user.name}</h2>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => setIsEditing(true)}
-                        className="text-white/60 hover:text-white"
-                      >
-                        <Edit2 className="w-4 h-4" />
-                      </Button>
-                    </div>
-                    <div className="flex items-center gap-2 text-white/60">
-                      <Mail className="w-4 h-4" />
-                      <span>{user.email}</span>
-                    </div>
-                    <div className="flex items-center gap-2 text-white/60">
-                      <Calendar className="w-4 h-4" />
-                      <span>Joined {new Date(user.createdAt).toLocaleDateString()}</span>
-                    </div>
-                    {user.lastLoginAt && (
-                      <div className="flex items-center gap-2 text-white/60">
-                        <Clock className="w-4 h-4" />
-                        <span>Last active {new Date(user.lastLoginAt).toLocaleDateString()}</span>
-                      </div>
-                    )}
+                  <div className="flex items-center gap-3">
+                    <h2 className="text-xl font-semibold text-white">{user.name}</h2>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setIsEditing(true)}
+                      className="text-white/60 hover:text-white"
+                    >
+                      <Edit2 className="w-4 h-4" />
+                    </Button>
+                  </div>
+                )}
+                
+                {/* Static Info - Always Visible */}
+                <div className="flex items-center gap-2 text-white/60">
+                  <Mail className="w-4 h-4" />
+                  <span>{user.email}</span>
+                </div>
+                <div className="flex items-center gap-2 text-white/60">
+                  <Calendar className="w-4 h-4" />
+                  <span>Joined {new Date(user.createdAt).toLocaleDateString()}</span>
+                </div>
+                {user.lastLoginAt && (
+                  <div className="flex items-center gap-2 text-white/60">
+                    <Clock className="w-4 h-4" />
+                    <span>Last active {new Date(user.lastLoginAt).toLocaleDateString()}</span>
                   </div>
                 )}
               </div>
@@ -323,18 +333,12 @@ export default function ProfilePage() {
             <BarChart3 className="w-5 h-5" />
             Account Statistics
           </h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             <StatCard
               icon={MessageCircle}
               label="Total Chats"
               value={totalChats}
               description="Conversations analyzed"
-            />
-            <StatCard
-              icon={Mail}
-              label="Total Messages"
-              value={totalMessages}
-              description="Messages processed"
             />
             <StatCard
               icon={BarChart3}
@@ -463,7 +467,7 @@ export default function ProfilePage() {
                     Delete Account
                   </Button>
                 </DialogTrigger>
-                <DialogContent className="bg-gray-900 border-red-500/30 text-white">
+                <DialogContent className="bg-black border-red-500/30 text-white">
                   <DialogHeader>
                     <DialogTitle className="text-red-300">Delete Account</DialogTitle>
                     <DialogDescription className="text-white/60">

@@ -75,6 +75,10 @@ export class NetworkService {
     return response.data;
   }
 
+  async deleteUser(): Promise<void> {
+    await this.api.delete(API_ENDPOINTS.USER);
+  }
+
   // ===== File API =====
 
   async fetchFiles(params?: FileGetRequest): Promise<File[]> {

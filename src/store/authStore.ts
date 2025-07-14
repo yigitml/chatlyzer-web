@@ -15,6 +15,7 @@ interface AuthState {
   setInitialized: (initialized: boolean) => void;
   fetchUser: () => Promise<User>;
   updateUser: (data: UserPutRequest) => Promise<User>;
+  deleteUser: () => Promise<void>;
   initialize: () => Promise<void>;
   login: (data: AuthWebPostRequest) => Promise<User>;
   logout: () => Promise<void>;
@@ -99,6 +100,14 @@ export const useAuthStore = create<AuthState>((set, get) => {
       const { networkService } = get();
       if (networkService) {
         return await networkService.updateUser(data);
+      }
+      throw new Error("Network service not initialized");
+    },
+
+    deleteUser: async () => {
+      const { networkService } = get();
+      if (networkService) {
+        return await networkService.deleteUser();
       }
       throw new Error("Network service not initialized");
     },
