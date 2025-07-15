@@ -1,21 +1,21 @@
 import { NextRequest } from "next/server";
-import { withProtectedRoute } from "@/middleware/jwtAuth";
-import { ApiResponse } from "@/types/api/apiResponse";
-import prisma from "@/lib/prisma";
+import { withProtectedRoute } from "@/backend/middleware/jwtAuth";
+import { ApiResponse } from "@/shared/types/api/apiResponse";
+import prisma from "@/backend/lib/prisma";
 import type {
   AnalysisPostRequest,
   AnalysisPutRequest,
   AnalysisDeleteRequest,
   AnalysisType,
-} from "@/types/api/apiRequest";
-import { analyzeAllChatTypes } from "@/lib/openai";
-import { consumeUserCredits } from "@/utils/consumeUserCredits";
+} from "@/shared/types/api/apiRequest";
+import { analyzeAllChatTypes } from "@/backend/lib/openai";
+import { consumeUserCredits } from "@/backend/lib/consumeUserCredits";
 import { CreditType } from "@prisma/client";
 import { 
   getAllAnalysisTypes, 
   analysisTypeToSchemaKey, 
   analysisTypeToTypeLiteral 
-} from "@/types/analysis";
+} from "@/shared/types/analysis";
 
 export const GET = withProtectedRoute(async (request: NextRequest) => {
   try {

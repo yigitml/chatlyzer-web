@@ -1,23 +1,23 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { useAuthStore } from "@/store/authStore";
-import { useMessageStore } from "@/store/messageStore";
-import { LoadingSpinner } from "@/components/common/loading-spinner";
-import { Toast } from "@/components/common/toast";
-import { Header } from "@/components/layout/header";
-import { Sidebar } from "@/components/layout/sidebar";
-import { MainContent } from "@/components/layout/main-content";
-import { CreateChatModal } from "@/components/modals/create-chat-modal";
-import { DeleteChatModal } from "@/components/modals/delete-chat-modal";
-import { CreatePrivacyAnalysisModal } from "@/components/modals/create-privacy-analysis-modal";
-import { useChatManagement } from "@/hooks/use-chat-management";
-import { useAnalysisManagement } from "@/hooks/use-analysis-management";
-import { useToast } from "@/hooks/use-toast";
-import { useUIState } from "@/hooks/use-ui-state";
-import { getStorageItem, LOCAL_STORAGE_KEYS } from "@/utils/storage";
+import { useAuthStore } from "@/frontend/store/authStore";
+import { useMessageStore } from "@/frontend/store/messageStore";
+import { LoadingSpinner } from "@/frontend/components/common/loading-spinner";
+import { Toast } from "@/frontend/components/common/toast";
+import { Header } from "@/frontend/components/layout/header";
+import { Sidebar } from "@/frontend/components/layout/sidebar";
+import { MainContent } from "@/frontend/components/layout/main-content";
+import { CreateChatModal } from "@/frontend/components/modals/create-chat-modal";
+import { DeleteChatModal } from "@/frontend/components/modals/delete-chat-modal";
+import { CreatePrivacyAnalysisModal } from "@/frontend/components/modals/create-privacy-analysis-modal";
+import { useChatManagement } from "@/frontend/hooks/use-chat-management";
+import { useAnalysisManagement } from "@/frontend/hooks/use-analysis-management";
+import { useToast } from "@/frontend/hooks/use-toast";
+import { useUIState } from "@/frontend/hooks/use-ui-state";
+import { getStorageItem, LOCAL_STORAGE_KEYS } from "@/shared/utils/storage";
 import Link from "next/link";
-import { AnalysisType } from "@/types/api/apiRequest";
+import { AnalysisType } from "@/shared/types/api/apiRequest";
 
 export default function UserDashboard() {
   const hasFetchedData = useRef(false);

@@ -1,8 +1,8 @@
 import { NextRequest } from "next/server";
-import { withProtectedRoute } from "@/middleware/jwtAuth";
-import { ApiResponse } from "@/types/api/apiResponse";
-import prisma from "@/lib/prisma";
-import type { SubscriptionDeleteRequest } from "@/types/api/apiRequest";
+import { withProtectedRoute } from "@/backend/middleware/jwtAuth";
+import { ApiResponse } from "@/shared/types/api/apiResponse";
+import prisma from "@/backend/lib/prisma";
+import type { SubscriptionDeleteRequest } from "@/shared/types/api/apiRequest";
 
 export const GET = withProtectedRoute(async (request: NextRequest) => {
   try {

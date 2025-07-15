@@ -4,7 +4,7 @@ import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useEffect } from "react"
 import { ArrowRight, Zap, Skull, Heart, Brain, Ghost, Star, AlertTriangle, CheckCircle, MessageCircle, Send, Twitter } from "lucide-react"
-import { useAuthStore } from "@/store/authStore"
+import { useAuthStore } from "@/frontend/store/authStore"
 
 export default function Home() {
   const router = useRouter()

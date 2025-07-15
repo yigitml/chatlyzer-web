@@ -1,10 +1,10 @@
 // pages/api/auth/mobile.ts (or wherever this lives)
 import { NextRequest } from "next/server";
 import jwt from "jsonwebtoken";
-import prisma from "@/lib/prisma";
-import { ApiResponse } from "@/types/api/apiResponse";
-import type { AuthMobilePostRequest } from "@/types/api/apiRequest";
-import { verifyGoogleIdToken } from "@/lib/verifyGoogleIdToken";
+import prisma from "@/backend/lib/prisma";
+import { ApiResponse } from "@/shared/types/api/apiResponse";
+import type { AuthMobilePostRequest } from "@/shared/types/api/apiRequest";
+import { verifyGoogleIdToken } from "@/backend/lib/verifyGoogleIdToken";
 
 export async function POST(request: NextRequest) {
   try {

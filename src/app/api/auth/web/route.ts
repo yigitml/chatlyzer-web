@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import jwt from "jsonwebtoken";
-import prisma from "@/lib/prisma";
-import { ApiResponse } from "@/types/api/apiResponse";
-import type { AuthWebPostRequest } from "@/types/api/apiRequest";
+import prisma from "@/backend/lib/prisma";
+import { ApiResponse } from "@/shared/types/api/apiResponse";
+import type { AuthWebPostRequest } from "@/shared/types/api/apiRequest";
 
 export async function POST(request: NextRequest) {
   try {

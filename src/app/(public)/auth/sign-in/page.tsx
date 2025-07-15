@@ -1,7 +1,7 @@
 "use client"
 
-import { LoginForm } from "@/components/login-form"
-import useAuth from "@/hooks/useAuth";
+import { LoginForm } from "@/frontend/components/login-form"
+import useAuth from "@/frontend/hooks/useAuth";
 import posthog from "posthog-js";
 import Image from "next/image";
 import Link from "next/link";

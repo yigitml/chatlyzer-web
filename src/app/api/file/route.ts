@@ -1,8 +1,8 @@
 import { NextRequest } from "next/server";
-import { withProtectedRoute } from "@/middleware/jwtAuth";
-import { ApiResponse } from "@/types/api/apiResponse";
+import { withProtectedRoute } from "@/backend/middleware/jwtAuth";
+import { ApiResponse } from "@/shared/types/api/apiResponse";
 //import { uploadFile } from "@/lib/fal";
-import prisma from "@/lib/prisma";
+import prisma from "@/backend/lib/prisma";
 
 export const GET = withProtectedRoute(async (request: NextRequest) => {
   try {

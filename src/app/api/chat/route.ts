@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import prisma from "@/lib/prisma";
-import { withProtectedRoute } from "@/middleware/jwtAuth";
-import { ApiResponse } from "@/types/api/apiResponse";
-import { ChatPostRequest, ChatPutRequest, ChatDeleteRequest } from "@/types/api/apiRequest";
+import prisma from "@/backend/lib/prisma";
+import { withProtectedRoute } from "@/backend/middleware/jwtAuth";
+import { ApiResponse } from "@/shared/types/api/apiResponse";
+import { ChatPostRequest, ChatPutRequest, ChatDeleteRequest } from "@/shared/types/api/apiRequest";
 import { InputJsonValue, JsonValue } from "@prisma/client/runtime/library";
 
 export const GET = withProtectedRoute(async (request: NextRequest) => {
