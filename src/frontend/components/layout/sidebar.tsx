@@ -2,10 +2,15 @@ import { Button } from "@/frontend/components/ui/button";
 import { ChatCard } from "@/frontend/components/chat/chat-card";
 import { Plus, ChevronRight, ChevronLeft, MessageCircle, Shield } from "lucide-react";
 import { Chat } from "@prisma/client";
+import { useCallback, useRef, useState } from "react";
 
 interface SidebarProps {
   isCollapsed: boolean;
+  width: number;
   onToggleCollapse: () => void;
+  onWidthChange: (width: number) => void;
+  minWidth: number;
+  maxWidth: number;
   chats: Chat[];
   selectedChatId: string | null;
   onSelectChat: (chatId: string) => void;
@@ -25,7 +30,11 @@ interface SidebarProps {
 
 export const Sidebar = ({
   isCollapsed,
+  width,
   onToggleCollapse,
+  onWidthChange,
+  minWidth,
+  maxWidth,
   chats,
   selectedChatId,
   onSelectChat,
@@ -40,12 +49,49 @@ export const Sidebar = ({
   onCreatePrivacyAnalysis,
   isPrivacyMode,
 }: SidebarProps) => {
+  const [isResizing, setIsResizing] = useState(false);
+  const resizeRef = useRef<HTMLDivElement>(null);
+
+  const handleMouseDown = useCallback((e: React.MouseEvent) => {
+    if (isCollapsed) return;
+    
+    e.preventDefault();
+    setIsResizing(true);
+
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!resizeRef.current) return;
+      
+      const rect = resizeRef.current.getBoundingClientRect();
+      const newWidth = e.clientX - rect.left;
+      
+      if (newWidth >= minWidth && newWidth <= maxWidth) {
+        onWidthChange(newWidth);
+      }
+    };
+
+    const handleMouseUp = () => {
+      setIsResizing(false);
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+  }, [isCollapsed, minWidth, maxWidth, onWidthChange]);
+
   return (
-    <div className={`transition-all duration-300 border-r border-white/10 bg-black z-50 ${
-      isCollapsed 
-        ? 'w-16' 
-        : 'w-80 lg:w-80 md:w-72 sm:w-64 lg:relative fixed lg:translate-x-0'
-    } ${isCollapsed ? '' : 'max-w-[80vw]'} ${!isCollapsed ? 'lg:relative fixed inset-y-0 left-0' : ''}`}>
+    <div 
+      ref={resizeRef}
+      className={`transition-all duration-300 border-r border-white/10 bg-black z-50 relative ${
+        isCollapsed 
+          ? 'w-16' 
+          : 'lg:relative fixed lg:translate-x-0'
+      } ${isCollapsed ? '' : 'max-w-[80vw]'} ${!isCollapsed ? 'lg:relative fixed inset-y-0 left-0' : ''}`}
+      style={{ 
+        width: isCollapsed ? '64px' : `${width}px`,
+        transition: isResizing ? 'none' : undefined 
+      }}
+    >
       <div className="p-4">
         <div className="flex items-center justify-between mb-6">
           {!isCollapsed && (
@@ -136,6 +182,17 @@ export const Sidebar = ({
           </>
         )}
       </div>
+
+      {/* Resize Handle */}
+      {!isCollapsed && (
+        <div
+          className={`absolute top-0 right-0 w-1 h-full cursor-col-resize hover:bg-purple-500/50 transition-colors ${
+            isResizing ? 'bg-purple-500' : ''
+          }`}
+          onMouseDown={handleMouseDown}
+          style={{ zIndex: 10 }}
+        />
+      )}
     </div>
   );
 }; 

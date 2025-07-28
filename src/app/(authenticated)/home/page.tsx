@@ -30,7 +30,16 @@ export default function UserDashboard() {
   const chatManagement = useChatManagement();
   const analysisManagement = useAnalysisManagement();
   const { toast, showToast, hideToast } = useToast();
-  const { sidebarCollapsed, isLoadingChatData, setIsLoadingChatData, toggleSidebar } = useUIState();
+  const { 
+    sidebarCollapsed, 
+    sidebarWidth,
+    isLoadingChatData, 
+    setIsLoadingChatData, 
+    toggleSidebar,
+    setSidebarWidth,
+    minSidebarWidth,
+    maxSidebarWidth 
+  } = useUIState();
 
   // Computed values
   const selectedChatMessages = chatManagement.selectedChatId ? messages.filter(msg => msg.chatId === chatManagement.selectedChatId) : [];
@@ -214,7 +223,11 @@ export default function UserDashboard() {
         {/* Sidebar */}
         <Sidebar
           isCollapsed={sidebarCollapsed}
+          width={sidebarWidth}
           onToggleCollapse={toggleSidebar}
+          onWidthChange={setSidebarWidth}
+          minWidth={minSidebarWidth}
+          maxWidth={maxSidebarWidth}
           chats={chatManagement.chats}
           selectedChatId={chatManagement.selectedChatId}
           onSelectChat={chatManagement.selectChat}
