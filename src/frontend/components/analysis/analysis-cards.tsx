@@ -34,12 +34,12 @@ export const ScoreCard = ({
     <div className="bg-white/5 rounded-xl p-4 border border-white/10">
       <div className="flex justify-between items-center mb-2">
         <h3 className="font-semibold text-white">{title}</h3>
-        <span className="text-lg font-bold text-purple-400">{displayValue}</span>
+        <span className="text-lg font-bold text-blue-400">{displayValue}</span>
       </div>
       <p className="text-sm text-white/60 mb-3">{description}</p>
       <div className="w-full bg-white/10 rounded-full h-2">
         <div 
-          className="bg-gradient-to-r from-purple-500 to-pink-500 h-2 rounded-full transition-all duration-300"
+          className="bg-gradient-to-r from-blue-500 to-cyan-500 h-2 rounded-full transition-all duration-300"
           style={{ width: `${Math.min(percentage, 100)}%` }}
         />
       </div>
@@ -135,20 +135,20 @@ export const ComparisonCard = ({
       <div className="flex justify-between items-center mb-3">
         <div className="text-left">
           <div className="text-sm font-medium text-white">{user1Name}</div>
-          <div className="text-xs text-purple-400">{user1Value} ({Math.round(user1Percentage)}%)</div>
+          <div className="text-xs text-blue-400">{user1Value} ({Math.round(user1Percentage)}%)</div>
         </div>
         <div className="text-right">
           <div className="text-sm font-medium text-white">{user2Name}</div>
-          <div className="text-xs text-pink-400">{user2Value} ({Math.round(100 - user1Percentage)}%)</div>
+          <div className="text-xs text-cyan-400">{user2Value} ({Math.round(100 - user1Percentage)}%)</div>
         </div>
       </div>
       <div className="w-full bg-white/10 rounded-full h-2 flex overflow-hidden">
         <div 
-          className="bg-purple-500 h-full"
+          className="bg-blue-500 h-full"
           style={{ width: `${user1Percentage}%` }}
         />
         <div 
-          className="bg-pink-500 h-full"
+          className="bg-cyan-500 h-full"
           style={{ width: `${100 - user1Percentage}%` }}
         />
       </div>
@@ -163,7 +163,7 @@ interface MessageExampleCardProps {
 export const MessageExampleCard = ({ example }: MessageExampleCardProps) => (
   <div className="bg-white/5 rounded-lg p-3 border border-white/10">
     <div className="flex justify-between items-center mb-1">
-      <span className="text-xs font-medium text-purple-300">{example.sender}</span>
+      <span className="text-xs font-medium text-blue-300">{example.sender}</span>
       <span className="text-xs text-white/40">{example.timestamp}</span>
     </div>
     <p className="text-sm text-white/80">{example.contentSnippet || example.content}</p>

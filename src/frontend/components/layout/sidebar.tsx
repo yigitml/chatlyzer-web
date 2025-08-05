@@ -125,7 +125,7 @@ export const Sidebar = ({
               
               <Button 
                 onClick={onCreatePrivacyAnalysis}
-                className="w-full bg-green-600 hover:bg-green-700 text-white border-0"
+                className="w-full bg-white/5 hover:bg-white/10 text-green-400 border border-green-400/30"
               >
                 <Shield className="w-4 h-4 mr-2" />
                 Privacy Analysis
@@ -186,8 +186,8 @@ export const Sidebar = ({
       {/* Resize Handle */}
       {!isCollapsed && (
         <div
-          className={`absolute top-0 right-0 w-1 h-full cursor-col-resize hover:bg-purple-500/50 transition-colors ${
-            isResizing ? 'bg-purple-500' : ''
+          className={`absolute top-0 right-0 w-1 h-full cursor-col-resize hover:bg-white/50 transition-colors ${
+            isResizing ? 'bg-white' : ''
           }`}
           onMouseDown={handleMouseDown}
           style={{ zIndex: 10 }}

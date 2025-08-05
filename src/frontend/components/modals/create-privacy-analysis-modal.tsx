@@ -259,7 +259,7 @@ export const CreatePrivacyAnalysisModal = ({
           <Button
             onClick={onCreatePrivacyAnalysis}
             disabled={!canCreateAnalysis || isCreating}
-            className="bg-green-600 hover:bg-green-700"
+            className="bg-white/5 hover:bg-white/10 text-green-400 border border-green-400/30"
           >
             {isCreating ? (
               <div className="flex items-center justify-center gap-2">

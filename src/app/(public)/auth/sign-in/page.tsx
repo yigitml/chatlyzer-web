@@ -11,12 +11,12 @@ export default function LoginPage() {
   const { signIn, isLoggingIn } = useAuth();
 
   return (
-    <div className="min-h-screen text-white bg-gradient-to-br from-gray-900 via-purple-900 to-violet-900">
+    <div className="min-h-screen text-white bg-gradient-to-br from-gray-900 via-blue-900 to-indigo-900">
       {/* Navigation */}
       <header className="container mx-auto px-4 py-6 flex items-center justify-between">
         <Link href="/" className="flex items-center gap-2">
           <Image src="/favicon.ico" alt="Chatlyzer" width={32} height={32} className="w-8 h-8" />
-          <span className="font-bold text-xl bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">
+          <span className="font-bold text-xl bg-gradient-to-r from-blue-400 to-cyan-400 bg-clip-text text-transparent">
             Chatlyzer
           </span>
         </Link>
@@ -34,7 +34,7 @@ export default function LoginPage() {
         <div className="w-full max-w-md space-y-8">
           {/* Hero Section */}
           <div className="text-center">
-            <div className="inline-flex items-center gap-2 text-purple-300 bg-white/10 rounded-full px-4 py-2 mb-6 backdrop-blur-sm">
+            <div className="inline-flex items-center gap-2 text-blue-300 bg-white/10 rounded-full px-4 py-2 mb-6 backdrop-blur-sm">
               <Zap className="w-4 h-4" />
               <span>Time to expose those texts ⚡</span>
             </div>
@@ -42,7 +42,7 @@ export default function LoginPage() {
             <h1 className="text-4xl md:text-5xl font-bold mb-6">
               Welcome back
               <br />
-              <span className="bg-gradient-to-r from-purple-400 via-pink-400 to-red-400 bg-clip-text text-transparent">
+              <span className="bg-gradient-to-r from-blue-400 via-cyan-400 to-red-400 bg-clip-text text-transparent">
                 bestie
               </span> ✨
             </h1>
@@ -53,7 +53,7 @@ export default function LoginPage() {
           </div>
 
           {/* Login Form Container */}
-          <div className="bg-white/5 backdrop-blur-sm border border-purple-400/20 rounded-2xl p-8 shadow-2xl">
+          <div className="bg-white/5 backdrop-blur-sm border border-blue-400/20 rounded-2xl p-8 shadow-2xl">
             <LoginForm 
               onSignIn={() => {
                 signIn();
@@ -77,9 +77,9 @@ export default function LoginPage() {
           </div>
 
           {/* Fun Stats */}
-          <div className="bg-gradient-to-r from-purple-500/10 to-pink-500/10 rounded-xl p-6 border border-purple-400/20 backdrop-blur-sm">
+          <div className="bg-gradient-to-r from-blue-500/10 to-cyan-500/10 rounded-xl p-6 border border-blue-400/20 backdrop-blur-sm">
             <div className="text-center">
-              <p className="text-sm text-purple-300 mb-3">
+              <p className="text-sm text-blue-300 mb-3">
                 Join thousands who've discovered the truth 👀
               </p>
               <div className="grid grid-cols-3 gap-4">

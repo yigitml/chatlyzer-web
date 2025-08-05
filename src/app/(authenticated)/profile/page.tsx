@@ -77,7 +77,7 @@ const StatCard = ({
   <Card className="bg-white/5 border-white/20">
     <CardContent className="p-6">
       <div className="flex items-center gap-3 mb-2">
-        <Icon className="w-5 h-5 text-purple-400" />
+        <Icon className="w-5 h-5 text-blue-400" />
         <span className="text-white/60 text-sm font-medium">{label}</span>
       </div>
       <div className="text-2xl font-bold text-white mb-1">{value.toLocaleString()}</div>
@@ -202,7 +202,7 @@ export default function ProfilePage() {
       <div className="min-h-screen bg-black flex items-center justify-center">
         <div className="text-center">
           <h1 className="text-2xl font-bold text-white mb-4">Not authenticated</h1>
-          <Link href="/auth/sign-in" className="text-purple-400 hover:text-purple-300">
+                        <Link href="/auth/sign-in" className="text-blue-400 hover:text-blue-300">
             Sign in to continue
           </Link>
         </div>

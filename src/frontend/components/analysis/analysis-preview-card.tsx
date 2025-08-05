@@ -70,8 +70,8 @@ export const AnalysisPreviewCard = ({
       className={`text-center p-2 sm:p-3 md:p-4 rounded-xl cursor-pointer transition-all ${
         analysisData 
           ? isSelected
-            ? 'bg-gradient-to-br from-purple-500/30 to-pink-500/30 border border-purple-400/50 scale-105'
-            : 'bg-white/10 border border-white/20 hover:bg-white/15 hover:border-purple-400/30'
+            ? 'bg-gradient-to-br from-blue-500/30 to-cyan-500/30 border border-blue-400/50 scale-105'
+            : 'bg-white/10 border border-white/20 hover:bg-white/15 hover:border-blue-400/30'
           : 'bg-white/5 border border-white/10'
       }`}
     >
