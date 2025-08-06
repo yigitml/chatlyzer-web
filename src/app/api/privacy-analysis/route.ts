@@ -38,6 +38,59 @@ export const POST = withProtectedRoute(async (request: NextRequest) => {
       return ApiResponse.error("Insufficient credits", 402).toResponse();
     }
 
+    // Perform comprehensive analysis using messages from request
+    const comprehensiveAnalysisData = await analyzeAllChatTypesPrivate(
+      data.title,
+      data.messages
+    );
+
+    // If ghost mode is enabled, return analysis results without saving anything to database
+    if (data.isGhostMode) {
+      // Get all analysis types using utility function
+      const analysisTypes = getAllAnalysisTypes();
+      
+      // Format analysis results for ghost mode response
+      const ghostAnalyses = analysisTypes.map((analysisType) => {
+        const schemaKey = analysisTypeToSchemaKey(analysisType);
+        const analysisResult = comprehensiveAnalysisData.analyses[schemaKey as keyof typeof comprehensiveAnalysisData.analyses];
+        
+        if (!analysisResult) {
+          throw new Error(`Analysis result for ${analysisType} is missing or undefined`);
+        }
+        
+        // Add the type field back to the analysis result
+        return {
+          id: `ghost-${Date.now()}-${analysisType}`, // Temporary ID for ghost mode
+          chatId: null,
+          userId: authenticatedUserId,
+          result: {
+            type: analysisTypeToTypeLiteral(analysisType),
+            ...analysisResult
+          },
+          createdAt: new Date(),
+          updatedAt: new Date()
+        };
+      });
+
+      return ApiResponse.success(
+        {
+          chat: {
+            id: `ghost-${Date.now()}`, // Temporary ID for ghost mode
+            title: data.title,
+            participants: [...new Set(data.messages.map(message => message.sender))],
+            userId: authenticatedUserId,
+            isPrivacy: true,
+            createdAt: new Date(),
+            updatedAt: new Date()
+          },
+          analyses: ghostAnalyses
+        },
+        "Ghost analysis completed! No data was saved.",
+        200
+      ).toResponse();
+    }
+
+    // Regular privacy analysis - save chat and analyses to database
     // Extract participants from messages for the chat record
     const participants = [...new Set(data.messages.map(message => message.sender))];
 
@@ -50,12 +103,6 @@ export const POST = withProtectedRoute(async (request: NextRequest) => {
         isPrivacy: true, // Mark as privacy chat
       }
     });
-
-    // Perform comprehensive analysis using messages from request
-    const comprehensiveAnalysisData = await analyzeAllChatTypesPrivate(
-      data.title,
-      data.messages
-    );
 
     // Get all analysis types using utility function
     const analysisTypes = getAllAnalysisTypes();

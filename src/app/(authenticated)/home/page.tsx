@@ -10,7 +10,6 @@ import { Sidebar } from "@/frontend/components/layout/sidebar";
 import { MainContent } from "@/frontend/components/layout/main-content";
 import { CreateChatModal } from "@/frontend/components/modals/create-chat-modal";
 import { DeleteChatModal } from "@/frontend/components/modals/delete-chat-modal";
-import { CreatePrivacyAnalysisModal } from "@/frontend/components/modals/create-privacy-analysis-modal";
 import { useChatManagement } from "@/frontend/hooks/use-chat-management";
 import { useAnalysisManagement } from "@/frontend/hooks/use-analysis-management";
 import { useToast } from "@/frontend/hooks/use-toast";
@@ -188,27 +187,10 @@ export default function UserDashboard() {
         importMode={chatManagement.importMode}
         onImportModeChange={chatManagement.setImportMode}
         onShowToast={showToast}
-      />
-
-      {/* Create Privacy Analysis Modal */}
-      <CreatePrivacyAnalysisModal
-        isOpen={chatManagement.isPrivacyAnalysisModalOpen}
-        onClose={chatManagement.closePrivacyAnalysisModal}
-        onCreatePrivacyAnalysis={() => chatManagement.handleCreatePrivacyAnalysis(showToast)}
-        isCreating={chatManagement.isCreatingPrivacyAnalysis}
-        chatTitle={chatManagement.privacyAnalysisTitle}
-        onTitleChange={chatManagement.setPrivacyAnalysisTitle}
-        chatMessages={chatManagement.privacyAnalysisMessages}
-        onMessagesChange={chatManagement.setPrivacyAnalysisMessages}
-        newMessageSender={chatManagement.newMessageSender}
-        onNewMessageSenderChange={chatManagement.setNewMessageSender}
-        newMessageContent={chatManagement.newMessageContent}
-        onNewMessageContentChange={chatManagement.setNewMessageContent}
-        whatsappImportText={chatManagement.whatsappImportText}
-        onWhatsappImportTextChange={chatManagement.setWhatsappImportText}
-        importMode={chatManagement.importMode}
-        onImportModeChange={chatManagement.setImportMode}
-        onShowToast={showToast}
+        isPrivacyMode={analysisManagement.isPrivacyMode}
+        isGhostMode={analysisManagement.isGhostMode}
+        onTogglePrivacyMode={analysisManagement.setIsPrivacyMode}
+        onToggleGhostMode={analysisManagement.setIsGhostMode}
       />
 
       <div className="flex h-[calc(100vh-73px)] relative">
@@ -239,13 +221,12 @@ export default function UserDashboard() {
           onSaveEdit={(chatId: string) => chatManagement.handleEditChatTitle(chatId, showToast)}
           onCancelEdit={chatManagement.cancelEditingChat}
           onTitleChange={chatManagement.setEditingTitle}
-          onCreatePrivacyAnalysis={() => chatManagement.setIsPrivacyAnalysisModalOpen(true)}
         />
 
         {/* Main Content */}
         <div className="flex-1 overflow-auto min-w-0">
           <MainContent
-            selectedChat={chatManagement.selectedChat}
+            selectedChat={chatManagement.selectedChat || undefined}
             selectedChatMessages={selectedChatMessages}
             selectedChatAnalyzes={selectedChatAnalyzes}
             analysesByType={analysesByType as Record<AnalysisType, any>}

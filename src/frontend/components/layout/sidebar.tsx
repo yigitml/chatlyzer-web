@@ -1,6 +1,6 @@
 import { Button } from "@/frontend/components/ui/button";
 import { ChatCard } from "@/frontend/components/chat/chat-card";
-import { Plus, ChevronRight, ChevronLeft, MessageCircle, Shield } from "lucide-react";
+import { Plus, ChevronRight, ChevronLeft, MessageCircle } from "lucide-react";
 import { Chat } from "@prisma/client";
 import { useCallback, useRef, useState } from "react";
 
@@ -22,10 +22,6 @@ interface SidebarProps {
   onSaveEdit: (chatId: string) => void;
   onCancelEdit: () => void;
   onTitleChange: (title: string) => void;
-  // Make these optional to avoid errors
-  onCreatePrivacyAnalysis?: () => void;
-  isPrivacyMode?: boolean;
-  onTogglePrivacyMode?: (isPrivacy: boolean) => void;
 }
 
 export const Sidebar = ({
@@ -46,8 +42,6 @@ export const Sidebar = ({
   onSaveEdit,
   onCancelEdit,
   onTitleChange,
-  onCreatePrivacyAnalysis,
-  isPrivacyMode,
 }: SidebarProps) => {
   const [isResizing, setIsResizing] = useState(false);
   const resizeRef = useRef<HTMLDivElement>(null);
@@ -112,38 +106,15 @@ export const Sidebar = ({
 
         {!isCollapsed && (
           <>
-            <div className="flex flex-col gap-2 mb-6">
-              {!isPrivacyMode && (
-                <Button 
-                  onClick={onCreateChat}
-                  className="w-full bg-white/10 hover:bg-white/20 text-white border-0"
-                >
-                  <Plus className="w-4 h-4 mr-2" />
-                  New Chat
-                </Button>
-              )}
-              
+            <div className="mb-6">
               <Button 
-                onClick={onCreatePrivacyAnalysis}
-                className="w-full bg-white/5 hover:bg-white/10 text-green-400 border border-green-400/30"
+                onClick={onCreateChat}
+                className="w-full bg-white/10 hover:bg-white/20 text-white border-0"
               >
-                <Shield className="w-4 h-4 mr-2" />
-                Privacy Analysis
+                <Plus className="w-4 h-4 mr-2" />
+                New Chat
               </Button>
             </div>
-
-            {/* Privacy Mode Info */}
-            {isPrivacyMode && (
-              <div className="bg-green-900/20 border border-green-500/30 rounded-lg p-3 mb-4">
-                <div className="flex items-center gap-2 mb-1">
-                  <Shield className="w-4 h-4 text-green-400" />
-                  <span className="text-green-400 text-sm font-medium">Privacy Mode</span>
-                </div>
-                <p className="text-green-300 text-xs">
-                  Messages are analyzed but never stored
-                </p>
-              </div>
-            )}
 
             {/* Chats List */}
             <div className="space-y-2">
@@ -167,15 +138,8 @@ export const Sidebar = ({
               ) : (
                 <div className="text-center py-12">
                   <MessageCircle className="w-12 h-12 text-white/20 mx-auto mb-4" />
-                  <p className="text-white/60 text-sm">
-                    {isPrivacyMode ? "No privacy analyses yet" : "No chats yet"}
-                  </p>
-                  <p className="text-white/40 text-xs">
-                    {isPrivacyMode 
-                      ? "Create your first privacy analysis" 
-                      : "Create your first chat to get started"
-                    }
-                  </p>
+                  <p className="text-white/60 text-sm">No chats yet</p>
+                  <p className="text-white/40 text-xs">Create your first chat to get started</p>
                 </div>
               )}
             </div>

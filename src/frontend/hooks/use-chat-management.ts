@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useChatStore } from "@/frontend/store/chatStore";
 import { useAnalysisManagement } from "@/frontend/hooks/use-analysis-management";
 import { ChatPostRequest, ChatDeleteRequest, PrivacyAnalysisPostRequest } from "@/shared/types/api/apiRequest";
-import { getStorageItem, setStorageItem, LOCAL_STORAGE_KEYS } from "@/shared/utils/storage";
+import { setStorageItem, LOCAL_STORAGE_KEYS } from "@/shared/utils/storage";
 
 interface Message {
   sender: string;
@@ -12,12 +12,12 @@ interface Message {
 
 export const useChatManagement = () => {
   const { chats, createChat, updateChat, deleteChat, fetchChats } = useChatStore();
-  const { handlePrivacyAnalysis } = useAnalysisManagement();
+  const { handlePrivacyAnalysis, isGhostMode, isPrivacyMode } = useAnalysisManagement();
   
   // Chat Selection State
   const [selectedChatId, setSelectedChatId] = useState<string | null>(null);
   
-  // Edit Chat State
+  // Chat Editing State
   const [editingChatId, setEditingChatId] = useState<string | null>(null);
   const [editingTitle, setEditingTitle] = useState("");
   const [isUpdatingTitle, setIsUpdatingTitle] = useState(false);
@@ -31,16 +31,12 @@ export const useChatManagement = () => {
   const [isCreatingChat, setIsCreatingChat] = useState(false);
   const [chatTitle, setChatTitle] = useState("");
   const [chatMessages, setChatMessages] = useState<Message[]>([]);
+  
+  // Message entry state (shared between all modals)
   const [newMessageSender, setNewMessageSender] = useState("");
   const [newMessageContent, setNewMessageContent] = useState("");
   const [whatsappImportText, setWhatsappImportText] = useState("");
-  const [importMode, setImportMode] = useState<"manual" | "whatsapp">("manual");
-
-  // Add privacy analysis modal state after existing state:
-  const [isPrivacyAnalysisModalOpen, setIsPrivacyAnalysisModalOpen] = useState(false);
-  const [isCreatingPrivacyAnalysis, setIsCreatingPrivacyAnalysis] = useState(false);
-  const [privacyAnalysisTitle, setPrivacyAnalysisTitle] = useState("");
-  const [privacyAnalysisMessages, setPrivacyAnalysisMessages] = useState<Message[]>([]);
+  const [importMode, setImportMode] = useState<"manual" | "whatsapp">("whatsapp"); // Default to WhatsApp
 
   // Helper function to select chat with storage update
   const selectChat = (chatId: string | null) => {
@@ -58,25 +54,56 @@ export const useChatManagement = () => {
 
     try {
       setIsCreatingChat(true);
-      const chatData: ChatPostRequest = {
-        title: chatTitle.trim(),
-        messages: chatMessages.length > 0 ? chatMessages.map(msg => ({
-          sender: msg.sender,
-          content: msg.content,
-          timestamp: msg.timestamp || new Date(),
-          metadata: null
-        } as any)) : undefined
-      };
 
-      const newChat = await createChat(chatData);
-      await fetchChats();
-      selectChat(newChat.id);
+      // If privacy mode or ghost mode is enabled, create privacy analysis instead
+      if (isPrivacyMode || isGhostMode) {
+        if (chatMessages.length === 0) {
+          showToast("At least one message is required for analysis", "error");
+          return;
+        }
+
+        const analysisData: PrivacyAnalysisPostRequest = {
+          title: chatTitle.trim(),
+          isGhostMode: isGhostMode,
+          messages: chatMessages.map(msg => ({
+            sender: msg.sender,
+            content: msg.content,
+            timestamp: msg.timestamp || new Date(),
+            metadata: null
+          }))
+        };
+
+        const result = await handlePrivacyAnalysis(analysisData, showToast);
+        
+        if (result) {
+          // For regular privacy analysis (not ghost mode), select the created chat
+          if (!isGhostMode) {
+            await fetchChats();
+            selectChat(result.chat.id);
+          }
+        }
+      } else {
+        // Regular chat creation
+        const chatData: ChatPostRequest = {
+          title: chatTitle.trim(),
+          messages: chatMessages.length > 0 ? chatMessages.map(msg => ({
+            sender: msg.sender,
+            content: msg.content,
+            timestamp: msg.timestamp || new Date(),
+            metadata: null
+          } as any)) : undefined
+        };
+
+        const newChat = await createChat(chatData);
+        await fetchChats();
+        selectChat(newChat.id);
+        showToast("Chat created! Ready for analysis ✨", "success");
+      }
       
       // Reset form and close modal
       resetCreateChatModal();
       setIsCreateModalOpen(false);
       
-      showToast("Chat created! Ready for analysis ✨", "success");
     } catch (error) {
       showToast(error instanceof Error ? error.message : "Failed to create chat", "error");
     } finally {
@@ -141,66 +168,12 @@ export const useChatManagement = () => {
     setNewMessageSender("");
     setNewMessageContent("");
     setWhatsappImportText("");
-    setImportMode("manual");
-  };
-
-  const resetPrivacyAnalysisModal = () => {
-    setPrivacyAnalysisTitle("");
-    setPrivacyAnalysisMessages([]);
-    setNewMessageSender("");
-    setNewMessageContent("");
-    setWhatsappImportText("");
-    setImportMode("manual");
+    setImportMode("whatsapp"); // Default to WhatsApp
   };
 
   const closeCreateChatModal = () => {
     resetCreateChatModal();
     setIsCreateModalOpen(false);
-  };
-
-  const closePrivacyAnalysisModal = () => {
-    resetPrivacyAnalysisModal();
-    setIsPrivacyAnalysisModalOpen(false);
-  };
-
-  const handleCreatePrivacyAnalysis = async (showToast: (message: string, type: "success" | "error") => void) => {
-    if (!privacyAnalysisTitle.trim()) {
-      showToast("Analysis title is required", "error");
-      return;
-    }
-
-    if (privacyAnalysisMessages.length === 0) {
-      showToast("At least one message is required", "error");
-      return;
-    }
-
-    try {
-      setIsCreatingPrivacyAnalysis(true);
-      const analysisData: PrivacyAnalysisPostRequest = {
-        title: privacyAnalysisTitle.trim(),
-        messages: privacyAnalysisMessages.map(msg => ({
-          sender: msg.sender,
-          content: msg.content,
-          timestamp: msg.timestamp || new Date(),
-          metadata: null
-        }))
-      };
-
-      const result = await handlePrivacyAnalysis(analysisData, showToast);
-      
-      if (result) {
-        // Select the newly created privacy chat
-        selectChat(result.chat.id);
-        
-        // Reset form and close modal
-        resetPrivacyAnalysisModal();
-        setIsPrivacyAnalysisModalOpen(false);
-      }
-    } catch (error) {
-      // Error already handled in handlePrivacyAnalysis
-    } finally {
-      setIsCreatingPrivacyAnalysis(false);
-    }
   };
 
   return {
@@ -221,14 +194,9 @@ export const useChatManagement = () => {
     whatsappImportText,
     importMode,
     
-    // Privacy Analysis State
-    isPrivacyAnalysisModalOpen,
-    isCreatingPrivacyAnalysis,
-    privacyAnalysisTitle,
-    privacyAnalysisMessages,
-    
     // Setters
     selectChat,
+    setEditingChatId,
     setEditingTitle,
     setIsDeleteDialogOpen,
     setIsCreateModalOpen,
@@ -238,26 +206,18 @@ export const useChatManagement = () => {
     setNewMessageContent,
     setWhatsappImportText,
     setImportMode,
-    setIsPrivacyAnalysisModalOpen,
-    setPrivacyAnalysisTitle,
-    setPrivacyAnalysisMessages,
-    
-    // Modal state management
-    closeCreateChatModal,
-    closePrivacyAnalysisModal,
-    resetCreateChatModal,
-    resetPrivacyAnalysisModal,
     
     // Actions
-    fetchChats,
     handleCreateChat,
     handleEditChatTitle,
     handleDeleteChat,
     startEditingChat,
     cancelEditingChat,
-    handleCreatePrivacyAnalysis,
+    closeCreateChatModal,
+    resetCreateChatModal,
+    fetchChats,
     
-    // Computed
-    selectedChat: chats.find(chat => chat.id === selectedChatId)
+    // Computed values
+    selectedChat: selectedChatId ? chats.find(chat => chat.id === selectedChatId) || null : null,
   };
 }; 

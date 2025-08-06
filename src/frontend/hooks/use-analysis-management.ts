@@ -18,6 +18,7 @@ export const useAnalysisManagement = () => {
   
   const [selectedAnalysisType, setSelectedAnalysisType] = useState<AnalysisType | null>(null);
   const [isPrivacyMode, setIsPrivacyMode] = useState(false);
+  const [isGhostMode, setIsGhostMode] = useState(false);
 
   // Optimistic credit update
   const updateCreditsOptimistically = async (creditsUsed: number) => {
@@ -68,12 +69,34 @@ export const useAnalysisManagement = () => {
     try {
       updateCreditsOptimistically(8);
       const result = await createPrivacyAnalysis(data);
-      showToast("Privacy analysis complete! Messages analyzed but not stored 🔒", "success");
+      
+      if (data.isGhostMode) {
+        showToast("Ghost analysis complete! No data was saved 👻", "success");
+      } else {
+        showToast("Privacy analysis complete! Messages analyzed but not stored 🔒", "success");
+      }
+      
       return result;
     } catch (error) {
       showToast(error instanceof Error ? error.message : "Privacy analysis failed", "error");
       await fetchCredits();
       throw error;
+    }
+  };
+
+  // Handle ghost mode toggle - when enabling ghost mode, enable privacy mode too
+  const handleToggleGhostMode = (enabled: boolean) => {
+    setIsGhostMode(enabled);
+    if (enabled && !isPrivacyMode) {
+      setIsPrivacyMode(true);
+    }
+  };
+
+  // Handle privacy mode toggle - when disabling privacy mode, disable ghost mode too
+  const handleTogglePrivacyMode = (enabled: boolean) => {
+    setIsPrivacyMode(enabled);
+    if (!enabled && isGhostMode) {
+      setIsGhostMode(false);
     }
   };
 
@@ -109,10 +132,12 @@ export const useAnalysisManagement = () => {
     selectedAnalysisType,
     credits,
     isPrivacyMode,
+    isGhostMode,
     
     // Setters
     setSelectedAnalysisType,
-    setIsPrivacyMode,
+    setIsPrivacyMode: handleTogglePrivacyMode,
+    setIsGhostMode: handleToggleGhostMode,
     
     // Actions
     handleAnalyzeChat,

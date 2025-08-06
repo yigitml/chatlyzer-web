@@ -5,7 +5,7 @@ import { Textarea } from "@/frontend/components/ui/textarea";
 import { Button } from "@/frontend/components/ui/button";
 import { Label } from "@/frontend/components/ui/label";
 import { LoadingSpinner } from "@/frontend/components/common/loading-spinner";
-import { X } from "lucide-react";
+import { X, Shield, EyeOff } from "lucide-react";
 import { convertChatExport, ChatPlatform } from "@/shared/utils/messageConverter";
 
 interface Message {
@@ -32,6 +32,11 @@ interface CreateChatModalProps {
   importMode: "manual" | "whatsapp";
   onImportModeChange: (mode: "manual" | "whatsapp") => void;
   onShowToast: (message: string, type: "success" | "error") => void;
+  // New props for privacy settings
+  isPrivacyMode: boolean;
+  isGhostMode: boolean;
+  onTogglePrivacyMode: (enabled: boolean) => void;
+  onToggleGhostMode: (enabled: boolean) => void;
 }
 
 export const CreateChatModal = ({
@@ -51,7 +56,11 @@ export const CreateChatModal = ({
   onWhatsappImportTextChange,
   importMode,
   onImportModeChange,
-  onShowToast
+  onShowToast,
+  isPrivacyMode,
+  isGhostMode,
+  onTogglePrivacyMode,
+  onToggleGhostMode
 }: CreateChatModalProps) => {
   const addMessage = () => {
     if (!newMessageSender.trim() || !newMessageContent.trim()) return;
@@ -113,14 +122,50 @@ export const CreateChatModal = ({
     }
   };
 
+  const handlePrivacyToggle = (enabled: boolean) => {
+    onTogglePrivacyMode(enabled);
+    // If disabling privacy and ghost mode is on, disable ghost mode too
+    if (!enabled && isGhostMode) {
+      onToggleGhostMode(false);
+    }
+  };
+
+  const handleGhostToggle = (enabled: boolean) => {
+    onToggleGhostMode(enabled);
+    // If enabling ghost mode, also enable privacy mode
+    if (enabled && !isPrivacyMode) {
+      onTogglePrivacyMode(true);
+    }
+  };
+
   const handleClose = () => {
     // Clear all state when closing the modal
     onMessagesChange([]);
     onWhatsappImportTextChange("");
     onNewMessageSenderChange("");
     onNewMessageContentChange("");
-    onImportModeChange("manual");
+    onImportModeChange("whatsapp"); // Default to WhatsApp import
     onClose();
+  };
+
+  const getButtonText = () => {
+    if (isGhostMode) {
+      return isCreating ? "Creating Ghost Analysis..." : "Create Ghost Analysis";
+    } else if (isPrivacyMode) {
+      return isCreating ? "Creating Privacy Analysis..." : "Create Privacy Analysis";
+    } else {
+      return isCreating ? "Creating Chat..." : "Create Chat";
+    }
+  };
+
+  const getModalDescription = () => {
+    if (isGhostMode) {
+      return "Create a completely private analysis - no data will be saved";
+    } else if (isPrivacyMode) {
+      return "Create a privacy analysis - messages will be analyzed but not stored";
+    } else {
+      return "Upload your conversation for analysis";
+    }
   };
 
   return (
@@ -129,11 +174,76 @@ export const CreateChatModal = ({
         <DialogHeader>
           <DialogTitle>Create New Chat</DialogTitle>
           <DialogDescription className="text-white/60">
-            Upload your conversation for analysis
+            {getModalDescription()}
           </DialogDescription>
         </DialogHeader>
         
         <div className="space-y-6">
+          {/* Privacy Settings */}
+          <div className="bg-white/5 border border-white/10 rounded-lg p-4 space-y-4">
+            <h3 className="text-sm font-medium text-white">Privacy Settings</h3>
+            
+            {/* Privacy Analysis Toggle */}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Shield className="w-4 h-4 text-green-400" />
+                <div>
+                  <span className="text-sm text-white">Privacy Analysis</span>
+                  <p className="text-xs text-white/60">Messages analyzed but not stored</p>
+                </div>
+              </div>
+              <button
+                onClick={() => handlePrivacyToggle(!isPrivacyMode)}
+                className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${
+                  isPrivacyMode ? 'bg-green-500' : 'bg-white/20'
+                }`}
+              >
+                <span
+                  className={`inline-block h-3 w-3 transform rounded-full bg-white transition-transform ${
+                    isPrivacyMode ? 'translate-x-5' : 'translate-x-1'
+                  }`}
+                />
+              </button>
+            </div>
+
+            {/* Ghost Mode Toggle */}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <EyeOff className="w-4 h-4 text-purple-400" />
+                <div>
+                  <span className="text-sm text-white">Ghost Mode</span>
+                  <p className="text-xs text-white/60">No data saved - completely private</p>
+                </div>
+              </div>
+              <button
+                onClick={() => handleGhostToggle(!isGhostMode)}
+                className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${
+                  isGhostMode ? 'bg-purple-500' : 'bg-white/20'
+                }`}
+              >
+                <span
+                  className={`inline-block h-3 w-3 transform rounded-full bg-white transition-transform ${
+                    isGhostMode ? 'translate-x-5' : 'translate-x-1'
+                  }`}
+                />
+              </button>
+            </div>
+
+            {/* Status indicator */}
+            {(isPrivacyMode || isGhostMode) && (
+              <div className={`text-xs p-2 rounded ${
+                isGhostMode 
+                  ? 'bg-purple-900/20 text-purple-300 border border-purple-500/30' 
+                  : 'bg-green-900/20 text-green-300 border border-green-500/30'
+              }`}>
+                {isGhostMode 
+                  ? "👻 Ghost Mode: Analysis will be performed but no data will be saved to your account"
+                  : "🔒 Privacy Mode: Messages will be analyzed but not stored in your chat history"
+                }
+              </div>
+            )}
+          </div>
+
           <div>
             <Label htmlFor="title">Chat Title</Label>
             <Input
@@ -147,18 +257,18 @@ export const CreateChatModal = ({
 
           <div className="flex gap-2">
             <Button
-              variant={importMode === "manual" ? "default" : "outline"}
-              onClick={() => handleImportModeChange("manual")}
-              className="flex-1"
-            >
-              Manual Entry
-            </Button>
-            <Button
               variant={importMode === "whatsapp" ? "default" : "outline"}
               onClick={() => handleImportModeChange("whatsapp")}
               className="flex-1"
             >
               WhatsApp Import
+            </Button>
+            <Button
+              variant={importMode === "manual" ? "default" : "outline"}
+              onClick={() => handleImportModeChange("manual")}
+              className="flex-1"
+            >
+              Manual Entry
             </Button>
           </div>
 
@@ -238,14 +348,15 @@ export const CreateChatModal = ({
           <Button
             onClick={onCreateChat}
             disabled={!chatTitle.trim() || isCreating}
+            className={isGhostMode ? 'bg-purple-600 hover:bg-purple-700' : isPrivacyMode ? 'bg-green-600 hover:bg-green-700' : ''}
           >
             {isCreating ? (
               <div className="flex items-center justify-center gap-2">
                 <LoadingSpinner />
-                <span>Creating...</span>
+                <span>{getButtonText()}</span>
               </div>
             ) : (
-              "Create Chat"
+              getButtonText()
             )}
           </Button>
         </DialogFooter>
