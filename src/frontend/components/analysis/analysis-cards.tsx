@@ -39,7 +39,7 @@ export const ScoreCard = ({
       <p className="text-sm text-white/60 mb-3">{description}</p>
       <div className="w-full bg-white/10 rounded-full h-2">
         <div 
-          className="bg-gradient-to-r from-blue-500 to-cyan-500 h-2 rounded-full transition-all duration-300"
+          className="bg-gradient-to-r from-blue-500/70 to-cyan-500/70 h-2 rounded-full transition-all duration-300"
           style={{ width: `${Math.min(percentage, 100)}%` }}
         />
       </div>

@@ -15,7 +15,7 @@ export default function DeleteAccountPage() {
   // Show loading while auth is initializing
   if (!isInitialized) {
     return (
-      <div className="min-h-screen text-white bg-gradient-to-br from-gray-900 via-purple-900 to-violet-900 flex items-center justify-center">
+      <div className="min-h-screen text-white bg-background flex items-center justify-center">
         <div className="text-center">
           <div className="w-8 h-8 border-2 border-purple-400 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
           <p className="text-purple-300">Loading the chaos... ⚡</p>
@@ -29,14 +29,12 @@ export default function DeleteAccountPage() {
   };
 
   return (
-    <div className="min-h-screen text-white bg-gradient-to-br from-gray-900 via-purple-900 to-violet-900">
+    <div className="min-h-screen text-white bg-background">
       {/* Navigation */}
       <header className="container mx-auto px-4 py-6 flex items-center justify-between">
         <Link href="/" className="flex items-center gap-2">
           <Image src="/favicon.ico" alt="Chatlyzer" width={32} height={32} className="w-8 h-8" />
-          <span className="font-bold text-xl bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">
-            Chatlyzer
-          </span>
+          <span className="font-bold text-xl text-white relative after:content-[''] after:block after:h-0.5 after:w-full after:bg-gradient-to-r from-purple-400/40 to-pink-400/40 after:mt-1 after:rounded-full">Chatlyzer</span>
         </Link>
 
         <Button
@@ -61,9 +59,7 @@ export default function DeleteAccountPage() {
             <h1 className="text-4xl md:text-6xl font-bold mb-6">
               About to
               <br />
-              <span className="bg-gradient-to-r from-red-400 via-pink-400 to-purple-400 bg-clip-text text-transparent">
-                delete everything
-              </span> 🗑️
+              <span className="text-white relative after:content-[''] after:block after:h-1 after:w-full after:bg-gradient-to-r from-red-400/30 to-pink-400/30 after:mt-1 after:rounded-full">delete everything</span> 🗑️
             </h1>
             
             <p className="text-xl text-gray-300 max-w-2xl mx-auto mb-8">
@@ -99,7 +95,7 @@ export default function DeleteAccountPage() {
 
                     <div className="pt-2">
                       <Button
-                        className="w-full bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white font-medium transition-all duration-200 hover:scale-105"
+                        className="w-full bg-gradient-to-r from-blue-500/70 to-purple-500/70 hover:from-blue-500/80 hover:to-purple-500/80 text-white font-medium transition-all duration-200 hover:scale-105"
                         onClick={handleLoginRedirect}
                       >
                         <LogIn className="h-4 w-4 mr-2" />
@@ -156,7 +152,7 @@ export default function DeleteAccountPage() {
                       <Button
                         variant="destructive"
                         size="lg"
-                        className="w-full bg-gradient-to-r from-red-500 to-pink-500 hover:from-red-600 hover:to-pink-600 transition-all duration-200 hover:scale-105 opacity-50 cursor-not-allowed"
+                        className="w-full bg-gradient-to-r from-red-500/70 to-pink-500/70 hover:from-red-500/80 hover:to-pink-500/80 transition-all duration-200 hover:scale-105 opacity-50 cursor-not-allowed"
                         disabled
                       >
                         Delete everything forever 💥

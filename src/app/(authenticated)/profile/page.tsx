@@ -394,7 +394,7 @@ export default function ProfilePage() {
             ) : (
               <div className="text-center py-6">
                 <p className="text-white/60 mb-4">No active subscription</p>
-                <Button className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600">
+                <Button className="bg-gradient-to-r from-purple-500/70 to-pink-500/70 hover:from-purple-500/80 hover:to-pink-500/80">
                   <Crown className="w-4 h-4 mr-2" />
                   Upgrade Plan
                 </Button>

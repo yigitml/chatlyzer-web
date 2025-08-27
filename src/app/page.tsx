@@ -17,14 +17,12 @@ export default function Home() {
   }, [isAuthenticated, isInitialized, router])
 
   return (
-    <div className="min-h-screen text-white bg-gradient-to-br from-gray-900 via-blue-900 to-indigo-900">
+    <div className="min-h-screen text-white bg-background">
       {/* Navigation */}
       <header className="container mx-auto px-4 py-6 flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Image src="/favicon.ico" alt="Chatlyzer" width={32} height={32} className="w-8 h-8" />
-          <span className="font-bold text-xl bg-gradient-to-r from-blue-400 to-cyan-400 bg-clip-text text-transparent">
-            Chatlyzer AI
-          </span>
+          <span className="font-bold text-xl text-white relative after:content-[''] after:block after:h-0.5 after:w-full after:bg-gradient-to-r from-blue-400/40 to-cyan-400/40 after:mt-1 after:rounded-full">Chatlyzer AI</span>
         </div>
 
         <nav className="hidden md:flex items-center gap-8">
@@ -39,8 +37,8 @@ export default function Home() {
           </Link>
           <Link href="#" className="text-gray-300 hover:text-white transition flex items-center gap-2">
             Blog
-            <span className="bg-gradient-to-r from-blue-500 to-cyan-500 text-white text-xs px-2 py-0.5 rounded-full font-medium">
-              NEW
+            <span className="inline-flex rounded-full p-[1px] bg-gradient-to-r from-blue-500/50 to-cyan-500/50">
+              <span className="text-white text-xs px-2 py-0.5 rounded-full bg-white/5">NEW</span>
             </span>
           </Link>
         </nav>
@@ -51,9 +49,9 @@ export default function Home() {
           </Link>
           <Link
             href="/auth/sign-in"
-            className="bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white font-medium px-6 py-2 rounded-full transition-all duration-200 hover:scale-105"
+            className="inline-flex rounded-full p-[1px] bg-gradient-to-r from-blue-500/50 to-cyan-500/50"
           >
-            Start vibing ✨
+            <span className="text-white font-medium px-6 py-2 rounded-full bg-white/5">Start vibing ✨</span>
           </Link>
         </div>
       </header>
@@ -70,9 +68,7 @@ export default function Home() {
         <h1 className="text-5xl md:text-7xl font-bold mb-6">
           Your chats are
           <br className="hidden md:block" />
-          <span className="bg-gradient-to-r from-blue-400 via-cyan-400 to-red-400 bg-clip-text text-transparent">
-            lowkey sus
-          </span> 👀
+          <span className="text-white relative after:content-[''] after:block after:h-1 after:w-full after:bg-gradient-to-r from-blue-400/30 to-cyan-400/30 after:mt-1 after:rounded-full">lowkey sus</span> 👀
         </h1>
 
         <p className="text-xl text-gray-300 max-w-3xl mx-auto mb-12">
@@ -84,9 +80,9 @@ export default function Home() {
         <div className="flex flex-col md:flex-row items-center justify-center gap-4 mb-16">
           <Link
             href="/auth/sign-in"
-            className="bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white font-medium px-8 py-3 rounded-full flex items-center gap-2 transition-all duration-200 hover:scale-105 w-full md:w-auto justify-center"
+            className="inline-flex rounded-full p-[1px] bg-gradient-to-r from-blue-500/50 to-cyan-500/50 w-full md:w-auto justify-center"
           >
-            Expose my texts 💀
+            <span className="text-white font-medium px-8 py-3 rounded-full bg-white/5">Expose my texts 💀</span>
           </Link>
 
           <Link
@@ -215,7 +211,7 @@ export default function Home() {
           
           <div className="grid grid-cols-1 md:grid-cols-3 gap-10">
             <div className="text-left">
-              <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-full flex items-center justify-center mb-4">
+              <div className="w-10 h-10 bg-gradient-to-r from-blue-500/60 to-cyan-500/60 rounded-full flex items-center justify-center mb-4">
                 <span className="font-bold">1</span>
               </div>
               <h3 className="text-xl font-medium mb-3">No More Guessing Games</h3>
@@ -223,7 +219,7 @@ export default function Home() {
             </div>
             
             <div className="text-left">
-              <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-full flex items-center justify-center mb-4">
+              <div className="w-10 h-10 bg-gradient-to-r from-blue-500/60 to-cyan-500/60 rounded-full flex items-center justify-center mb-4">
                 <span className="font-bold">2</span>
               </div>
               <h3 className="text-xl font-medium mb-3">Catch Red Flags Early</h3>
@@ -231,7 +227,7 @@ export default function Home() {
             </div>
             
             <div className="text-left">
-              <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-full flex items-center justify-center mb-4">
+              <div className="w-10 h-10 bg-gradient-to-r from-blue-500/60 to-cyan-500/60 rounded-full flex items-center justify-center mb-4">
                 <span className="font-bold">3</span>
               </div>
               <h3 className="text-xl font-medium mb-3">Your Data Stays Private</h3>
@@ -246,7 +242,7 @@ export default function Home() {
             "Bro this app literally saved me from getting played 💀 The ghost risk analysis was spot on - they left me on read the next day"
           </blockquote>
           <div className="flex items-center justify-center gap-3">
-            <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-full flex items-center justify-center">
+            <div className="w-10 h-10 bg-gradient-to-r from-blue-500/60 to-cyan-500/60 rounded-full flex items-center justify-center">
               <span className="text-sm font-bold">AJ</span>
             </div>
             <div>
@@ -264,7 +260,7 @@ export default function Home() {
           </p>
           <Link
             href="/auth/sign-in"
-            className="bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white font-medium px-10 py-4 rounded-full inline-block transition-all duration-200 hover:scale-105"
+            className="bg-gradient-to-r from-blue-500/70 to-cyan-500/70 hover:from-blue-500/80 hover:to-cyan-500/80 text-white font-medium px-10 py-4 rounded-full inline-block transition-all duration-200 hover:scale-105"
           >
             Let's get this tea ☕
           </Link>
@@ -278,7 +274,7 @@ export default function Home() {
           <div className="flex flex-col md:flex-row justify-between items-center">
             <div className="flex items-center gap-2 mb-6 md:mb-0">
               <Image src="/favicon.ico" alt="Chatlyzer" width={32} height={32} className="w-8 h-8" />
-              <span className="font-bold bg-gradient-to-r from-blue-400 to-cyan-400 bg-clip-text text-transparent">
+              <span className="font-bold bg-gradient-to-r from-blue-400/70 to-cyan-400/70 bg-clip-text text-transparent">
                 Chatlyzer
               </span>
             </div>

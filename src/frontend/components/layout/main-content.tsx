@@ -52,7 +52,7 @@ export const MainContent = ({
           <p className="text-sm sm:text-base text-white/60 mb-6 sm:mb-8">Choose a conversation from the sidebar to get started</p>
           <Button
             onClick={onCreateChat}
-            className="bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600"
+            className="bg-gradient-to-r from-blue-500/70 to-cyan-500/70 hover:from-blue-500/80 hover:to-cyan-500/80"
           >
             <Plus className="w-4 h-4 mr-2" />
             Create New Chat
@@ -85,7 +85,7 @@ export const MainContent = ({
               <Button
                 onClick={onAnalyzeChat}
                 disabled={isAnalyzing || totalCredits < 8}
-                className="bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-sm"
+                className="bg-gradient-to-r from-blue-500/70 to-cyan-500/70 hover:from-blue-500/80 hover:to-cyan-500/80 text-sm"
               >
                 {isAnalyzing ? (
                   <>
@@ -187,7 +187,7 @@ export const MainContent = ({
                 <Button
                   onClick={onAnalyzeChat}
                   disabled={isAnalyzing || totalCredits < 8}
-                  className="bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600"
+                  className="bg-gradient-to-r from-blue-500/70 to-cyan-500/70 hover:from-blue-500/80 hover:to-cyan-500/80"
                 >
                   {isAnalyzing ? (
                     <>
