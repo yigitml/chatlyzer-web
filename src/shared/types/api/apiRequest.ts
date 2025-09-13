@@ -44,6 +44,7 @@ export interface ChatDeleteRequest {
 export interface AnalysisGetRequest {
   id?: string;
   chatId?: string;
+  includeInProgress?: boolean;
 }
 
 export interface AnalysisPostRequest {

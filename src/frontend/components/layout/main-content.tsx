@@ -16,6 +16,7 @@ interface MainContentProps {
   isLoadingChatData: boolean;
   isAnalyzing: boolean;
   totalCredits: number;
+  hasInProgressAnalysis: boolean;
   onAnalyzeChat: () => void;
   onDeleteChat: () => void;
   onCreateChat: () => void;
@@ -31,6 +32,7 @@ export const MainContent = ({
   isLoadingChatData,
   isAnalyzing,
   totalCredits,
+  hasInProgressAnalysis,
   onAnalyzeChat,
   onDeleteChat,
   onCreateChat,
@@ -84,13 +86,13 @@ export const MainContent = ({
             {!hasAnalyses && (
               <Button
                 onClick={onAnalyzeChat}
-                disabled={isAnalyzing || totalCredits < 8}
+                disabled={isAnalyzing || hasInProgressAnalysis || totalCredits < 8}
                 className="bg-gradient-to-r from-blue-500/70 to-cyan-500/70 hover:from-blue-500/80 hover:to-cyan-500/80 text-sm"
               >
-                {isAnalyzing ? (
+                {isAnalyzing || hasInProgressAnalysis ? (
                   <>
                     <Sparkles className="w-4 h-4 mr-2 animate-spin" />
-                    Analyzing...
+                    {hasInProgressAnalysis ? "Processing..." : "Analyzing..."}
                   </>
                 ) : (
                   <>
@@ -182,17 +184,24 @@ export const MainContent = ({
             {!hasAnalyses && (
               <div className="text-center py-12">
                 <BarChart3 className="w-16 h-16 text-white/20 mx-auto mb-4" />
-                <h3 className="text-lg font-medium text-white mb-2">No Analysis Yet</h3>
-                <p className="text-white/60 mb-6">Analyze this chat to see insights</p>
+                <h3 className="text-lg font-medium text-white mb-2">
+                  {hasInProgressAnalysis ? "Analysis in Progress" : "No Analysis Yet"}
+                </h3>
+                <p className="text-white/60 mb-6">
+                  {hasInProgressAnalysis 
+                    ? "Your analysis is being processed. This may take a few moments..." 
+                    : "Analyze this chat to see insights"
+                  }
+                </p>
                 <Button
                   onClick={onAnalyzeChat}
-                  disabled={isAnalyzing || totalCredits < 8}
+                  disabled={isAnalyzing || hasInProgressAnalysis || totalCredits < 8}
                   className="bg-gradient-to-r from-blue-500/70 to-cyan-500/70 hover:from-blue-500/80 hover:to-cyan-500/80"
                 >
-                  {isAnalyzing ? (
+                  {isAnalyzing || hasInProgressAnalysis ? (
                     <>
                       <Sparkles className="w-4 h-4 mr-2 animate-spin" />
-                      Analyzing...
+                      {hasInProgressAnalysis ? "Processing..." : "Analyzing..."}
                     </>
                   ) : (
                     <>

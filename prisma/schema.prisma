@@ -86,6 +86,13 @@ enum CreditType {
   ANALYSIS
 }
 
+enum AnalysisStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+}
+
 model File {
   id        String    @id @default(cuid())
   url       String
@@ -129,13 +136,15 @@ model Message {
 }
 
 model Analysis {
-  id        String    @id @default(cuid())
+  id        String         @id @default(cuid())
   chatId    String
-  chat      Chat      @relation(fields: [chatId], references: [id])
-  result    Json
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
+  chat      Chat           @relation(fields: [chatId], references: [id])
+  result    Json?
+  status    AnalysisStatus @default(PENDING)
+  error     String?
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
   deletedAt DateTime?
-  User      User      @relation(fields: [userId], references: [id])
+  User      User           @relation(fields: [userId], references: [id])
   userId    String
 }

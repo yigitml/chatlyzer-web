@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { Analysis, Chat } from "@prisma/client";
+import { Analysis, Chat, AnalysisStatus } from "@prisma/client";
 import { createNetworkService } from "@/shared/utils/network";
 import { useAuthStore } from "./authStore";
 import { 
@@ -24,6 +24,10 @@ interface AnalysisActions {
   createAnalysis: (data: AnalysisPostRequest) => Promise<Analysis[]>;
   updateAnalysis: (data: AnalysisPutRequest) => Promise<Analysis>;
   deleteAnalysis: (data: AnalysisDeleteRequest) => Promise<void>;
+  
+  // Status checking actions
+  checkAnalysisStatus: (chatId: string) => Promise<Analysis[]>;
+  hasInProgressAnalysis: (chatId: string) => boolean;
   
   // Privacy analysis actions
   createPrivacyAnalysis: (data: PrivacyAnalysisPostRequest) => Promise<{ chat: Chat; analyses: Analysis[] }>;
@@ -109,6 +113,30 @@ export const useAnalysisStore = create<AnalysisStore>((set, get) => {
         set({ error: error as Error, isLoading: false });
         throw error;
       }
+    },
+
+    // Status checking methods
+    checkAnalysisStatus: async (chatId) => {
+      try {
+        const analyses = await networkService.fetchAnalyzes({ chatId, includeInProgress: true });
+        // Update store with all analyses including in-progress ones
+        set((state) => {
+          const otherAnalyses = state.analyzes.filter(a => a.chatId !== chatId);
+          return { analyzes: [...otherAnalyses, ...analyses] };
+        });
+        return analyses;
+      } catch (error) {
+        console.error("Failed to check analysis status:", error);
+        throw error;
+      }
+    },
+
+    hasInProgressAnalysis: (chatId) => {
+      const state = get();
+      const chatAnalyses = state.analyzes.filter(a => a.chatId === chatId);
+      return chatAnalyses.some(a => 
+        a.status === AnalysisStatus.PENDING || a.status === AnalysisStatus.PROCESSING
+      );
     },
 
     // Privacy analysis methods

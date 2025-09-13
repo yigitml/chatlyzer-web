@@ -86,8 +86,13 @@ export default function UserDashboard() {
         
         await Promise.all([
           chatManagement.selectedChatId && fetchMessages({ chatId: chatManagement.selectedChatId }),
-          chatManagement.selectedChatId && analysisManagement.fetchAnalyzes({ chatId: chatManagement.selectedChatId })
+          chatManagement.selectedChatId && analysisManagement.checkAnalysisStatus(chatManagement.selectedChatId)
         ]);
+
+        // Start polling if there are in-progress analyses
+        if (chatManagement.selectedChatId && analysisManagement.hasInProgressAnalysis(chatManagement.selectedChatId)) {
+          analysisManagement.startPolling(chatManagement.selectedChatId);
+        }
       } catch (error) {
         if (!abortController.signal.aborted && error instanceof Error && error.name !== 'AbortError') {
           showToast(error.message || "Failed to load chat data", "error");
@@ -106,7 +111,7 @@ export default function UserDashboard() {
     return () => {
       abortController.abort();
     };
-  }, [chatManagement.selectedChatId, fetchMessages, analysisManagement.fetchAnalyzes]);
+  }, [chatManagement.selectedChatId, fetchMessages, analysisManagement.checkAnalysisStatus, analysisManagement.hasInProgressAnalysis, analysisManagement.startPolling]);
 
   useEffect(() => {
     if (chatManagement.chats.length > 0) {
@@ -234,6 +239,7 @@ export default function UserDashboard() {
             isLoadingChatData={isLoadingChatData}
             isAnalyzing={analysisManagement.isAnalyzing}
             totalCredits={analysisManagement.totalCredits}
+            hasInProgressAnalysis={chatManagement.selectedChatId ? analysisManagement.hasInProgressAnalysis(chatManagement.selectedChatId) : false}
             onAnalyzeChat={() => chatManagement.selectedChatId && analysisManagement.handleAnalyzeChat(chatManagement.selectedChatId, showToast)}
             onDeleteChat={() => chatManagement.setIsDeleteDialogOpen(true)}
             onCreateChat={() => chatManagement.setIsCreateModalOpen(true)}

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useAnalysisStore } from "@/frontend/store/analysisStore";
 import { useCreditStore } from "@/frontend/store/creditStore";
 import { AnalysisType, PrivacyAnalysisPostRequest } from "@/shared/types/api/apiRequest";
@@ -11,6 +11,8 @@ export const useAnalysisManagement = () => {
     fetchAnalyzes, 
     createAnalysis,
     createPrivacyAnalysis,
+    checkAnalysisStatus,
+    hasInProgressAnalysis,
     isLoading,
     isPrivacyLoading
   } = useAnalysisStore();
@@ -19,6 +21,8 @@ export const useAnalysisManagement = () => {
   const [selectedAnalysisType, setSelectedAnalysisType] = useState<AnalysisType | null>(null);
   const [isPrivacyMode, setIsPrivacyMode] = useState(false);
   const [isGhostMode, setIsGhostMode] = useState(false);
+  const [pollingChatId, setPollingChatId] = useState<string | null>(null);
+  const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   // Optimistic credit update
   const updateCreditsOptimistically = async (creditsUsed: number) => {
@@ -47,8 +51,11 @@ export const useAnalysisManagement = () => {
     try {
       updateCreditsOptimistically(8);
       await createAnalysis({ chatId });
-      await fetchAnalyzes({ chatId });
-      showToast("Analysis complete! The tea has been spilled ☕", "success");
+      
+      // Start polling for analysis completion
+      startPolling(chatId);
+      
+      showToast("Analysis started! We'll update you when it's complete ⏳", "success");
     } catch (error) {
       showToast(error instanceof Error ? error.message : "Analysis failed", "error");
       await fetchCredits();
@@ -100,6 +107,50 @@ export const useAnalysisManagement = () => {
     }
   };
 
+  // Polling for in-progress analyses
+  const startPolling = (chatId: string) => {
+    if (pollingIntervalRef.current) {
+      clearInterval(pollingIntervalRef.current);
+    }
+    
+    setPollingChatId(chatId);
+    pollingIntervalRef.current = setInterval(async () => {
+      try {
+        const analyses = await checkAnalysisStatus(chatId);
+        const hasInProgress = analyses.some(a => 
+          a.status === 'PENDING' || a.status === 'PROCESSING'
+        );
+        
+        if (!hasInProgress) {
+          // All analyses are completed or failed, stop polling
+          stopPolling();
+          // Refresh credits since analysis is complete
+          await fetchCredits();
+        }
+      } catch (error) {
+        console.error("Polling error:", error);
+        // Continue polling even on error, but stop after too many failures
+      }
+    }, 3000); // Poll every 3 seconds
+  };
+
+  const stopPolling = () => {
+    if (pollingIntervalRef.current) {
+      clearInterval(pollingIntervalRef.current);
+      pollingIntervalRef.current = null;
+    }
+    setPollingChatId(null);
+  };
+
+  // Cleanup polling on unmount
+  useEffect(() => {
+    return () => {
+      if (pollingIntervalRef.current) {
+        clearInterval(pollingIntervalRef.current);
+      }
+    };
+  }, []);
+
   // Group analyses by type
   const getAnalysesByType = (chatId: string, isPrivacy: boolean = false) => {
     const relevantAnalyzes = isPrivacy ? privacyAnalyzes : analyzes;
@@ -144,6 +195,10 @@ export const useAnalysisManagement = () => {
     handlePrivacyAnalysis,
     fetchAnalyzes,
     fetchCredits,
+    checkAnalysisStatus,
+    hasInProgressAnalysis,
+    startPolling,
+    stopPolling,
     
     // Computed
     getAnalysesByType,
