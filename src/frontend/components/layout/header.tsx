@@ -1,7 +1,12 @@
+"use client";
+
 import Link from "next/link";
 import Image from "next/image";
 import { Avatar, AvatarFallback, AvatarImage } from "@/frontend/components/ui/avatar";
 import { CreditsDisplay } from "@/frontend/components/common/credits-display";
+import { Button } from "@/frontend/components/ui/button";
+import { useAuthStore } from "@/frontend/store/authStore";
+import { useRouter } from "next/navigation";
 
 interface HeaderProps {
   user: {
@@ -14,6 +19,17 @@ interface HeaderProps {
 }
 
 export const Header = ({ user, totalCredits }: HeaderProps) => {
+  const logout = useAuthStore((s) => s.logout);
+  const router = useRouter();
+
+  const handleLogout = async () => {
+    try {
+      await logout();
+    } finally {
+      router.push("/");
+    }
+  };
+
   return (
     <header className="border-b border-white/10 px-3 sm:px-6 py-4">
       <div className="flex items-center justify-between">
@@ -24,6 +40,9 @@ export const Header = ({ user, totalCredits }: HeaderProps) => {
 
         <div className="flex items-center gap-2 sm:gap-4 flex-shrink-0">
           <CreditsDisplay credits={totalCredits} />
+          <Button variant="outline" size="sm" onClick={handleLogout}>
+            Logout
+          </Button>
           
           <Link href="/profile">
             <Avatar className="w-8 h-8 cursor-pointer hover:ring-2 hover:ring-white/20 transition-all flex-shrink-0">

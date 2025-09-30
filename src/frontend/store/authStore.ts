@@ -133,6 +133,14 @@ export const useAuthStore = create<AuthState>((set, get) => {
       if (networkService) {
         await networkService.logout();
       }
+      // Clear persisted auth/session data from storage
+      try {
+        localStorage.removeItem(LOCAL_STORAGE_KEYS.ACCESS_TOKEN);
+        localStorage.removeItem(LOCAL_STORAGE_KEYS.EXPIRES_AT);
+        localStorage.removeItem(LOCAL_STORAGE_KEYS.SELECTED_CHAT_ID);
+      } catch (e) {
+        console.error("Failed to clear localStorage on logout", e);
+      }
       set({
         user: null,
         accessToken: null,
