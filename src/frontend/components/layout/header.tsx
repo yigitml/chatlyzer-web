@@ -7,6 +7,7 @@ import { CreditsDisplay } from "@/frontend/components/common/credits-display";
 import { Button } from "@/frontend/components/ui/button";
 import { useAuthStore } from "@/frontend/store/authStore";
 import { useRouter } from "next/navigation";
+import { LogOut } from "lucide-react";
 
 interface HeaderProps {
   user: {
@@ -40,16 +41,21 @@ export const Header = ({ user, totalCredits }: HeaderProps) => {
 
         <div className="flex items-center gap-2 sm:gap-4 flex-shrink-0">
           <CreditsDisplay credits={totalCredits} />
-          <Button variant="outline" size="sm" onClick={handleLogout}>
-            Logout
-          </Button>
-          
           <Link href="/profile">
             <Avatar className="w-8 h-8 cursor-pointer hover:ring-2 hover:ring-white/20 transition-all flex-shrink-0">
               <AvatarImage src={user.image || ""} alt={user.name || "User"} />
               <AvatarFallback>{user.name?.substring(0, 2).toUpperCase() || "U"}</AvatarFallback>
             </Avatar>
           </Link>
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={handleLogout}
+            aria-label="Log out"
+            title="Log out"
+          >
+            <LogOut className="w-4 h-4" />
+          </Button>
         </div>
       </div>
     </header>
