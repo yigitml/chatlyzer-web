@@ -1,7 +1,6 @@
 import "./globals.css";
 import { Metadata } from "next";
 import Providers from "@/frontend/providers/providers";
-import { PostHogProvider } from "@/frontend/providers/PostHogProvider";
 
 export const metadata: Metadata = {
   title: "Chatlyzer",

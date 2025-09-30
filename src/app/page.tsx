@@ -22,7 +22,7 @@ export default function Home() {
       <header className="container mx-auto px-4 py-6 flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Image src="/favicon.ico" alt="Chatlyzer" width={32} height={32} className="w-8 h-8" />
-          <span className="font-bold text-xl text-white relative after:content-[''] after:block after:h-0.5 after:w-full after:bg-gradient-to-r from-blue-400/40 to-cyan-400/40 after:mt-1 after:rounded-full">Chatlyzer AI</span>
+          <span className="font-bold text-xl text-white relative after:content-[''] after:block after:h-0.5 after:w-full after:bg-gradient-to-r from-blue-400/40 to-cyan-400/40 after:rounded-full">Chatlyzer AI</span>
         </div>
 
         <nav className="hidden md:flex items-center gap-8">

@@ -115,21 +115,25 @@ export const useAnalysisStore = create<AnalysisStore>((set, get) => {
       }
     },
 
-    // Status checking methods
-    checkAnalysisStatus: async (chatId) => {
-      try {
-        const analyses = await networkService.fetchAnalyzes({ chatId, includeInProgress: true });
-        // Update store with all analyses including in-progress ones
-        set((state) => {
-          const otherAnalyses = state.analyzes.filter(a => a.chatId !== chatId);
-          return { analyzes: [...otherAnalyses, ...analyses] };
-        });
-        return analyses;
-      } catch (error) {
-        console.error("Failed to check analysis status:", error);
-        throw error;
-      }
-    },
+        // Status checking methods
+        checkAnalysisStatus: async (chatId) => {
+          try {
+           const auth = useAuthStore.getState();
+           if (!auth.isAuthenticated || !auth.accessToken) {
+             return [];
+           }
+            const analyses = await networkService.fetchAnalyzes({ chatId, includeInProgress: true });
+            // Update store with all analyses including in-progress ones
+            set((state) => {
+              const otherAnalyses = state.analyzes.filter(a => a.chatId !== chatId);
+              return { analyzes: [...otherAnalyses, ...analyses] };
+            });
+            return analyses;
+          } catch (error) {
+            console.error("Failed to check analysis status:", error);
+            throw error;
+          }
+        },
 
     hasInProgressAnalysis: (chatId) => {
       const state = get();

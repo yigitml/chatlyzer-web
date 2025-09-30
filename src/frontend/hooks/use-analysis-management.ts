@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useAnalysisStore } from "@/frontend/store/analysisStore";
 import { useCreditStore } from "@/frontend/store/creditStore";
+import { useAuthStore } from "@/frontend/store/authStore";
 import { AnalysisType, PrivacyAnalysisPostRequest } from "@/shared/types/api/apiRequest";
 import { normalizeAnalysisType } from "@/shared/types/analysis";
 
@@ -116,6 +117,11 @@ export const useAnalysisManagement = () => {
     setPollingChatId(chatId);
     pollingIntervalRef.current = setInterval(async () => {
       try {
+        const auth = useAuthStore.getState();
+        if (!auth.isAuthenticated || !auth.accessToken) {
+          stopPolling();
+          return;
+        }
         const analyses = await checkAnalysisStatus(chatId);
         const hasInProgress = analyses.some(a => 
           a.status === 'PENDING' || a.status === 'PROCESSING'

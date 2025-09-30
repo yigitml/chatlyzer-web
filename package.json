@@ -10,7 +10,7 @@
     "format": "prettier --write ."
   },
   "dependencies": {
-    "@polar-sh/nextjs": "^0.4.0",
+    "@polar-sh/nextjs": "^0.3.16",
     "@prisma/client": "^6.8.2",
     "@radix-ui/react-avatar": "^1.1.9",
     "@radix-ui/react-dialog": "^1.1.13",

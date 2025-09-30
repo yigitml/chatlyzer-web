@@ -75,30 +75,31 @@ export default function UserDashboard() {
   }, [user]);
 
   useEffect(() => {
-    if (!chatManagement.selectedChatId) return;
-    
-    const abortController = new AbortController();
-    
+    const chatId = chatManagement.selectedChatId;
+    if(!chatId) return;
+
+    let cancelled = false;
+        
     const fetchChatData = async () => {
       try {
         setIsLoadingChatData(true);
         analysisManagement.setSelectedAnalysisType(null);
         
         await Promise.all([
-          chatManagement.selectedChatId && fetchMessages({ chatId: chatManagement.selectedChatId }),
-          chatManagement.selectedChatId && analysisManagement.checkAnalysisStatus(chatManagement.selectedChatId)
+          fetchMessages({ chatId }),
+          analysisManagement.checkAnalysisStatus(chatId)
         ]);
 
         // Start polling if there are in-progress analyses
-        if (chatManagement.selectedChatId && analysisManagement.hasInProgressAnalysis(chatManagement.selectedChatId)) {
-          analysisManagement.startPolling(chatManagement.selectedChatId);
+        if (!cancelled && analysisManagement.hasInProgressAnalysis(chatId)) {
+          analysisManagement.startPolling(chatId);
         }
       } catch (error) {
-        if (!abortController.signal.aborted && error instanceof Error && error.name !== 'AbortError') {
+        if (error instanceof Error && error.name !== 'AbortError') {
           showToast(error.message || "Failed to load chat data", "error");
         }
       } finally {
-        if (!abortController.signal.aborted) {
+        if (!cancelled) {
           setTimeout(() => {
             setIsLoadingChatData(false);
           }, 100);
@@ -109,9 +110,10 @@ export default function UserDashboard() {
     fetchChatData();
     
     return () => {
-      abortController.abort();
+      cancelled = true;
+      analysisManagement.stopPolling();
     };
-  }, [chatManagement.selectedChatId, fetchMessages, analysisManagement.checkAnalysisStatus, analysisManagement.hasInProgressAnalysis, analysisManagement.startPolling]);
+  }, [chatManagement.selectedChatId]);
 
   useEffect(() => {
     if (chatManagement.chats.length > 0) {

@@ -125,7 +125,7 @@ export const POST = withProtectedRoute(async (request: NextRequest) => {
            chatId: data.chatId,
            userId: authenticatedUserId,
            status: AnalysisStatus.PENDING,
-           result: null,
+           result: {},
          }
        });
      })
