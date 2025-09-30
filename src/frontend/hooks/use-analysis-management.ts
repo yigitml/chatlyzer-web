@@ -4,6 +4,7 @@ import { useCreditStore } from "@/frontend/store/creditStore";
 import { useAuthStore } from "@/frontend/store/authStore";
 import { AnalysisType, PrivacyAnalysisPostRequest } from "@/shared/types/api/apiRequest";
 import { normalizeAnalysisType } from "@/shared/types/analysis";
+import type { Chat, Analysis } from "@prisma/client";
 
 export const useAnalysisManagement = () => {
   const { 
@@ -24,6 +25,10 @@ export const useAnalysisManagement = () => {
   const [isGhostMode, setIsGhostMode] = useState(false);
   const [pollingChatId, setPollingChatId] = useState<string | null>(null);
   const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Ghost results modal state
+  const [ghostResult, setGhostResult] = useState<{ chat: Chat; analyses: Analysis[] } | null>(null);
+  const [isGhostResultsOpen, setIsGhostResultsOpen] = useState(false);
 
   // Optimistic credit update
   const updateCreditsOptimistically = async (creditsUsed: number) => {
@@ -80,6 +85,9 @@ export const useAnalysisManagement = () => {
       
       if (data.isGhostMode) {
         showToast("Ghost analysis complete! No data was saved 👻", "success");
+        // Show results in a modal
+        setGhostResult(result);
+        setIsGhostResultsOpen(true);
       } else {
         showToast("Privacy analysis complete! Messages analyzed but not stored 🔒", "success");
       }
@@ -190,11 +198,14 @@ export const useAnalysisManagement = () => {
     credits,
     isPrivacyMode,
     isGhostMode,
+    ghostResult,
+    isGhostResultsOpen,
     
     // Setters
     setSelectedAnalysisType,
     setIsPrivacyMode: handleTogglePrivacyMode,
     setIsGhostMode: handleToggleGhostMode,
+    closeGhostResults: () => setIsGhostResultsOpen(false),
     
     // Actions
     handleAnalyzeChat,

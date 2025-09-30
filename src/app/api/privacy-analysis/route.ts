@@ -4,13 +4,10 @@ import { ApiResponse } from "@/shared/types/api/apiResponse";
 import prisma from "@/backend/lib/prisma";
 import type {
   PrivacyAnalysisPostRequest,
-  AnalysisType,
-  AnalysisPutRequest,
-  AnalysisDeleteRequest,
 } from "@/shared/types/api/apiRequest";
 import { analyzeAllChatTypesPrivate } from "@/backend/lib/openai";
 import { consumeUserCredits } from "@/backend/lib/consumeUserCredits";
-import { CreditType } from "@prisma/client";
+import { CreditType, AnalysisStatus } from "@prisma/client";
 import { 
   getAllAnalysisTypes, 
   analysisTypeToSchemaKey, 
@@ -51,8 +48,8 @@ export const POST = withProtectedRoute(async (request: NextRequest) => {
       
       // Format analysis results for ghost mode response
       const ghostAnalyses = analysisTypes.map((analysisType) => {
-        const schemaKey = analysisTypeToSchemaKey(analysisType);
-        const analysisResult = comprehensiveAnalysisData.analyses[schemaKey as keyof typeof comprehensiveAnalysisData.analyses];
+      const schemaKey = analysisTypeToSchemaKey(analysisType);
+      const analysisResult = comprehensiveAnalysisData.analyses[schemaKey as keyof typeof comprehensiveAnalysisData.analyses];
         
         if (!analysisResult) {
           throw new Error(`Analysis result for ${analysisType} is missing or undefined`);
@@ -67,6 +64,8 @@ export const POST = withProtectedRoute(async (request: NextRequest) => {
             type: analysisTypeToTypeLiteral(analysisType),
             ...analysisResult
           },
+          status: AnalysisStatus.COMPLETED,
+          error: null,
           createdAt: new Date(),
           updatedAt: new Date()
         };
@@ -129,10 +128,12 @@ export const POST = withProtectedRoute(async (request: NextRequest) => {
           chatId: chat.id,
           userId: authenticatedUserId,
           result: analysisWithType,
+          status: AnalysisStatus.COMPLETED,
+          error: null,
         }
       });
     });
-
+    
     const analyses = await Promise.all(analysisPromises);
 
     return ApiResponse.success(

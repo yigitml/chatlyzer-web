@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { useChatStore } from "@/frontend/store/chatStore";
-import { useAnalysisManagement } from "@/frontend/hooks/use-analysis-management";
 import { ChatPostRequest, ChatDeleteRequest, PrivacyAnalysisPostRequest } from "@/shared/types/api/apiRequest";
 import { setStorageItem, LOCAL_STORAGE_KEYS } from "@/shared/utils/storage";
 
@@ -12,7 +11,6 @@ interface Message {
 
 export const useChatManagement = () => {
   const { chats, createChat, updateChat, deleteChat, fetchChats } = useChatStore();
-  const { handlePrivacyAnalysis, isGhostMode, isPrivacyMode } = useAnalysisManagement();
   
   // Chat Selection State
   const [selectedChatId, setSelectedChatId] = useState<string | null>(null);
@@ -46,7 +44,12 @@ export const useChatManagement = () => {
     }
   };
 
-  const handleCreateChat = async (showToast: (message: string, type: "success" | "error") => void) => {
+  const handleCreateChat = async (
+    showToast: (message: string, type: "success" | "error") => void,
+    isPrivacyMode: boolean,
+    isGhostMode: boolean,
+    handlePrivacyAnalysis: (data: PrivacyAnalysisPostRequest, showToast: (message: string, type: "success" | "error") => void) => Promise<{ chat: any; analyses: any[] } | undefined>
+  ) => {
     if (!chatTitle.trim()) {
       showToast("Chat title is required bestie", "error");
       return;

@@ -55,6 +55,7 @@ export const CreatePrivacyAnalysisModal = ({
   onImportModeChange,
   onShowToast,
 }: CreatePrivacyAnalysisModalProps) => {
+  // NOTE: This modal is only for the standalone privacy flow; ghost results are shown via a separate modal.
   const addMessage = () => {
     if (!newMessageSender.trim() || !newMessageContent.trim()) {
       onShowToast("Both sender and content are required", "error");

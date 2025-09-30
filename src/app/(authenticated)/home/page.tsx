@@ -17,6 +17,7 @@ import { useUIState } from "@/frontend/hooks/use-ui-state";
 import { getStorageItem, LOCAL_STORAGE_KEYS } from "@/shared/utils/storage";
 import Link from "next/link";
 import { AnalysisType } from "@/shared/types/api/apiRequest";
+import { GhostResultsModal } from "@/frontend/components/modals/ghost-results-modal";
 
 export default function UserDashboard() {
   const hasFetchedData = useRef(false);
@@ -179,7 +180,12 @@ export default function UserDashboard() {
       <CreateChatModal
         isOpen={chatManagement.isCreateModalOpen}
         onClose={chatManagement.closeCreateChatModal}
-        onCreateChat={() => chatManagement.handleCreateChat(showToast)}
+        onCreateChat={() => chatManagement.handleCreateChat(
+          showToast,
+          analysisManagement.isPrivacyMode,
+          analysisManagement.isGhostMode,
+          analysisManagement.handlePrivacyAnalysis
+        )}
         isCreating={chatManagement.isCreatingChat}
         chatTitle={chatManagement.chatTitle}
         onTitleChange={chatManagement.setChatTitle}
@@ -198,6 +204,13 @@ export default function UserDashboard() {
         isGhostMode={analysisManagement.isGhostMode}
         onTogglePrivacyMode={analysisManagement.setIsPrivacyMode}
         onToggleGhostMode={analysisManagement.setIsGhostMode}
+      />
+
+      {/* Ghost Results Modal */}
+      <GhostResultsModal
+        isOpen={analysisManagement.isGhostResultsOpen}
+        onClose={analysisManagement.closeGhostResults}
+        result={analysisManagement.ghostResult}
       />
 
       <div className="flex h-[calc(100vh-73px)] relative">
