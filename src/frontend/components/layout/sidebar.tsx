@@ -91,7 +91,7 @@ export const Sidebar = ({
           {!isCollapsed && (
             <div>
               <h2 className="font-semibold text-white">Your Chats</h2>
-              <p className="text-sm text-white/60">{chats.length} conversations</p>
+              <p className="text-sm text-white/60">{chats.length} {chats.length == 1 ? 'conversation' : 'conversations'}</p>
             </div>
           )}
           <Button
