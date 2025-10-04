@@ -29,8 +29,6 @@ interface CreateChatModalProps {
   onNewMessageContentChange: (content: string) => void;
   whatsappImportText: string;
   onWhatsappImportTextChange: (text: string) => void;
-  importMode: "manual" | "whatsapp";
-  onImportModeChange: (mode: "manual" | "whatsapp") => void;
   onShowToast: (message: string, type: "success" | "error") => void;
   // New props for privacy settings
   isPrivacyMode: boolean;
@@ -54,8 +52,6 @@ export const CreateChatModal = ({
   onNewMessageContentChange,
   whatsappImportText,
   onWhatsappImportTextChange,
-  importMode,
-  onImportModeChange,
   onShowToast,
   isPrivacyMode,
   isGhostMode,
@@ -112,20 +108,10 @@ export const CreateChatModal = ({
     }
   };
 
-  const handleImportModeChange = (mode: "manual" | "whatsapp") => {
-    onImportModeChange(mode);
-    
-    // Clear messages and WhatsApp text when switching to manual mode
-    if (mode === "manual") {
-      onMessagesChange([]);
-      onWhatsappImportTextChange("");
-    }
-  };
-
   const handlePrivacyToggle = (enabled: boolean) => {
     onTogglePrivacyMode(enabled);
-    // If disabling privacy and ghost mode is on, disable ghost mode too
-    if (!enabled && isGhostMode) {
+    // If enabling privacy mode, ensure ghost mode is off
+    if (enabled) {
       onToggleGhostMode(false);
     }
   };
@@ -133,7 +119,7 @@ export const CreateChatModal = ({
   const handleGhostToggle = (enabled: boolean) => {
     onToggleGhostMode(enabled);
     // If enabling ghost mode, also enable privacy mode
-    if (enabled && !isPrivacyMode) {
+    if (enabled) {
       onTogglePrivacyMode(true);
     }
   };
@@ -144,7 +130,8 @@ export const CreateChatModal = ({
     onWhatsappImportTextChange("");
     onNewMessageSenderChange("");
     onNewMessageContentChange("");
-    onImportModeChange("whatsapp"); // Default to WhatsApp import
+    onTogglePrivacyMode(true); // Default to Privacy Mode
+    onToggleGhostMode(false); // Ensure Ghost Mode is off
     onClose();
   };
 
@@ -179,71 +166,6 @@ export const CreateChatModal = ({
         </DialogHeader>
         
         <div className="space-y-6">
-          {/* Privacy Settings */}
-          <div className="bg-white/5 border border-white/10 rounded-lg p-4 space-y-4">
-            <h3 className="text-sm font-medium text-white">Privacy Settings</h3>
-            
-            {/* Privacy Analysis Toggle */}
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Shield className="w-4 h-4 text-green-400" />
-                <div>
-                  <span className="text-sm text-white">Privacy Analysis</span>
-                  <p className="text-xs text-white/60">Messages analyzed but not stored</p>
-                </div>
-              </div>
-              <button
-                onClick={() => handlePrivacyToggle(!isPrivacyMode)}
-                className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${
-                  isPrivacyMode ? 'bg-green-500' : 'bg-white/20'
-                }`}
-              >
-                <span
-                  className={`inline-block h-3 w-3 transform rounded-full bg-white transition-transform ${
-                    isPrivacyMode ? 'translate-x-5' : 'translate-x-1'
-                  }`}
-                />
-              </button>
-            </div>
-
-            {/* Ghost Mode Toggle */}
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <EyeOff className="w-4 h-4 text-purple-400" />
-                <div>
-                  <span className="text-sm text-white">Ghost Mode</span>
-                  <p className="text-xs text-white/60">No data saved - completely private</p>
-                </div>
-              </div>
-              <button
-                onClick={() => handleGhostToggle(!isGhostMode)}
-                className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${
-                  isGhostMode ? 'bg-purple-500' : 'bg-white/20'
-                }`}
-              >
-                <span
-                  className={`inline-block h-3 w-3 transform rounded-full bg-white transition-transform ${
-                    isGhostMode ? 'translate-x-5' : 'translate-x-1'
-                  }`}
-                />
-              </button>
-            </div>
-
-            {/* Status indicator */}
-            {(isPrivacyMode || isGhostMode) && (
-              <div className={`text-xs p-2 rounded ${
-                isGhostMode 
-                  ? 'bg-purple-900/20 text-purple-300 border border-purple-500/30' 
-                  : 'bg-green-900/20 text-green-300 border border-green-500/30'
-              }`}>
-                {isGhostMode 
-                  ? "👻 Ghost Mode: Analysis will be performed but no data will be saved to your account"
-                  : "🔒 Privacy Mode: Messages will be analyzed but not stored in your chat history"
-                }
-              </div>
-            )}
-          </div>
-
           <div>
             <Label htmlFor="title">Chat Title</Label>
             <Input
@@ -257,22 +179,28 @@ export const CreateChatModal = ({
 
           <div className="flex gap-2">
             <Button
-              variant={importMode === "whatsapp" ? "default" : "outline"}
-              onClick={() => handleImportModeChange("whatsapp")}
+              variant={!isPrivacyMode && !isGhostMode ? "default" : "outline"}
+              onClick={() => { onTogglePrivacyMode(false); onToggleGhostMode(false); }}
               className="flex-1"
             >
-              WhatsApp Import
+              Normal Analysis
             </Button>
             <Button
-              variant={importMode === "manual" ? "default" : "outline"}
-              onClick={() => handleImportModeChange("manual")}
-              className="flex-1"
+              variant={isPrivacyMode && !isGhostMode ? "default" : "outline"}
+              onClick={() => handlePrivacyToggle(true)}
+              className={`flex-1 ${isPrivacyMode && !isGhostMode ? 'border-2 border-green-500' : ''}`}
             >
-              Manual Entry
+              Privacy Mode
+            </Button>
+            <Button
+              variant={isGhostMode ? "default" : "outline"}
+              onClick={() => handleGhostToggle(true)}
+              className={`flex-1 ${isGhostMode ? 'border-2 border-purple-500' : ''}`}
+            >
+              Ghost Mode
             </Button>
           </div>
 
-          {importMode === "whatsapp" ? (
             <div>
               <Label>WhatsApp Export</Label>
               <Textarea
@@ -290,52 +218,6 @@ export const CreateChatModal = ({
                 Parse Export
               </Button>
             </div>
-          ) : (
-            <div>
-              <Label>Messages (Optional)</Label>
-              {chatMessages.length > 0 && (
-                <div className="space-y-2 max-h-32 overflow-y-auto mt-2">
-                  {chatMessages.map((msg, i) => (
-                    <div key={i} className="flex items-center gap-2 p-2 bg-white/5 rounded">
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-purple-300">{msg.sender}</p>
-                        <p className="text-sm text-white/80 truncate">{msg.content}</p>
-                      </div>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => removeMessage(i)}
-                      >
-                        <X className="w-3 h-3" />
-                      </Button>
-                    </div>
-                  ))}
-                </div>
-              )}
-              <div className="grid grid-cols-2 gap-2 mt-3">
-                <Input
-                  placeholder="Sender..."
-                  value={newMessageSender}
-                  onChange={(e) => onNewMessageSenderChange(e.target.value)}
-                  className="bg-white/10 border-white/20 text-white"
-                />
-                <Input
-                  placeholder="Message..."
-                  value={newMessageContent}
-                  onChange={(e) => onNewMessageContentChange(e.target.value)}
-                  className="bg-white/10 border-white/20 text-white"
-                />
-              </div>
-              <Button
-                onClick={addMessage}
-                disabled={!newMessageSender.trim() || !newMessageContent.trim()}
-                variant="outline"
-                className="w-full mt-2"
-              >
-                Add Message
-              </Button>
-            </div>
-          )}
         </div>
 
         <DialogFooter>
