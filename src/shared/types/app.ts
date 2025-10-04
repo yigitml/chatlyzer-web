@@ -24,6 +24,11 @@ import {
   AnalysisGetRequest,
 } from "@/shared/types/api/apiRequest";
 
+export enum ImportMode {
+  MANUAL = "manual",
+  WHATSAPP = "whatsapp",
+}
+
 export interface PhotoPagination {
   page: number;
   limit: number;

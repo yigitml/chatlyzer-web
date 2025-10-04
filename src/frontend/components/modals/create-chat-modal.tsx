@@ -7,6 +7,7 @@ import { Label } from "@/frontend/components/ui/label";
 import { LoadingSpinner } from "@/frontend/components/common/loading-spinner";
 import { X, Shield, EyeOff } from "lucide-react";
 import { convertChatExport, ChatPlatform } from "@/shared/utils/messageConverter";
+import { ImportMode } from "@/shared/types/app";
 
 interface Message {
   sender: string;
@@ -30,6 +31,8 @@ interface CreateChatModalProps {
   whatsappImportText: string;
   onWhatsappImportTextChange: (text: string) => void;
   onShowToast: (message: string, type: "success" | "error") => void;
+  importMode: ImportMode;
+  onImportModeChange: (mode: ImportMode) => void;
   // New props for privacy settings
   isPrivacyMode: boolean;
   isGhostMode: boolean;
@@ -53,6 +56,8 @@ export const CreateChatModal = ({
   whatsappImportText,
   onWhatsappImportTextChange,
   onShowToast,
+  importMode,
+  onImportModeChange,
   isPrivacyMode,
   isGhostMode,
   onTogglePrivacyMode,

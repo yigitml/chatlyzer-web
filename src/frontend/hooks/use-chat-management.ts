@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useChatStore } from "@/frontend/store/chatStore";
 import { ChatPostRequest, ChatDeleteRequest, PrivacyAnalysisPostRequest } from "@/shared/types/api/apiRequest";
 import { setStorageItem, LOCAL_STORAGE_KEYS } from "@/shared/utils/storage";
+import { ImportMode } from "@/shared/types/app";
 
 interface Message {
   sender: string;
@@ -34,7 +35,7 @@ export const useChatManagement = () => {
   const [newMessageSender, setNewMessageSender] = useState("");
   const [newMessageContent, setNewMessageContent] = useState("");
   const [whatsappImportText, setWhatsappImportText] = useState("");
-  const [importMode, setImportMode] = useState<"manual" | "whatsapp">("whatsapp"); // Default to WhatsApp
+  const [importMode, setImportMode] = useState<ImportMode>(ImportMode.WHATSAPP); // Default to WhatsApp
 
   // Helper function to select chat with storage update
   const selectChat = (chatId: string | null) => {
@@ -171,7 +172,7 @@ export const useChatManagement = () => {
     setNewMessageSender("");
     setNewMessageContent("");
     setWhatsappImportText("");
-    setImportMode("whatsapp"); // Default to WhatsApp
+    setImportMode(ImportMode.WHATSAPP); // Default to WhatsApp
   };
 
   const closeCreateChatModal = () => {
