@@ -69,7 +69,7 @@ export async function POST(request: NextRequest) {
           userId: user.id,
           type: "ANALYSIS",
           totalAmount: 128,
-          amount: 8,
+          amount: 0,
           subscriptionId: subscription.id,
         },
       });
