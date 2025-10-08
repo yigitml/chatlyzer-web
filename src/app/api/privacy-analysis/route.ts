@@ -35,7 +35,15 @@ export const POST = withProtectedRoute(async (request: NextRequest) => {
       return ApiResponse.error("Insufficient credits", 402).toResponse();
     }
 
-    const smallMessages = smallChatBuilder(data.messages);
+    const m = [];
+
+    for (const message of data.messages) {
+      if (message.content.length < 500) {
+        m.push(message);
+      }
+    }
+
+    const smallMessages = smallChatBuilder(m);
 
     // Perform comprehensive analysis using messages from request
     const comprehensiveAnalysisData = await analyzeAllChatTypesPrivate(

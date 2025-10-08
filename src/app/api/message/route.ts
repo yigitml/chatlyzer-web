@@ -116,6 +116,14 @@ export const PUT = withProtectedRoute(async (request: NextRequest) => {
       return ApiResponse.error("Unauthorized to modify this message", 403).toResponse();
     }
 
+    if (!content) {
+      return ApiResponse.error("Message content is required", 400).toResponse();
+    }
+
+    if (content.length > 500) {
+      return ApiResponse.error("Message content is too long", 400).toResponse();
+    }
+
     const updatedMessage = await prisma.message.update({
       where: { id },
       data: {
