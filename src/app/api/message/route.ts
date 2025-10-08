@@ -71,6 +71,10 @@ export const POST = withProtectedRoute(async (request: NextRequest) => {
       return ApiResponse.error("Chat not found or unauthorized", 404).toResponse();
     }
 
+    if (data.content.length > 500) {
+      return ApiResponse.error("Message content is too long", 400).toResponse();
+    }
+
     const message = await prisma.message.create({
       data: {
         userId: authenticatedUserId,

@@ -4,6 +4,7 @@ import { withProtectedRoute } from "@/backend/middleware/jwtAuth";
 import { ApiResponse } from "@/shared/types/api/apiResponse";
 import { ChatPostRequest, ChatPutRequest, ChatDeleteRequest } from "@/shared/types/api/apiRequest";
 import { InputJsonValue, JsonValue } from "@prisma/client/runtime/library";
+import { smallChatBuilder } from "@/backend/lib/openai";
 
 export const GET = withProtectedRoute(async (request: NextRequest) => {
     try {
@@ -55,8 +56,22 @@ export const POST = withProtectedRoute(async (request: NextRequest) => {
       return ApiResponse.error("Chat already exists", 400).toResponse();
     }
 
-    const messages = data.messages
-    const participants = messages ? [...new Set(messages.map(message => message.sender))] : [];
+    const messages = data.messages;
+
+    if (!messages) {
+      return ApiResponse.error("Messages are required", 400).toResponse();
+    }
+
+    let sampledMessages = [];
+
+    if (messages.length > 25000) {
+      const interval = messages.length / 25000;
+      for (let i = 0; i < 25000; i++) {
+        sampledMessages.push(messages[Math.floor(i * interval)]);
+      }
+    } else sampledMessages = messages;
+    
+    const participants = sampledMessages ? [...new Set(sampledMessages.map(message => message.sender))] : [];
 
     const chat = await prisma.chat.create({
       data: {
@@ -66,18 +81,20 @@ export const POST = withProtectedRoute(async (request: NextRequest) => {
       }
     });
 
-    if (messages) {
-      messages.forEach(async (message) => {
-        await prisma.message.create({
-          data: {
-            userId: authenticatedUserId,
-            chatId: chat.id,
-            sender: message.sender,
-            content: message.content,
-            timestamp: message.timestamp,
-            metadata: message.metadata as InputJsonValue,
-          }
-        })
+    if (sampledMessages) {
+      sampledMessages.forEach(async (message) => {
+        if (message.content.length < 500) {
+          await prisma.message.create({
+            data: {
+              userId: authenticatedUserId,
+              chatId: chat.id,
+              sender: message.sender,
+              content: message.content,
+              timestamp: message.timestamp,
+              metadata: message.metadata as InputJsonValue,
+            }
+          })
+        }
       })
     } 
 

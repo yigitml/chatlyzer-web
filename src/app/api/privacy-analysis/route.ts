@@ -5,7 +5,7 @@ import prisma from "@/backend/lib/prisma";
 import type {
   PrivacyAnalysisPostRequest,
 } from "@/shared/types/api/apiRequest";
-import { analyzeAllChatTypesPrivate } from "@/backend/lib/openai";
+import { analyzeAllChatTypesPrivate, smallChatBuilder } from "@/backend/lib/openai";
 import { consumeUserCredits } from "@/backend/lib/consumeUserCredits";
 import { CreditType, AnalysisStatus } from "@prisma/client";
 import { 
@@ -35,10 +35,12 @@ export const POST = withProtectedRoute(async (request: NextRequest) => {
       return ApiResponse.error("Insufficient credits", 402).toResponse();
     }
 
+    const smallMessages = smallChatBuilder(data.messages);
+
     // Perform comprehensive analysis using messages from request
     const comprehensiveAnalysisData = await analyzeAllChatTypesPrivate(
       data.title,
-      data.messages
+      smallMessages
     );
 
     // If ghost mode is enabled, return analysis results without saving anything to database
@@ -76,7 +78,7 @@ export const POST = withProtectedRoute(async (request: NextRequest) => {
           chat: {
             id: `ghost-${Date.now()}`, // Temporary ID for ghost mode
             title: data.title,
-            participants: [...new Set(data.messages.map(message => message.sender))],
+            participants: [...new Set(smallMessages.map(message => message.sender))],
             userId: authenticatedUserId,
             isPrivacy: true,
             createdAt: new Date(),
@@ -91,7 +93,7 @@ export const POST = withProtectedRoute(async (request: NextRequest) => {
 
     // Regular privacy analysis - save chat and analyses to database
     // Extract participants from messages for the chat record
-    const participants = [...new Set(data.messages.map(message => message.sender))];
+    const participants = [...new Set(smallMessages.map(message => message.sender))];
 
     // Create chat record WITHOUT storing messages, marked as privacy
     const chat = await prisma.chat.create({

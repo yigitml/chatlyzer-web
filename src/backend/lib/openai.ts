@@ -210,13 +210,15 @@ export async function analyzeAllChatTypes(chatId: string): Promise<z.infer<typeo
     
     const systemPrompt = `${COMPREHENSIVE_ANALYSIS_PROMPT}\n\n${RATING_INSTRUCTION}\n\n${languageInstruction}`.trim();
 
+    const smallChat = smallChatBuilder(minimalChat.messages);
+
     const response = await openai.chat.completions.create({
       model: MODELS.MAIN,
       messages: [
         { role: "system", content: systemPrompt },
         { 
           role: "user", 
-          content: `Analyze this chat comprehensively across all analysis types and provide the complete multi-faceted analysis:\nChat: ${JSON.stringify(minimalChat)}`
+          content: `Analyze this chat comprehensively across all analysis types and provide the complete multi-faceted analysis:\nChat: ${JSON.stringify(smallChat)}`
         }
       ],
       response_format: zodResponseFormat(ChatlyzerSchemas.AllAnalyses, "all_analyses")
@@ -241,6 +243,18 @@ const createMinimalChatFromMessages = (title: string, messages: any[]) => ({
   }))
 });
 
+export const smallChatBuilder = (messages: any[]) => {
+  if (messages.length > 25000) {
+    const sampledMessages = [];
+    const interval = messages.length / 25000;
+    for (let i = 0; i < 25000; i++) {
+      sampledMessages.push(messages[Math.floor(i * interval)]);
+    }
+    return sampledMessages;
+  }
+  return messages;
+};
+
 export async function analyzeAllChatTypesPrivate(
   chatTitle: string, 
   messages: any[]
@@ -254,13 +268,15 @@ export async function analyzeAllChatTypesPrivate(
     
     const systemPrompt = `${COMPREHENSIVE_ANALYSIS_PROMPT}\n\n${RATING_INSTRUCTION}\n\n${languageInstruction}`.trim();
 
+    const smallChat = smallChatBuilder(minimalChat.messages);
+
     const response = await openai.chat.completions.create({
       model: MODELS.MAIN,
       messages: [
         { role: "system", content: systemPrompt },
         { 
           role: "user", 
-          content: `Analyze this chat comprehensively across all analysis types and provide the complete multi-faceted analysis:\nChat: ${JSON.stringify(minimalChat)}`
+          content: `Analyze this chat comprehensively across all analysis types and provide the complete multi-faceted analysis:\nChat: ${JSON.stringify(smallChat)}`
         }
       ],
       response_format: zodResponseFormat(ChatlyzerSchemas.AllAnalyses, "all_analyses")
