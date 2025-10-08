@@ -205,8 +205,7 @@ export const CreateChatModal = ({
               Ghost Mode
             </Button>
           </div>
-
-            <div>
+            <div className={importMode === ImportMode.WHATSAPP ? 'block' : 'hidden'}>
               <Label>WhatsApp Export</Label>
               <Textarea
                 value={whatsappImportText}

@@ -35,7 +35,7 @@ export const useChatManagement = () => {
   const [newMessageSender, setNewMessageSender] = useState("");
   const [newMessageContent, setNewMessageContent] = useState("");
   const [whatsappImportText, setWhatsappImportText] = useState("");
-  const [importMode, setImportMode] = useState<ImportMode>(ImportMode.WHATSAPP); // Default to WhatsApp
+  const [importMode, setImportMode] = useState<ImportMode>(ImportMode.WHATSAPP);
 
   // Helper function to select chat with storage update
   const selectChat = (chatId: string | null) => {
