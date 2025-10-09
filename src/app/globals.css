@@ -5,6 +5,19 @@
   .text-balance {
     text-wrap: balance;
   }
+
+  .animate-whatsapp-scroll {
+    animation: whatsapp-scroll 100s linear infinite;
+  }
+}
+
+@keyframes whatsapp-scroll {
+  0% {
+    transform: translateY(100vh) translateX(0) rotate(0deg);
+  }
+  100% {
+    transform: translateY(-100vh) translateX(calc(var(--tw-translate-x, 0) + 100px)) rotate(360deg); /* Adjust 100px for horizontal drift */
+  }
 }
 
 @layer base {

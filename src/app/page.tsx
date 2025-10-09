@@ -6,6 +6,19 @@ import { useEffect } from "react"
 import { ArrowRight, Zap, Skull, Heart, Brain, Ghost, Star, AlertTriangle, CheckCircle, MessageCircle, Send, Twitter } from "lucide-react"
 import { useAuthStore } from "@/frontend/store/authStore"
 
+const whatsappMessages = [
+  "hey, what's up?",
+  "heard you got some tea to spill 👀",
+  "are we still on for tonight?",
+  "just checking in! 😊",
+  "you there?",
+  "omg you won't believe what happened!",
+  "sending good vibes ✨",
+  "can't wait to see you!",
+  "did you finish the report?",
+  "what do you think?",
+];
+
 export default function Home() {
   const router = useRouter()
   const { isAuthenticated, isInitialized } = useAuthStore()
@@ -17,9 +30,39 @@ export default function Home() {
   }, [isAuthenticated, isInitialized, router])
 
   return (
-    <div className="min-h-screen text-white bg-background">
+    <div className="min-h-screen text-white bg-background relative overflow-hidden">
+      {/* WhatsApp Background */}
+      <div className="absolute inset-0 z-0 overflow-hidden">
+        {Array.from({ length: 50 }).map((_, i) => {
+          const message = whatsappMessages[i % whatsappMessages.length];
+          const isUser = i % 2 === 0; // Alternate between sent/received messages
+          const delay = `${i * 1.5}s`; // Stagger animation start
+          const duration = `${20 + i * 2}s`; // Vary animation duration for randomness
+
+          return (
+            <div
+              key={i}
+              className={`absolute whitespace-nowrap text-sm p-2 rounded-lg max-w-[70%] animate-whatsapp-scroll`}
+              style={{
+                top: `${Math.random() * 100}%`,
+                left: `${Math.random() * 100}%`,
+                animationDelay: delay,
+                animationDuration: duration,
+                backgroundColor: isUser ? '#075E54' : '#262D31', // WhatsApp sent/received dark mode colors
+                color: '#E1E1E1', // Light text for dark background
+                opacity: 0.7 + Math.random() * 0.3, // Vary opacity
+                transform: `scale(${0.7 + Math.random() * 0.3})`, // Vary size
+                zIndex: 0,
+              }}
+            >
+              {message}
+            </div>
+          );
+        })}
+      </div>
+      
       {/* Navigation */}
-      <header className="container mx-auto px-4 py-6 flex items-center justify-between">
+      <header className="container mx-auto px-4 py-6 flex items-center justify-between relative z-10">
         <div className="flex items-center gap-2">
           <Image src="/favicon.ico" alt="Chatlyzer" width={32} height={32} className="w-8 h-8" />
           <span className="font-bold text-xl text-white relative after:content-[''] after:block after:h-0.5 after:w-full after:bg-gradient-to-r from-blue-400/40 to-cyan-400/40 after:rounded-full">Chatlyzer AI</span>
@@ -57,7 +100,7 @@ export default function Home() {
       </header>
 
       {/* Hero Section */}
-      <main className="container mx-auto px-4 mt-16 text-center">
+      <main className="container mx-auto px-4 mt-16 text-center relative z-10">
         <div className="inline-flex items-center gap-2 text-blue-300 bg-white/10 rounded-full px-4 py-2 mb-6 backdrop-blur-sm">
           <span>🔥 New: Simp-O-Meter & Ghost Risk Analysis</span>
           <Link href="#analyses" className="text-cyan-300 hover:text-cyan-200 flex items-center gap-1 transition">
