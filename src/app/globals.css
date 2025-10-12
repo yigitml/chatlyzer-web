@@ -22,7 +22,7 @@
 
 @layer base {
   :root {
-    --background: 222 47% 4%;
+    --background: black;
     --foreground: 0 0% 98%;
     --card: 222 47% 4%;
     --card-foreground: 0 0% 98%;
@@ -57,7 +57,7 @@
     --sidebar-ring: 217.2 91.2% 59.8%;
   }
   .dark {
-    --background: 222 47% 4%;
+    --background: black;
     --foreground: 0 0% 98%;
     --card: 222 47% 4%;
     --card-foreground: 0 0% 98%;

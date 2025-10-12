@@ -51,7 +51,7 @@ export default function DeleteAccountPage() {
         <div className="max-w-2xl mx-auto">
           {/* Hero Section */}
           <div className="text-center mb-12">
-            <div className="inline-flex items-center gap-2 text-red-300 bg-red-500/10 rounded-full px-4 py-2 mb-6 backdrop-blur-sm border border-red-500/20">
+            <div className="inline-flex items-center gap-2 text-gray-400 bg-white/10 rounded-full px-4 py-2 mb-6 backdrop-blur-sm border border-gray-400/20">
               <Skull className="w-4 h-4" />
               <span>Danger zone ahead 💀</span>
             </div>
@@ -59,10 +59,10 @@ export default function DeleteAccountPage() {
             <h1 className="text-4xl md:text-6xl font-bold mb-6">
               About to
               <br />
-              <span className="text-white relative after:content-[''] after:block after:h-1 after:w-full after:bg-gradient-to-r from-red-400/30 to-pink-400/30 after:mt-1 after:rounded-full">delete everything</span> 🗑️
+              <span className="text-white relative after:content-[''] after:block after:h-1 after:w-full after:bg-gradient-to-r from-gray-400/20 to-gray-500/30 after:mt-1 after:rounded-full">delete everything</span> 🗑️
             </h1>
             
-            <p className="text-xl text-gray-300 max-w-2xl mx-auto mb-8">
+            <p className="text-xl text-gray-400 max-w-2xl mx-auto mb-8">
               This is your last stop before yeeting your account into the void. No take-backs bestie 💔
             </p>
           </div>
@@ -70,19 +70,19 @@ export default function DeleteAccountPage() {
           <div className="space-y-6">
             {/* Authentication Check */}
             {!isAuthenticated || !user ? (
-              <Card className="bg-white/5 border-purple-400/20 backdrop-blur-sm">
+              <Card className="bg-black border-white/20 text-white">
                 <CardHeader>
-                  <CardTitle className="flex items-center gap-2 text-white">
-                    <LogIn className="h-5 w-5 text-blue-400" />
+                  <CardTitle className="text-white">
+                    <LogIn className="h-5 w-5 text-gray-400" />
                     Hold up - who are you? 🤔
                   </CardTitle>
-                  <CardDescription className="text-gray-300">
+                  <CardDescription className="text-white/60">
                     You gotta prove you're you before we let you destroy anything fr
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-4">
-                    <div className="p-4 rounded-lg bg-gradient-to-r from-blue-500/10 to-purple-500/10 border border-blue-400/20">
+                    <div className="p-4 rounded-lg bg-gradient-to-r from-gray-200/10 to-gray-500/10 border border-gray-400/20">
                       <h3 className="font-semibold mb-3 text-white">
                         Before you can nuke your account:
                       </h3>
@@ -95,7 +95,7 @@ export default function DeleteAccountPage() {
 
                     <div className="pt-2">
                       <Button
-                        className="w-full bg-gradient-to-r from-blue-500/70 to-purple-500/70 hover:from-blue-500/80 hover:to-purple-500/80 text-white font-medium transition-all duration-200 hover:scale-105"
+                        className="w-full bg-black border-white/20 text-white font-medium transition-all duration-200 hover:bg-white/10 hover:border-white/40 hover:text-white"
                         onClick={handleLoginRedirect}
                       >
                         <LogIn className="h-4 w-4 mr-2" />
@@ -163,7 +163,7 @@ export default function DeleteAccountPage() {
                     </div>
 
                     {/* Quick Escape */}
-                    <Card className="bg-white/5 border-purple-400/20">
+                    <Card className="bg-white/5 border-gray-400/20">
                       <CardContent className="pt-6">
                         <div className="text-center space-y-3">
                           <p className="text-sm text-gray-300">

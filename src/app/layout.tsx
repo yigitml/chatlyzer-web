@@ -23,7 +23,7 @@ export default function RootLayout({
           content="width=device-width, initial-scale=1, viewport-fit=cover"
         />
       </head>
-      <body className="min-h-screen antialiased">
+      <body className="bg-black min-h-screen antialiased">
         <Providers>{children}</Providers>
       </body>
     </html>

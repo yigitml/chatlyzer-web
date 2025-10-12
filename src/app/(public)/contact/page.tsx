@@ -131,13 +131,13 @@ export default function ContactPage() {
       <header className="container mx-auto px-4 py-6 flex items-center justify-between">
         <Link href="/" className="flex items-center gap-2">
           <Image src="/favicon.ico" alt="Chatlyzer" width={32} height={32} className="w-8 h-8" />
-          <span className="font-bold text-xl text-white relative after:content-[''] after:block after:h-0.5 after:w-full after:bg-gradient-to-r from-purple-400/40 to-pink-400/40 after:mt-1 after:rounded-full">Chatlyzer</span>
+          <span className="font-bold text-xl text-white relative after:content-[''] after:block after:h-0.5 after:w-full after:mt-1 after:rounded-full">Chatlyzer</span>
         </Link>
 
         <Button
           variant="outline"
           onClick={() => router.push("/")}
-          className="bg-white/10 hover:bg-white/20 border-purple-400/30 text-white backdrop-blur-sm"
+          className="bg-white/10 hover:bg-white/20 border-gray-400/30 text-white backdrop-blur-sm"
         >
           <ArrowLeft className="h-4 w-4 mr-2" />
           Back Home
@@ -148,7 +148,7 @@ export default function ContactPage() {
         <div className="max-w-2xl mx-auto">
           {/* Hero Section */}
           <div className="text-center mb-12">
-            <div className="inline-flex items-center gap-2 text-purple-300 bg-white/10 rounded-full px-4 py-2 mb-6 backdrop-blur-sm">
+            <div className="inline-flex items-center gap-2 text-gray-400 bg-white/10 rounded-full px-4 py-2 mb-6 backdrop-blur-sm">
               <Sparkles className="w-4 h-4" />
               <span>Hit us up bestie ✨</span>
             </div>
@@ -156,23 +156,23 @@ export default function ContactPage() {
             <h1 className="text-4xl md:text-6xl font-bold mb-6">
               Got questions?
               <br />
-              <span className="text-white relative after:content-[''] after:block after:h-1 after:w-full after:bg-gradient-to-r from-purple-400/30 to-pink-400/30 after:mt-1 after:rounded-full">We got answers</span> 💬
+              <span className="text-white relative after:content-[''] after:block after:h-1 after:w-full after:bg-gradient-to-r from-gray-400/20 to-gray-500/30 after:mt-1 after:rounded-full">We got answers</span> 💬
             </h1>
             
-            <p className="text-xl text-gray-300 max-w-2xl mx-auto mb-8">
+            <p className="text-xl text-gray-400 max-w-2xl mx-auto mb-8">
               Drop us a line and we'll get back to you faster than your crush leaves you on read 💀
             </p>
           </div>
           
           <div className="space-y-6">
             {/* Contact Form */}
-            <Card className="bg-white/5 border-purple-400/20 backdrop-blur-sm">
+            <Card className="bg-black border-white/20 text-white">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-white">
-                  <MessageSquare className="h-5 w-5 text-purple-400" />
+                  <MessageSquare className="h-5 w-5 text-gray-400" />
                   Spill the tea ☕
                 </CardTitle>
-                <CardDescription className="text-gray-300">
+                <CardDescription className="text-white/60">
                   Whether you're confused, stuck, or just want to say hi - we're here for it 💯
                 </CardDescription>
               </CardHeader>
@@ -182,9 +182,7 @@ export default function ContactPage() {
                     <div className="space-y-2">
                       <Label htmlFor="name" className="flex items-center justify-between text-white">
                         <span>Your name bestie *</span>
-                        <span className={`text-xs ${getCharacterCount('name').isNearLimit ? 'text-orange-400' : 'text-gray-400'}`}>
-                          {getCharacterCount('name').current}/{limits.name}
-                        </span>
+                        <span className={`text-xs ${getCharacterCount('name').isNearLimit ? 'text-gray-500' : 'text-gray-400'}`}>{getCharacterCount('name').current}/{limits.name}</span>
                       </Label>
                       <Input
                         id="name"
@@ -192,7 +190,7 @@ export default function ContactPage() {
                         placeholder="What should we call you?"
                         value={formData.name}
                         onChange={handleInputChange}
-                        className={`bg-white/10 border-purple-400/30 text-white placeholder:text-gray-400 ${errors.name ? "border-red-500" : ""}`}
+                        className={`bg-white/10 border-gray-400/30 text-white placeholder:text-gray-400 ${errors.name ? "border-gray-500" : ""}`}
                         required
                       />
                       {errors.name && (
@@ -205,9 +203,7 @@ export default function ContactPage() {
                     <div className="space-y-2">
                       <Label htmlFor="email" className="flex items-center justify-between text-white">
                         <span>Email *</span>
-                        <span className={`text-xs ${getCharacterCount('email').isNearLimit ? 'text-orange-400' : 'text-gray-400'}`}>
-                          {getCharacterCount('email').current}/{limits.email}
-                        </span>
+                        <span className={`text-xs ${getCharacterCount('email').isNearLimit ? 'text-gray-500' : 'text-gray-400'}`}>{getCharacterCount('email').current}/{limits.email}</span>
                       </Label>
                       <Input
                         id="email"
@@ -216,7 +212,7 @@ export default function ContactPage() {
                         placeholder="your.email@example.com"
                         value={formData.email}
                         onChange={handleInputChange}
-                        className={`bg-white/10 border-purple-400/30 text-white placeholder:text-gray-400 ${errors.email ? "border-red-500" : ""}`}
+                        className={`bg-white/10 border-gray-400/30 text-white placeholder:text-gray-400 ${errors.email ? "border-gray-500" : ""}`}
                         required
                       />
                       {errors.email && (
@@ -231,9 +227,7 @@ export default function ContactPage() {
                   <div className="space-y-2">
                     <Label htmlFor="subject" className="flex items-center justify-between text-white">
                       <span>What's this about? *</span>
-                      <span className={`text-xs ${getCharacterCount('subject').isNearLimit ? 'text-orange-400' : 'text-gray-400'}`}>
-                        {getCharacterCount('subject').current}/{limits.subject}
-                      </span>
+                      <span className={`text-xs ${getCharacterCount('subject').isNearLimit ? 'text-gray-500' : 'text-gray-400'}`}>{getCharacterCount('subject').current}/{limits.subject}</span>
                     </Label>
                     <Input
                       id="subject"
@@ -241,7 +235,7 @@ export default function ContactPage() {
                       placeholder="Give us the topic bestie"
                       value={formData.subject}
                       onChange={handleInputChange}
-                      className={`bg-white/10 border-purple-400/30 text-white placeholder:text-gray-400 ${errors.subject ? "border-red-500" : ""}`}
+                      className={`bg-white/10 border-gray-400/30 text-white placeholder:text-gray-400 ${errors.subject ? "border-gray-500" : ""}`}
                       required
                     />
                     {errors.subject && (
@@ -255,9 +249,7 @@ export default function ContactPage() {
                   <div className="space-y-2">
                     <Label htmlFor="message" className="flex items-center justify-between text-white">
                       <span>Your message *</span>
-                      <span className={`text-xs ${getCharacterCount('message').isNearLimit ? 'text-orange-400' : 'text-gray-400'}`}>
-                        {getCharacterCount('message').current}/{limits.message}
-                      </span>
+                      <span className={`text-xs ${getCharacterCount('message').isNearLimit ? 'text-gray-500' : 'text-gray-400'}`}>{getCharacterCount('message').current}/{limits.message}</span>
                     </Label>
                     <Textarea
                       id="message"
@@ -266,7 +258,7 @@ export default function ContactPage() {
                       rows={6}
                       value={formData.message}
                       onChange={handleInputChange}
-                      className={`bg-white/10 border-purple-400/30 text-white placeholder:text-gray-400 ${errors.message ? "border-red-500" : ""}`}
+                      className={`bg-white/10 border-gray-400/30 text-white placeholder:text-gray-400 ${errors.message ? "border-gray-500" : ""}`}
                       required
                     />
                     {errors.message && (
@@ -280,7 +272,7 @@ export default function ContactPage() {
                   <div className="pt-2">
                     <Button
                       type="submit"
-                      className="w-full bg-gradient-to-r from-purple-500/70 to-pink-500/70 hover:from-purple-500/80 hover:to-pink-500/80 text-white font-medium transition-all duration-200 hover:scale-105 opacity-50 cursor-not-allowed"
+                      className="w-full bg-white/10 border-white/20 text-white font-medium transition-all duration-200 hover:scale-105 opacity-50 cursor-not-allowed"
                       disabled
                     >
                       Send that energy ✨
@@ -294,30 +286,30 @@ export default function ContactPage() {
             </Card>
 
             {/* Contact Information */}
-            <Card className="bg-white/5 border-purple-400/20 backdrop-blur-sm">
+            <Card className="bg-black border-white/20 text-white">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-white">
-                  <Phone className="h-5 w-5 text-purple-400" />
+                  <Phone className="h-5 w-5 text-gray-400" />
                   Other ways to vibe with us 📱
                 </CardTitle>
-                <CardDescription className="text-gray-300">
+                <CardDescription className="text-white/60">
                   Multiple ways to reach us because we're accommodating like that ✨
                 </CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  <div className="p-4 rounded-lg bg-gradient-to-r from-purple-500/10 to-pink-500/10 border border-purple-400/20">
+                  <div className="p-4 rounded-lg bg-gradient-to-r from-gray-500/10 to-gray-500/10 border border-gray-400/20">
                     <div className="flex items-center gap-3">
-                      <Mail className="h-5 w-5 text-blue-400" />
+                      <Mail className="h-5 w-5 text-gray-400" />
                       <div>
                         <h3 className="font-semibold text-white">Direct line to us</h3>
-                        <p className="text-purple-300">info@chatlyzerai.com</p>
+                        <p className="text-gray-400">info@chatlyzerai.com</p>
                         <p className="text-sm text-gray-400">We actually check this one 💯</p>
                       </div>
                     </div>
                   </div>
 
-                  <div className="p-4 rounded-lg bg-gradient-to-r from-purple-500/10 to-pink-500/10 border border-purple-400/20">
+                  <div className="p-4 rounded-lg bg-gradient-to-r from-gray-500/10 to-gray-500/10 border border-gray-400/20">
                     <h3 className="font-semibold text-white mb-3">
                       Quick answers to common Qs 🤔
                     </h3>
@@ -328,7 +320,7 @@ export default function ContactPage() {
                       <li>• What are the different vibes? → Red flags, green flags, simp meter, ghost risk & more</li>
                       <li>• How do credits work? → Each analysis costs credits, get more in your dashboard</li>
                     </ul>
-                    <p className="text-sm text-purple-300 mt-3">
+                    <p className="text-sm text-gray-400 mt-3">
                       Still confused? Hit us up - no judgment zone here 🫶
                     </p>
                   </div>
