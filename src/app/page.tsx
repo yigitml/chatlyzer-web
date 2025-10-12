@@ -32,7 +32,9 @@ export default function Home() {
   return (
     <div className="min-h-screen text-white bg-background relative overflow-hidden">
       {/* WhatsApp Background */}
-      <div className="absolute inset-0 z-0 overflow-hidden">
+      <div className="absolute inset-0 z-0 overflow-hidden"
+           style={{ pointerEvents: "none" }}
+      >
         {Array.from({ length: 50 }).map((_, i) => {
           const message = whatsappMessages[i % whatsappMessages.length];
           const isUser = i % 2 === 0; // Alternate between sent/received messages
