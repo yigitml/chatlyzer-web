@@ -35,10 +35,10 @@ export default function Home() {
       <div className="absolute inset-0 z-0 overflow-hidden"
            style={{ pointerEvents: "none" }}
       >
-        {Array.from({ length: 50 }).map((_, i) => {
+        {Array.from({ length: 20 }).map((_, i) => {
           const message = whatsappMessages[i % whatsappMessages.length];
           const isUser = i % 2 === 0; // Alternate between sent/received messages
-          const delay = `${i * 1.5}s`; // Stagger animation start
+          const delay = `${i * 4}s`; // Stagger animation start
           const duration = `${20 + i * 2}s`; // Vary animation duration for randomness
 
           return (
