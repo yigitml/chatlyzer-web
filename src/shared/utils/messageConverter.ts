@@ -39,8 +39,8 @@ class WhatsAppConverter extends MessageConverter {
 
   // WhatsApp date+time formats for exported messages
   // Old format: 31.12.23, 23:59 - Sender: Message
-  // New format: [31.12.2023, 23:59:59] Sender: Message
   private static readonly MESSAGE_HEADER_OLD = /^(\d{1,2}\.\d{1,2}\.\d{2,4}), (\d{2}:\d{2}) - (.*)$/;
+  // New format: [31.12.2023, 23:59:59] Sender: Message
   private static readonly MESSAGE_HEADER_NEW = /^\[(\d{1,2}\.\d{1,2}\.\d{4}), (\d{2}:\d{2}:\d{2})\] (.*)$/;
 
   // System messages (tr, en, de)
@@ -201,7 +201,7 @@ class WhatsAppConverter extends MessageConverter {
       const timeParts = timeStr.split(':');
       const hours = timeParts[0];
       const minutes = timeParts[1];
-      const seconds = hasSeconds ? timeParts[2] : '0';
+      const seconds = hasSeconds && timeParts.length > 2 ? timeParts[2] : '0';
       
       let fullYear: number;
       if (year.length === 2) {
@@ -218,7 +218,7 @@ class WhatsAppConverter extends MessageConverter {
         parseInt(day),
         parseInt(hours),
         parseInt(minutes),
-        parseInt(seconds || '0')
+        parseInt(seconds)
       );
 
       // Validate the date
@@ -313,8 +313,6 @@ class TelegramConverter extends MessageConverter {
   platform = ChatPlatform.TELEGRAM;
   
   parseMessages(rawText: string): ParsedMessage[] {
-    // Implement Telegram-specific parsing logic
-    // This would depend on Telegram's export format
     const lines = rawText.split('\n').filter(line => line.trim());
     const messages: ParsedMessage[] = [];
     
@@ -376,8 +374,6 @@ class DiscordConverter extends MessageConverter {
   platform = ChatPlatform.DISCORD;
   
   parseMessages(rawText: string): ParsedMessage[] {
-    // Implement Discord-specific parsing logic
-    // This would depend on Discord's export format
     const lines = rawText.split('\n').filter(line => line.trim());
     const messages: ParsedMessage[] = [];
     
@@ -505,7 +501,7 @@ class MessageConverterFactory {
     // WhatsApp patterns: 
     // Old format: DD.MM.YY, HH:MM - 
     // New format: [DD.MM.YYYY, HH:MM:SS] 
-    if (/\d{2}\.\d{2}\.\d{2},\s\d{2}:\d{2}\s-\s/.test(rawText) || 
+    if (/\d{1,2}\.\d{1,2}\.\d{2,4},\s\d{2}:\d{2}\s-\s/.test(rawText) || 
         /\[\d{1,2}\.\d{1,2}\.\d{4},\s\d{2}:\d{2}:\d{2}\]/.test(rawText)) {
       return ChatPlatform.WHATSAPP;
     }
@@ -530,6 +526,11 @@ class MessageConverterFactory {
       return ChatPlatform.DISCORD;
     }
     
+    // Default to Generic if nothing else matches but there is content
+    if (rawText.trim().length > 0) {
+        return ChatPlatform.GENERIC;
+    }
+    
     throw new Error("Platform couldn't be identified");
   }
   
@@ -542,6 +543,32 @@ class MessageConverterFactory {
     const parsedMessages = converter.parseMessages(rawText);
     return converter.convertToMessages(parsedMessages);
   }
+
+  static generateChatTitle(platform: ChatPlatform, messages: Omit<Message, 'id' | 'chatId' | 'userId' | 'createdAt' | 'updatedAt' | 'deletedAt'>[]): string {
+    let platformName = "";
+    switch (platform) {
+        case ChatPlatform.WHATSAPP: platformName = "WhatsApp"; break;
+        case ChatPlatform.INSTAGRAM: platformName = "Instagram"; break;
+        case ChatPlatform.TELEGRAM: platformName = "Telegram"; break;
+        case ChatPlatform.DISCORD: platformName = "Discord"; break;
+        case ChatPlatform.GENERIC: platformName = "Chat"; break;
+    }
+
+    const participants = [...new Set(
+        messages
+            .map(m => m.sender)
+            .filter(s => s !== "System" && s !== "Unknown")
+    )];
+
+    let participantsStr = "Unknown";
+    if (participants.length > 0) {
+        const firstTwo = participants.slice(0, 2).join(" & ");
+        const remaining = participants.length > 2 ? ` +${participants.length - 2}` : "";
+        participantsStr = `${firstTwo}${remaining}`;
+    }
+
+    return `${platformName}: ${participantsStr}`;
+  }
 }
 
 // Export the factory
@@ -551,10 +578,14 @@ export default MessageConverterFactory;
 export function convertChatExport(
   rawText: string,
   platform?: ChatPlatform
-): Omit<Message, 'id' | 'chatId' | 'userId' | 'createdAt' | 'updatedAt' | 'deletedAt'>[] {
-  return MessageConverterFactory.convertMessages(rawText, platform);
+): { 
+    messages: Omit<Message, 'id' | 'chatId' | 'userId' | 'createdAt' | 'updatedAt' | 'deletedAt'>[],
+    title: string,
+    platform: ChatPlatform
+} {
+  const detectedPlatform = platform || MessageConverterFactory.detectPlatform(rawText);
+  const messages = MessageConverterFactory.convertMessages(rawText, detectedPlatform);
+  const title = MessageConverterFactory.generateChatTitle(detectedPlatform, messages);
+  
+  return { messages, title, platform: detectedPlatform };
 }
-
-// Example usage:
-// const messages = convertChatExport(whatsappExportText, ChatPlatform.WHATSAPP);
-// const autoDetectedMessages = convertChatExport(someExportText); // Auto-detect platform 
