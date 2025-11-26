@@ -1,13 +1,15 @@
-import { PrismaClient, CreditType } from "@prisma/client";
-
-const prisma = new PrismaClient();
+import prisma from "@/backend/lib/prisma";
+import { CreditType, Prisma } from "@prisma/client";
 
 export async function consumeUserCredits(
   userId: string,
   creditType: CreditType,
   desiredAmount: number,
+  tx?: Prisma.TransactionClient | any
 ): Promise<boolean> {
-  const userCredit = await prisma.userCredit.findUnique({
+  const client = tx || prisma;
+
+  const userCredit = await client.userCredit.findUnique({
     where: {
       userId_type: {
         userId,
@@ -26,7 +28,7 @@ export async function consumeUserCredits(
     return false;
   }
 
-  await prisma.userCredit.update({
+  await client.userCredit.update({
     where: {
       userId_type: {
         userId,

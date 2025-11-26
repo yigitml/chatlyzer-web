@@ -10,7 +10,7 @@ import type {
 } from "@/shared/types/api/apiRequest";
 import { analyzeAllChatTypes } from "@/backend/lib/openai";
 import { consumeUserCredits } from "@/backend/lib/consumeUserCredits";
-import { CreditType, AnalysisStatus } from "@prisma/client";
+import { CreditType, AnalysisStatus, Prisma } from "@prisma/client";
 import { 
   getAllAnalysisTypes, 
   analysisTypeToSchemaKey, 
@@ -84,62 +84,64 @@ export const POST = withProtectedRoute(async (request: NextRequest) => {
    const authenticatedUserId = request.user!.id;
    const data: AnalysisPostRequest = await request.json();
 
-   // Check if analyses already exist or are in progress for this chat
-   const existingAnalyses = await prisma.analysis.findMany({
-    where: {
-      chatId: data.chatId,
-      userId: authenticatedUserId,
-      deletedAt: null,
-    }
-   });
+    // Start transaction with default isolation level (ReadCommitted)
+    const placeholderAnalyses = await prisma.$transaction(async (tx) => {
+      // Acquire advisory lock for this chat ID to prevent concurrent analysis creation
+      // hashtext(text) returns an integer, which we use for the lock key
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${data.chatId}))`;
 
-   // Check for completed analyses
-   const completedAnalyses = existingAnalyses.filter(a => a.status === AnalysisStatus.COMPLETED);
-   if (completedAnalyses.length > 0) {
-    return ApiResponse.error("Analyses already exist for this chat").toResponse();
-   }
+      // Check if analyses already exist or are in progress for this chat
+      const existingAnalyses = await tx.analysis.findMany({
+        where: {
+          chatId: data.chatId,
+          userId: authenticatedUserId,
+          deletedAt: null,
+        }
+      });
 
-   // Check for pending or processing analyses
-   const inProgressAnalyses = existingAnalyses.filter(a => 
-     a.status === AnalysisStatus.PENDING || a.status === AnalysisStatus.PROCESSING
-   );
-   if (inProgressAnalyses.length > 0) {
-    return ApiResponse.error("Analysis is already in progress for this chat").toResponse();
-   }
+      // Check for completed analyses
+      const completedAnalyses = existingAnalyses.filter(a => a.status === AnalysisStatus.COMPLETED);
+      if (completedAnalyses.length > 0) {
+        throw new Error("Analyses already exist for this chat");
+      }
 
-   // Consume 8 credits for comprehensive analysis
-   const creditConsumption = await consumeUserCredits(authenticatedUserId, CreditType.ANALYSIS, 8);
+      // Check for pending or processing analyses
+      const inProgressAnalyses = existingAnalyses.filter(a => 
+        a.status === AnalysisStatus.PENDING || a.status === AnalysisStatus.PROCESSING
+      );
+      if (inProgressAnalyses.length > 0) {
+        throw new Error("Analysis is already in progress for this chat");
+      }
 
-   if (!creditConsumption) {
-    return ApiResponse.error("Insufficient credits").toResponse();
-   }
+      // Consume 8 credits for comprehensive analysis
+      const creditConsumption = await consumeUserCredits(authenticatedUserId, CreditType.ANALYSIS, 8, tx);
 
-   // Get all analysis types using utility function
-   const analysisTypes = getAllAnalysisTypes();
+      if (!creditConsumption) {
+        throw new Error("Insufficient credits");
+      }
 
-   // Create placeholder analysis records with PENDING status
-   const placeholderAnalyses = await Promise.all(
-     analysisTypes.map(async (analysisType) => {
-       return prisma.analysis.create({
-         data: {
-           chatId: data.chatId,
-           userId: authenticatedUserId,
-           status: AnalysisStatus.PENDING,
-           result: {},
-         }
-       });
-     })
-   );
+      // Get all analysis types using utility function
+      const analysisTypes = getAllAnalysisTypes();
 
-   // Update all analyses to PROCESSING status
-   await prisma.analysis.updateMany({
-     where: {
-       id: { in: placeholderAnalyses.map(a => a.id) }
-     },
-     data: {
-       status: AnalysisStatus.PROCESSING
-     }
-   });
+      // Create placeholder analysis records with PROCESSING status
+      const createdAnalyses = [];
+      for (const analysisType of analysisTypes) {
+        const analysis = await tx.analysis.create({
+          data: {
+            chatId: data.chatId,
+            userId: authenticatedUserId,
+            status: AnalysisStatus.PROCESSING,
+            result: {},
+          }
+        });
+        createdAnalyses.push(analysis);
+      }
+      
+      return createdAnalyses;
+    });
+
+    // Get analysis types again for the next step (or reuse if we could, but it's cheap)
+    const analysisTypes = getAllAnalysisTypes();
 
    try {
      // Perform comprehensive analysis
@@ -196,9 +198,20 @@ export const POST = withProtectedRoute(async (request: NextRequest) => {
      throw analysisError;
    }
 
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error processing POST /api/analysis", error);
-    return ApiResponse.error(`Failed to process request`, 500).toResponse();
+    
+    if (error.code === 'P2034') {
+      return ApiResponse.error("Analysis already in progress (concurrency conflict)", 409).toResponse();
+    }
+
+    if (error.message === "Insufficient credits") {
+      return ApiResponse.error("Insufficient credits", 402).toResponse();
+    }
+    if (error.message === "Analyses already exist for this chat" || error.message === "Analysis is already in progress for this chat") {
+      return ApiResponse.error(error.message, 400).toResponse();
+    }
+    return ApiResponse.error(`Failed to process request: ${error.message}`, 500).toResponse();
   }
 });
 

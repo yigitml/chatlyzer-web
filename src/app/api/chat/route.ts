@@ -45,6 +45,10 @@ export const POST = withProtectedRoute(async (request: NextRequest) => {
     const authenticatedUserId = request.user!.id;
     const data: ChatPostRequest = await request.json();
     
+    if (!data.title || data.title.trim() === "") {
+      return ApiResponse.error("Chat title is required", 400).toResponse();
+    }
+
     const existingChat = await prisma.chat.findFirst({
       where: {
         title: data.title,
@@ -58,8 +62,13 @@ export const POST = withProtectedRoute(async (request: NextRequest) => {
 
     const messages = data.messages;
 
-    if (!messages) {
+    if (!messages || !Array.isArray(messages) || messages.length === 0) {
       return ApiResponse.error("Messages are required", 400).toResponse();
+    }
+
+    const hasValidMessage = messages.some(msg => msg.content && msg.content.trim().length > 0);
+    if (!hasValidMessage) {
+      return ApiResponse.error("Chat must contain at least one message with content", 400).toResponse();
     }
 
     let sampledMessages = [];
