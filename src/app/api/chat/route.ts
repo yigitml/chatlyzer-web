@@ -151,18 +151,32 @@ export const DELETE = withProtectedRoute(async (request: NextRequest) => {
       return ApiResponse.error("Chat ID is required", 400).toResponse();
     }
 
-    const deletedChat = await prisma.chat.update({
-      where: { id, userId: authenticatedUserId },
-      data: {
-        deletedAt: new Date(),
-      },
+    // Use a transaction to ensure both chat and analyses are deleted together
+    const result = await prisma.$transaction(async (tx) => {
+      // First, soft-delete the chat
+      const deletedChat = await tx.chat.update({
+        where: { id, userId: authenticatedUserId },
+        data: {
+          deletedAt: new Date(),
+        },
+      });
+
+      // Then, soft-delete all analyses associated with this chat
+      await tx.analysis.updateMany({
+        where: {
+          chatId: id,
+          userId: authenticatedUserId,
+          deletedAt: null, // Only delete analyses that aren't already deleted
+        },
+        data: {
+          deletedAt: new Date(),
+        },
+      });
+
+      return deletedChat;
     });
 
-    if (deletedChat) {
-      return ApiResponse.success(deletedChat, "Chat deleted successfully", 200).toResponse();
-    }
-
-    return ApiResponse.error("Chat not found", 404).toResponse();
+    return ApiResponse.success(result, "Chat and associated analyses deleted successfully", 200).toResponse();
   } catch (error) {
     console.error("Error deleting chat:", error);
     return ApiResponse.error("Internal server error", 500).toResponse();
