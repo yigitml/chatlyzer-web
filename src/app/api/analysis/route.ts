@@ -48,6 +48,7 @@ export const GET = withProtectedRoute(async (request: NextRequest) => {
         where: {
           id: id,
           userId: authenticatedUserId,
+          deletedAt: null,
         },
       });
       if (analysis) {
@@ -69,6 +70,7 @@ export const GET = withProtectedRoute(async (request: NextRequest) => {
       const analyzes = await prisma.analysis.findMany({
         where: {
           userId: authenticatedUserId,
+          deletedAt: null,
         },
       });
       return ApiResponse.success(analyzes).toResponse();
