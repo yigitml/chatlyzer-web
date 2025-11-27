@@ -14,7 +14,7 @@ export const GET = withProtectedRoute(async (request: NextRequest) => {
 
         if (id) {
           const chat = await prisma.chat.findFirst({
-              where: { id, userId: authenticatedUserId },
+              where: { id, userId: authenticatedUserId, deletedAt: null },
           });
           if (chat) {
             return ApiResponse.success(chat).toResponse();
@@ -22,7 +22,7 @@ export const GET = withProtectedRoute(async (request: NextRequest) => {
           return ApiResponse.error("Chat not found", 404).toResponse();
         } else {
           const chats = await prisma.chat.findMany({
-            where: { userId: authenticatedUserId },
+            where: { userId: authenticatedUserId, deletedAt: null },
             orderBy: { createdAt: "desc" },
             include: {
               messages: {
@@ -53,6 +53,7 @@ export const POST = withProtectedRoute(async (request: NextRequest) => {
       where: {
         title: data.title,
         userId: authenticatedUserId,
+        deletedAt: null,
       }
     });
 
