@@ -154,7 +154,11 @@ const createSystemPrompt = (analysisType: AnalysisType, language: string): strin
 const fetchChatData = async (chatId: string) => {
   const chatJson = await prisma.chat.findUnique({ 
     where: { id: chatId }, 
-    include: { messages: true } 
+    include: { 
+      messages: {
+        orderBy: { timestamp: 'asc' }
+      }
+    } 
   });
 
   if (!chatJson) {
