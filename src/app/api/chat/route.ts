@@ -182,6 +182,6 @@ export const DELETE = withProtectedRoute(async (request: NextRequest) => {
     return ApiResponse.success(result, "Chat and associated analyses deleted successfully", 200).toResponse();
   } catch (error) {
     console.error("Error deleting chat:", error);
-    return ApiResponse.error("Internal server error", 500).toResponse();
+    return ApiResponse.error(`Internal server error, ${error}`, 500).toResponse();
   }
 });

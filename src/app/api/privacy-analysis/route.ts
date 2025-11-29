@@ -183,6 +183,6 @@ export const POST = withProtectedRoute(async (request: NextRequest) => {
       await refundUserCredits(authenticatedUserId, CreditType.ANALYSIS, 8);
     }
 
-    return ApiResponse.error(`Failed to process privacy analysis request`, 500).toResponse();
+    return ApiResponse.error(`Failed to process privacy analysis request, ${error}`, 500).toResponse();
   }
 });
