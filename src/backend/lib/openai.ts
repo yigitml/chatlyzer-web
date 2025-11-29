@@ -4,6 +4,7 @@ import prisma from "./prisma";
 import { zodResponseFormat } from "openai/helpers/zod";
 import { z } from "zod";
 import { AnalysisType } from "@/shared/types/api/apiRequest";
+import { encodingForModel } from "js-tiktoken";
 
 const MODELS = {
   MAIN: "gpt-4o-mini",
@@ -259,42 +260,61 @@ export const smallChatBuilder = (messages: any[]) => {
 export const smartChatSampler = (messages: any[], targetTokenLimit: number = 100000) => {
   if (!messages || messages.length === 0) return [];
 
-  // 1. Calculate total estimated tokens
-  // JSON overhead per message is roughly: {"sender":"","timestamp":"","content":""} ~ 40 chars
-  // Plus content length.
-  const ESTIMATED_OVERHEAD_CHARS = 50; 
-  
-  let totalChars = 0;
+  // Use gpt-4 encoding (cl100k_base) as a safe proxy for gpt-4o-mini (o200k_base).
+  // cl100k_base is generally less efficient, so it provides a conservative estimate.
+  const enc = encodingForModel("gpt-4");
+
+  // Helper to count tokens for a message object
+  const countTokens = (msg: any) => {
+    // Estimate overhead for JSON structure (sender, timestamp keys etc)
+    // A safe buffer for JSON syntax overhead per message is ~20 tokens.
+    const overhead = 20; 
+    const contentTokens = enc.encode(msg.content || "").length;
+    const metadataTokens = enc.encode(msg.sender || "").length + enc.encode(msg.timestamp || "").length;
+    
+    return contentTokens + metadataTokens + overhead;
+  };
+
+  let totalTokens = 0;
+  // Calculate total tokens first
   for (const msg of messages) {
-    totalChars += (msg.content?.length || 0) + ESTIMATED_OVERHEAD_CHARS;
+    totalTokens += countTokens(msg);
   }
 
-  const estimatedTokens = Math.ceil(totalChars / 3.5); // Conservative estimate
-
-  // 2. If within limit, return all
-  if (estimatedTokens <= targetTokenLimit) {
+  // If within limit, return all
+  if (totalTokens <= targetTokenLimit) {
     return messages;
   }
 
-  // 3. Calculate sampling ratio
-  const ratio = targetTokenLimit / estimatedTokens;
+  // If over limit, we need to sample.
+  // We use a ratio based on total tokens to determine target count.
+  const ratio = targetTokenLimit / totalTokens;
   const targetCount = Math.floor(messages.length * ratio);
   
-  // Ensure we keep at least some messages if possible, but respect limit
   if (targetCount < 1) return messages.slice(0, 1);
 
-  // 4. Sample uniformly
   const sampledMessages = [];
   const interval = messages.length / targetCount;
+  let currentTokens = 0;
   
+  // Sample uniformly
   for (let i = 0; i < targetCount; i++) {
     const index = Math.floor(i * interval);
     if (index < messages.length) {
-      sampledMessages.push(messages[index]);
+      const msg = messages[index];
+      const tokens = countTokens(msg);
+      
+      // Stop if adding this message would exceed limit (strict enforcement)
+      if (currentTokens + tokens > targetTokenLimit) {
+        break; 
+      }
+      
+      sampledMessages.push(msg);
+      currentTokens += tokens;
     }
   }
 
-  console.log(`SmartSampler: Reduced ${messages.length} messages (${estimatedTokens} est. tokens) to ${sampledMessages.length} messages to fit ${targetTokenLimit} limit.`);
+  console.log(`SmartSampler: Reduced ${messages.length} messages (${totalTokens} actual tokens) to ${sampledMessages.length} messages (${currentTokens} tokens) to fit ${targetTokenLimit} limit.`);
   
   return sampledMessages;
 };
