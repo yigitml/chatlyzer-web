@@ -5,8 +5,8 @@ import prisma from "@/backend/lib/prisma";
 import type {
   PrivacyAnalysisPostRequest,
 } from "@/shared/types/api/apiRequest";
-import { analyzeAllChatTypesPrivate, smallChatBuilder } from "@/backend/lib/openai";
-import { consumeUserCredits } from "@/backend/lib/consumeUserCredits";
+import { analyzeAllChatTypesPrivate, smartChatSampler } from "@/backend/lib/openai";
+import { consumeUserCredits, refundUserCredits } from "@/backend/lib/consumeUserCredits";
 import { CreditType, AnalysisStatus } from "@prisma/client";
 import { 
   getAllAnalysisTypes, 
@@ -15,8 +15,11 @@ import {
 } from "@/shared/types/analysis";
 
 export const POST = withProtectedRoute(async (request: NextRequest) => {
+  let creditsConsumed = false;
+  let authenticatedUserId = "";
+
   try {
-    const authenticatedUserId = request.user!.id;
+    authenticatedUserId = request.user!.id;
     const data: PrivacyAnalysisPostRequest = await request.json();
 
     // Validate required fields
@@ -43,9 +46,13 @@ export const POST = withProtectedRoute(async (request: NextRequest) => {
     // Consume 8 credits for comprehensive analysis
     const creditConsumption = await consumeUserCredits(authenticatedUserId, CreditType.ANALYSIS, 8);
 
-    if (!creditConsumption) {
+    if (creditConsumption) {
+      creditsConsumed = true;
+    } else {
       return ApiResponse.error("Insufficient credits", 402).toResponse();
     }
+
+
 
     const m = [];
 
@@ -55,7 +62,7 @@ export const POST = withProtectedRoute(async (request: NextRequest) => {
       }
     }
 
-    const smallMessages = smallChatBuilder(m);
+    const smallMessages = smartChatSampler(m);
 
     // Perform comprehensive analysis using messages from request
     const comprehensiveAnalysisData = await analyzeAllChatTypesPrivate(
@@ -169,6 +176,13 @@ export const POST = withProtectedRoute(async (request: NextRequest) => {
 
   } catch (error) {
     console.error("Error processing POST /api/privacy-analysis", error);
+    
+    // Refund credits if they were consumed but analysis failed
+    if (creditsConsumed) {
+      console.log(`Refunding 8 credits to user ${authenticatedUserId} due to failure`);
+      await refundUserCredits(authenticatedUserId, CreditType.ANALYSIS, 8);
+    }
+
     return ApiResponse.error(`Failed to process privacy analysis request`, 500).toResponse();
   }
 });

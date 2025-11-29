@@ -214,7 +214,7 @@ export async function analyzeAllChatTypes(chatId: string): Promise<z.infer<typeo
     
     const systemPrompt = `${COMPREHENSIVE_ANALYSIS_PROMPT}\n\n${RATING_INSTRUCTION}\n\n${languageInstruction}`.trim();
 
-    const smallChat = smallChatBuilder(minimalChat.messages);
+    const smallChat = smartChatSampler(minimalChat.messages);
 
     const response = await openai.chat.completions.create({
       model: MODELS.MAIN,
@@ -248,15 +248,55 @@ const createMinimalChatFromMessages = (title: string, messages: any[]) => ({
 });
 
 export const smallChatBuilder = (messages: any[]) => {
-  if (messages.length > 25000) {
-    const sampledMessages = [];
-    const interval = messages.length / 25000;
-    for (let i = 0; i < 25000; i++) {
-      sampledMessages.push(messages[Math.floor(i * interval)]);
-    }
-    return sampledMessages;
+  // Deprecated: Use smartChatSampler instead for better token management
+  return smartChatSampler(messages, 100000);
+};
+
+/**
+ * Smartly samples messages to fit within a target token limit.
+ * Estimates tokens conservatively (1 token ~= 4 chars) and samples uniformly if limit is exceeded.
+ */
+export const smartChatSampler = (messages: any[], targetTokenLimit: number = 100000) => {
+  if (!messages || messages.length === 0) return [];
+
+  // 1. Calculate total estimated tokens
+  // JSON overhead per message is roughly: {"sender":"","timestamp":"","content":""} ~ 40 chars
+  // Plus content length.
+  const ESTIMATED_OVERHEAD_CHARS = 50; 
+  
+  let totalChars = 0;
+  for (const msg of messages) {
+    totalChars += (msg.content?.length || 0) + ESTIMATED_OVERHEAD_CHARS;
   }
-  return messages;
+
+  const estimatedTokens = Math.ceil(totalChars / 3.5); // Conservative estimate
+
+  // 2. If within limit, return all
+  if (estimatedTokens <= targetTokenLimit) {
+    return messages;
+  }
+
+  // 3. Calculate sampling ratio
+  const ratio = targetTokenLimit / estimatedTokens;
+  const targetCount = Math.floor(messages.length * ratio);
+  
+  // Ensure we keep at least some messages if possible, but respect limit
+  if (targetCount < 1) return messages.slice(0, 1);
+
+  // 4. Sample uniformly
+  const sampledMessages = [];
+  const interval = messages.length / targetCount;
+  
+  for (let i = 0; i < targetCount; i++) {
+    const index = Math.floor(i * interval);
+    if (index < messages.length) {
+      sampledMessages.push(messages[index]);
+    }
+  }
+
+  console.log(`SmartSampler: Reduced ${messages.length} messages (${estimatedTokens} est. tokens) to ${sampledMessages.length} messages to fit ${targetTokenLimit} limit.`);
+  
+  return sampledMessages;
 };
 
 export async function analyzeAllChatTypesPrivate(
@@ -272,7 +312,7 @@ export async function analyzeAllChatTypesPrivate(
     
     const systemPrompt = `${COMPREHENSIVE_ANALYSIS_PROMPT}\n\n${RATING_INSTRUCTION}\n\n${languageInstruction}`.trim();
 
-    const smallChat = smallChatBuilder(minimalChat.messages);
+    const smallChat = smartChatSampler(minimalChat.messages);
 
     const response = await openai.chat.completions.create({
       model: MODELS.MAIN,

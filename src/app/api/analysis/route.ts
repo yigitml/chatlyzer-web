@@ -9,7 +9,7 @@ import type {
   AnalysisType,
 } from "@/shared/types/api/apiRequest";
 import { analyzeAllChatTypes } from "@/backend/lib/openai";
-import { consumeUserCredits } from "@/backend/lib/consumeUserCredits";
+import { consumeUserCredits, refundUserCredits } from "@/backend/lib/consumeUserCredits";
 import { CreditType, AnalysisStatus, Prisma } from "@prisma/client";
 import { 
   getAllAnalysisTypes, 
@@ -197,8 +197,12 @@ export const POST = withProtectedRoute(async (request: NextRequest) => {
        }
      });
 
-     throw analysisError;
-   }
+      // Refund credits since analysis failed
+      console.log(`Refunding 8 credits to user ${authenticatedUserId} due to analysis failure`);
+      await refundUserCredits(authenticatedUserId, CreditType.ANALYSIS, 8);
+
+      throw analysisError;
+    }
 
   } catch (error: any) {
     console.error("Error processing POST /api/analysis", error);

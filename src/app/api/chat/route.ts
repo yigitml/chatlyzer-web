@@ -4,7 +4,7 @@ import { withProtectedRoute } from "@/backend/middleware/jwtAuth";
 import { ApiResponse } from "@/shared/types/api/apiResponse";
 import { ChatPostRequest, ChatPutRequest, ChatDeleteRequest } from "@/shared/types/api/apiRequest";
 import { InputJsonValue, JsonValue } from "@prisma/client/runtime/library";
-import { smallChatBuilder } from "@/backend/lib/openai";
+import { smallChatBuilder, smartChatSampler } from "@/backend/lib/openai";
 
 export const GET = withProtectedRoute(async (request: NextRequest) => {
     try {
@@ -74,12 +74,13 @@ export const POST = withProtectedRoute(async (request: NextRequest) => {
 
     let sampledMessages = [];
 
-    if (messages.length > 25000) {
-      const interval = messages.length / 25000;
-      for (let i = 0; i < 25000; i++) {
-        sampledMessages.push(messages[Math.floor(i * interval)]);
-      }
-    } else sampledMessages = messages;
+    if (messages.length > 0) {
+      // Use smartChatSampler to ensure we don't store excessively large chats
+      // We use a slightly higher limit for storage (200k tokens) to preserve more history than analysis
+      sampledMessages = smartChatSampler(messages, 200000);
+    } else {
+      sampledMessages = messages;
+    }
     
     const participants = sampledMessages ? [...new Set(sampledMessages.map(message => message.sender))] : [];
 
@@ -91,21 +92,23 @@ export const POST = withProtectedRoute(async (request: NextRequest) => {
       }
     });
 
-    if (sampledMessages) {
-      sampledMessages.forEach(async (message) => {
-        if (message.content.length < 500) {
-          await prisma.message.create({
-            data: {
-              userId: authenticatedUserId,
-              chatId: chat.id,
-              sender: message.sender,
-              content: message.content,
-              timestamp: message.timestamp,
-              metadata: message.metadata as InputJsonValue,
-            }
-          })
-        }
-      })
+    if (sampledMessages && sampledMessages.length > 0) {
+      const messagesToCreate = sampledMessages
+        .filter(message => message.content && message.content.length < 500)
+        .map(message => ({
+          userId: authenticatedUserId,
+          chatId: chat.id,
+          sender: message.sender,
+          content: message.content,
+          timestamp: message.timestamp,
+          metadata: message.metadata as InputJsonValue,
+        }));
+
+      if (messagesToCreate.length > 0) {
+        await prisma.message.createMany({
+          data: messagesToCreate,
+        });
+      }
     } 
 
     return ApiResponse.success(chat, "Chat created successfully", 200).toResponse();
