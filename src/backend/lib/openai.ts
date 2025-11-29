@@ -232,7 +232,7 @@ export async function analyzeAllChatTypes(chatId: string): Promise<z.infer<typeo
     return ChatlyzerSchemas.AllAnalyses.parse(analysisData);
   } catch (error) {
     console.error("Error in analyzeAllChatTypes:", error);
-    throw new Error("Failed to perform comprehensive chat analysis");
+    throw new Error(`Failed to perform comprehensive chat analysis, ${error}`);
   }
 }
 
@@ -330,6 +330,6 @@ export async function analyzeAllChatTypesPrivate(
     return ChatlyzerSchemas.AllAnalyses.parse(analysisData);
   } catch (error) {
     console.error("Error in analyzeAllChatTypesPrivate:", error);
-    throw new Error("Failed to perform comprehensive privacy chat analysis");
+    throw new Error(`Failed to perform comprehensive privacy chat analysis, ${error}`);
   }
 }
