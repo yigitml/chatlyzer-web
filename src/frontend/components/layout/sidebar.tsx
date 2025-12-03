@@ -1,7 +1,7 @@
 import { Button } from "@/frontend/components/ui/button";
 import { ChatCard } from "@/frontend/components/chat/chat-card";
 import { Plus, ChevronRight, ChevronLeft, MessageCircle } from "lucide-react";
-import { Chat } from "@prisma/client";
+import { Chat } from "../../../generated/client/browser";
 import { useCallback, useRef, useState } from "react";
 
 interface SidebarProps {

@@ -1,4 +1,4 @@
-import { Message } from "@prisma/client";
+import { Message } from "../../generated/client/browser";
 
 // Types for parsed messages (before conversion to full Message objects)
 export interface ParsedMessage {

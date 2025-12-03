@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { User } from "@prisma/client";
+import { User } from "../../generated/client/browser";
 import { createNetworkService } from "@/shared/utils/network";
 import { LOCAL_STORAGE_KEYS } from "@/shared/utils/storage";
 import { AuthWebPostRequest, UserPutRequest } from "@/shared/types/api/apiRequest";

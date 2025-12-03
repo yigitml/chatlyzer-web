@@ -4,7 +4,7 @@ import { useCreditStore } from "@/frontend/store/creditStore";
 import { useAuthStore } from "@/frontend/store/authStore";
 import { AnalysisType, PrivacyAnalysisPostRequest } from "@/shared/types/api/apiRequest";
 import { normalizeAnalysisType } from "@/shared/types/analysis";
-import type { Chat, Analysis } from "@prisma/client";
+import type { Chat, Analysis } from "../../generated/client/browser";
 
 export const useAnalysisManagement = () => {
   const { 

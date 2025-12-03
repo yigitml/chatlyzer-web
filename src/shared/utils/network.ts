@@ -28,7 +28,7 @@ import {
   Chat,
   Message,
   Analysis,
-} from "@prisma/client";
+} from "../../generated/client/browser";
 
 export class NetworkService {
   private api: ApiClient;

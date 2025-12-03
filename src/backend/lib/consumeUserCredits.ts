@@ -1,5 +1,5 @@
 import prisma from "@/backend/lib/prisma";
-import { CreditType, Prisma } from "@prisma/client";
+import { CreditType, Prisma } from "../../generated/client/client";
 
 export async function consumeUserCredits(
   userId: string,

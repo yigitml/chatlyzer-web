@@ -3,7 +3,7 @@ import prisma from "@/backend/lib/prisma";
 import { withProtectedRoute } from "@/backend/middleware/jwtAuth";
 import { ApiResponse } from "@/shared/types/api/apiResponse";
 import { ChatPostRequest, ChatPutRequest, ChatDeleteRequest } from "@/shared/types/api/apiRequest";
-import { InputJsonValue, JsonValue } from "@prisma/client/runtime/library";
+import { Prisma } from "../../../generated/client/client";
 import { smallChatBuilder, smartChatSampler } from "@/backend/lib/openai";
 
 export const GET = withProtectedRoute(async (request: NextRequest) => {
@@ -101,7 +101,7 @@ export const POST = withProtectedRoute(async (request: NextRequest) => {
           sender: message.sender,
           content: message.content,
           timestamp: message.timestamp,
-          metadata: message.metadata as InputJsonValue,
+          metadata: message.metadata as Prisma.InputJsonValue,
         }));
 
       if (messagesToCreate.length > 0) {

@@ -7,7 +7,7 @@ import type {
 } from "@/shared/types/api/apiRequest";
 import { analyzeAllChatTypesPrivate, smartChatSampler } from "@/backend/lib/openai";
 import { consumeUserCredits, refundUserCredits } from "@/backend/lib/consumeUserCredits";
-import { CreditType, AnalysisStatus } from "@prisma/client";
+import { CreditType, AnalysisStatus } from "../../../generated/client/client";
 import { 
   getAllAnalysisTypes, 
   analysisTypeToSchemaKey, 

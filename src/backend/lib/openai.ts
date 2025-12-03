@@ -197,7 +197,7 @@ export async function analyzeChat<T extends ChatlyzerSchemaType>(
     });
     
     const analysisData = parseOpenAIResponse(response.choices[0].message.content);
-    return schema.parse(analysisData);
+    return schema.parse(analysisData) as z.infer<T>;
   } catch (error) {
     console.error("Error in analyzeChat:", error);
     throw new Error("Failed to analyze chat");

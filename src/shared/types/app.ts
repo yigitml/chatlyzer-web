@@ -5,7 +5,7 @@ import {
   Message,
   Chat,
   Analysis,
-} from "@prisma/client";
+} from "../../generated/client/browser";
 
 import {
   AuthWebPostRequest,

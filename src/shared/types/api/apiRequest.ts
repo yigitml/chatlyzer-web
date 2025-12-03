@@ -1,4 +1,4 @@
-import { Message } from "@prisma/client";
+import { Message } from "../../../generated/client/browser";
 
 export interface AuthWebPostRequest {
   accessToken: string;

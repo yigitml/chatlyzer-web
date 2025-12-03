@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { Message } from "@prisma/client";
+import { Message } from "../../generated/client/browser";
 import { useAuthStore } from "./authStore";
 import { MessageGetRequest, MessagePostRequest, MessagePutRequest, MessageDeleteRequest } from "@/shared/types/api/apiRequest";
 interface MessageState {

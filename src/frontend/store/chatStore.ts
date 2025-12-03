@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { Chat } from "@prisma/client";
+import { Chat } from "../../generated/client/browser";
 import { useAuthStore } from "./authStore";
 import { ChatGetRequest, ChatPostRequest, ChatPutRequest, ChatDeleteRequest } from "@/shared/types/api/apiRequest";
 interface ChatState {

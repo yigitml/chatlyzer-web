@@ -5,7 +5,7 @@ import { AnalysisResultCard } from "@/frontend/components/analysis/analysis-resu
 import { Plus, Sparkles, Trash2, BarChart3, MessageCircle } from "lucide-react";
 import { AnalysisType } from "@/shared/types/api/apiRequest";
 import { ANALYSIS_CONFIG } from "@/shared/types/analysis";
-import { Chat } from "@prisma/client";
+import { Chat } from "../../../generated/client/browser";
 
 interface MainContentProps {
   selectedChat: Chat | undefined;

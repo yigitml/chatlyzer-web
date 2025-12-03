@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { UserCredit, Subscription } from "@prisma/client";
+import { UserCredit, Subscription } from "../../generated/client/browser";
 import { createNetworkService } from "@/shared/utils/network";
 import { useAuthStore } from "./authStore";
 

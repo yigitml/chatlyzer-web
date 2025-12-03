@@ -1,4 +1,4 @@
-import { Chat } from "@prisma/client";
+import { Chat } from "../../../generated/client/browser";
 import { Input } from "@/frontend/components/ui/input";
 import { Button } from "@/frontend/components/ui/button";
 import { LoadingSpinner } from "@/frontend/components/common/loading-spinner";

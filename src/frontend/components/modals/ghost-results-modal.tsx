@@ -4,7 +4,7 @@ import React from "react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/frontend/components/ui/dialog";
 import { Button } from "@/frontend/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/frontend/components/ui/card";
-import type { Chat, Analysis } from "@prisma/client";
+import type { Chat, Analysis } from "../../../generated/client/browser";
 import { AnalysisResultCard } from "@/frontend/components/analysis/analysis-result-card";
 import { AnalysisType } from "@/shared/types/api/apiRequest";
 import { normalizeAnalysisType } from "@/shared/types/analysis";

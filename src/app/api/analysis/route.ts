@@ -10,7 +10,7 @@ import type {
 } from "@/shared/types/api/apiRequest";
 import { analyzeAllChatTypes } from "@/backend/lib/openai";
 import { consumeUserCredits, refundUserCredits } from "@/backend/lib/consumeUserCredits";
-import { CreditType, AnalysisStatus, Prisma } from "@prisma/client";
+import { CreditType, AnalysisStatus, Prisma } from "../../../generated/client/client";
 import { 
   getAllAnalysisTypes, 
   analysisTypeToSchemaKey, 
