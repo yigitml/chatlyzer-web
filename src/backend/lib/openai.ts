@@ -24,24 +24,28 @@ const LANGUAGE_NAMES: Record<string, string> = {
 };
 
 const ANALYSIS_PROMPTS: Record<AnalysisType, string> = {
-  ChatStats: "You are an expert chat statistician. Analyze the conversation and provide comprehensive statistics including message counts, word counts, emoji usage, response times, conversation phases, and user roles. Focus on quantitative metrics and behavioral patterns.",
+  ChatStats: "You are an expert chat statistician. Analyze the conversation and provide comprehensive statistics including message counts, word counts, emoji usage, response times, conversation phases, and user roles. Focus on quantitative metrics and behavioral patterns. Provide a detailed explanation of at least 100 words. Use human-like, empathetic, and descriptive language focusing on the specific situations and emotional undertones.",
   
-  RedFlag: "You are an expert relationship analyzer specializing in identifying problematic patterns. Analyze the conversation for potential red flags such as manipulation, gaslighting, love bombing, possessiveness, disrespect, or toxic communication patterns. Be objective and evidence-based.",
+  RedFlag: "You are an expert relationship analyzer specializing in identifying problematic patterns. Analyze the conversation for potential red flags such as manipulation, gaslighting, love bombing, possessiveness, disrespect, or toxic communication patterns. Be objective and evidence-based. Provide a detailed explanation of at least 100 words. Use human-like, empathetic, and descriptive language focusing on the specific situations and emotional undertones.",
   
-  GreenFlag: "You are an expert relationship analyzer specializing in identifying positive patterns. Analyze the conversation for green flags such as respectful communication, healthy boundaries, emotional support, genuine interest, and positive relationship dynamics.",
+  GreenFlag: "You are an expert relationship analyzer specializing in identifying positive patterns. Analyze the conversation for green flags such as respectful communication, healthy boundaries, emotional support, genuine interest, and positive relationship dynamics. Provide a detailed explanation of at least 100 words. Use human-like, empathetic, and descriptive language focusing on the specific situations and emotional undertones.",
   
-  VibeCheck: "You are an expert at reading social vibes and communication energy. Analyze the overall mood, energy, humor, awkwardness, and social dynamics of the conversation. Focus on the emotional undertones and social chemistry.",
+  VibeCheck: "You are an expert at reading social vibes and communication energy. Analyze the overall mood, energy, humor, awkwardness, and social dynamics of the conversation. Focus on the emotional undertones and social chemistry. Provide a detailed explanation of at least 100 words. Use human-like, empathetic, and descriptive language focusing on the specific situations and emotional undertones.",
   
-  SimpOMeter: "You are an expert at analyzing romantic interest and dating dynamics. Analyze the conversation for signs of excessive romantic pursuit, one-sided effort, over-complimenting, or unbalanced romantic investment. Be objective about dating behaviors.",
+  SimpOMeter: "You are an expert at analyzing romantic interest and dating dynamics. Analyze the conversation for signs of excessive romantic pursuit, one-sided effort, over-complimenting, or unbalanced romantic investment. Be objective about dating behaviors. Provide a detailed explanation of at least 100 words. Use human-like, empathetic, and descriptive language focusing on the specific situations and emotional undertones.",
   
-  GhostRisk: "You are an expert at predicting communication patterns and engagement levels. Analyze the conversation for signs that might indicate someone is losing interest or likely to stop responding (ghosting). Look for engagement patterns, response quality, and communication decline.",
+  GhostRisk: "You are an expert at predicting communication patterns and engagement levels. Analyze the conversation for signs that might indicate someone is losing interest or likely to stop responding (ghosting). Look for engagement patterns, response quality, and communication decline. Provide a detailed explanation of at least 100 words. Use human-like, empathetic, and descriptive language focusing on the specific situations and emotional undertones.",
   
-  MainCharacterEnergy: "You are an expert at analyzing personality expression and social presence. Analyze the conversation for main character energy - dramatic flair, storytelling ability, command of attention, confidence, and standout personality moments.",
+  MainCharacterEnergy: "You are an expert at analyzing personality expression and social presence. Analyze the conversation for main character energy - dramatic flair, storytelling ability, command of attention, confidence, and standout personality moments. Provide a detailed explanation of at least 100 words. Use human-like, empathetic, and descriptive language focusing on the specific situations and emotional undertones.",
   
-  EmotionalDepth: "You are an expert at analyzing emotional intelligence and vulnerability in conversations. Analyze the conversation for emotional depth, vulnerability, empathy, meaningful topics, and genuine emotional connection between participants."
+  EmotionalDepth: "You are an expert at analyzing emotional intelligence and vulnerability in conversations. Analyze the conversation for emotional depth, vulnerability, empathy, meaningful topics, and genuine emotional connection between participants. Provide a detailed explanation of at least 100 words. Use human-like, empathetic, and descriptive language focusing on the specific situations and emotional undertones."
 };
 
-const COMPREHENSIVE_ANALYSIS_PROMPT = `You are an expert chat analyzer capable of performing comprehensive multi-faceted analysis. You will analyze the conversation and provide ALL of the following analysis types in a single response:
+const COMPREHENSIVE_ANALYSIS_PROMPT = `You are an expert chat analyzer capable of performing comprehensive multi-faceted analysis. You will analyze the conversation and provide ALL of the following analysis types in a single response.
+
+IMPORTANT: For each analysis section, you must:
+- Provide a detailed explanation of at least 100 words.
+- Use human-like, empathetic, and descriptive language focusing on the specific situations and emotional undertones.
 
 1. **Chat Statistics**: Comprehensive statistics including message counts, word counts, emoji usage, response times, conversation phases, and user roles.
 2. **Red Flag Analysis**: Identify potential problematic patterns such as manipulation, gaslighting, love bombing, possessiveness, disrespect, or toxic communication patterns.
@@ -53,6 +57,7 @@ const COMPREHENSIVE_ANALYSIS_PROMPT = `You are an expert chat analyzer capable o
 8. **Emotional Depth**: Analyze for emotional depth, vulnerability, empathy, meaningful topics, and genuine emotional connection between participants.
 
 Provide a complete analysis for ALL categories in the exact format specified in the schema.`;
+
 
 const formatTimestamp = (timestamp: Date | string): string => {
   const date = new Date(timestamp);
