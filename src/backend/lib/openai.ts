@@ -5,6 +5,7 @@ import { zodResponseFormat } from "openai/helpers/zod";
 import { z } from "zod";
 import { AnalysisType } from "@/shared/types/api/apiRequest";
 import { encodingForModel } from "js-tiktoken";
+import { detect } from "tinyld";
 
 const MODELS = {
   MAIN: "gpt-4o-mini",
@@ -99,10 +100,44 @@ const parseOpenAIResponse = (responseContent: string | null) => {
   return parsedContent.analysis || parsedContent.all_analyses || parsedContent;
 };
 
-const createSystemPrompt = (analysisType: AnalysisType): string => {
+const createSystemPrompt = (analysisType: AnalysisType, detectedLanguage?: string): string => {
   const basePrompt = ANALYSIS_PROMPTS[analysisType] || ANALYSIS_PROMPTS.ChatStats;
   
-  return `${basePrompt} ${SHARED_INSTRUCTIONS}`.trim();
+  let prompt = `${basePrompt} ${SHARED_INSTRUCTIONS}`;
+  if (detectedLanguage && detectedLanguage !== "UNKNOWN") {
+    prompt += `\n\nIMPORTANT: The detected primary language of this chat is '${detectedLanguage}' (ISO 639-1 code). You MUST write your entire analysis and all explanations exactly in this language.`;
+  }
+  
+  return prompt.trim();
+};
+
+const getDetectedLanguage = (messages: any[]): string => {
+  if (!messages || messages.length === 0) return "UNKNOWN";
+  
+  // Select a message from the middle of the convo
+  const middleIndex = Math.floor(messages.length / 2);
+  let contentToDetect = messages[middleIndex]?.content || "";
+  
+  // If the middle message is too short (e.g., just an emoji or "ok"),
+  // try to find a slightly longer message nearby to ensure accurate detection
+  if (contentToDetect.length < 5) {
+    let offset = 1;
+    while (middleIndex - offset >= 0 || middleIndex + offset < messages.length) {
+      if (middleIndex + offset < messages.length && messages[middleIndex + offset]?.content?.length >= 5) {
+        contentToDetect = messages[middleIndex + offset].content;
+        break;
+      }
+      if (middleIndex - offset >= 0 && messages[middleIndex - offset]?.content?.length >= 5) {
+        contentToDetect = messages[middleIndex - offset].content;
+        break;
+      }
+      offset++;
+      if (offset > 15) break; // Limit search radius
+    }
+  }
+
+  const detected = detect(contentToDetect);
+  return detected || "UNKNOWN";
 };
 
 const fetchChatData = async (chatId: string) => {
@@ -131,8 +166,9 @@ export async function analyzeChat<T extends ChatlyzerSchemaType>(
     const minimalChat = createMinimalChat(chatJson);
     const openai = createOpenAIClient();
     
+    const detectedLanguage = getDetectedLanguage(minimalChat.messages);
     const analysisType = getAnalysisTypeFromSchema(schema);
-    const systemPrompt = createSystemPrompt(analysisType);
+    const systemPrompt = createSystemPrompt(analysisType, detectedLanguage);
     const content = `Analyze this chat and provide a complete ${analysisType} analysis following the exact format in your instructions:\nChat: ${JSON.stringify(minimalChat)}`;
 
     console.log(content);
@@ -162,7 +198,12 @@ export async function analyzeAllChatTypes(chatId: string): Promise<z.infer<typeo
     const minimalChat = createMinimalChat(chatJson);
     const openai = createOpenAIClient();
     
-    const systemPrompt = `${COMPREHENSIVE_ANALYSIS_PROMPT}\n\n${SHARED_INSTRUCTIONS}`.trim();
+    const detectedLanguage = getDetectedLanguage(minimalChat.messages);
+    let systemPrompt = `${COMPREHENSIVE_ANALYSIS_PROMPT}\n\n${SHARED_INSTRUCTIONS}`;
+    if (detectedLanguage && detectedLanguage !== "UNKNOWN") {
+      systemPrompt += `\n\nIMPORTANT: The detected primary language of this chat is '${detectedLanguage}' (ISO 639-1 code). You MUST write your entire analysis and all explanations exactly in this language.`;
+    }
+    systemPrompt = systemPrompt.trim();
 
     const smallChat = smartChatSampler(minimalChat.messages);
 
@@ -286,7 +327,12 @@ export async function analyzeAllChatTypesPrivate(
     const minimalChat = createMinimalChatFromMessages(chatTitle, messages);
     const openai = createOpenAIClient();
     
-    const systemPrompt = `${COMPREHENSIVE_ANALYSIS_PROMPT}\n\n${SHARED_INSTRUCTIONS}`.trim();
+    const detectedLanguage = getDetectedLanguage(minimalChat.messages);
+    let systemPrompt = `${COMPREHENSIVE_ANALYSIS_PROMPT}\n\n${SHARED_INSTRUCTIONS}`;
+    if (detectedLanguage && detectedLanguage !== "UNKNOWN") {
+      systemPrompt += `\n\nIMPORTANT: The detected primary language of this chat is '${detectedLanguage}' (ISO 639-1 code). You MUST write your entire analysis and all explanations exactly in this language.`;
+    }
+    systemPrompt = systemPrompt.trim();
 
     const smallChat = smartChatSampler(minimalChat.messages);
 

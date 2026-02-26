@@ -13,3 +13,4 @@ package-lock.json
 .env
 src/generated/client
 .turbo
+tsconfig.tsbuildinfo
