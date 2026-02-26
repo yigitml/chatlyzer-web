@@ -1,6 +1,6 @@
 "use client";
 
-import { ErrorBoundary } from "react-error-boundary";
+import { ErrorBoundary, FallbackProps } from "react-error-boundary";
 import { ThemeProvider as NextThemesProvider } from "next-themes";
 import { GoogleOAuthProvider } from "@react-oauth/google";
 import { useRouter } from "next/navigation";
@@ -15,10 +15,7 @@ interface ProvidersProps {
 function RootErrorFallback({
   error,
   resetErrorBoundary,
-}: {
-  error: Error;
-  resetErrorBoundary: () => void;
-}) {
+}: FallbackProps) {
   const router = useRouter();
 
   return (
