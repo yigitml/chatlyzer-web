@@ -2,6 +2,11 @@ import { z } from "zod";
 
 export const ChatStatsSchema = z.object({
   type: z.literal("chat_stats"),
+  schemaVersion: z.literal("2.0.0").nullable().optional(),
+  overview: z.object({
+    emotionalContext: z.string(), // "The situation feels tense..."
+    explanation: z.string(), // The 100-word deep dive
+  }).nullable().optional(),
   totals: z.object({
     messageCount: z.number(),
     wordCount: z.number(),
@@ -92,6 +97,11 @@ export const MessageRefSchema = z.object({
 // 1. Red Flag Analysis
 export const RedFlagAnalysisSchema = z.object({
   type: z.literal("red_flag"),
+  schemaVersion: z.literal("2.0.0").nullable().optional(),
+  overview: z.object({
+    emotionalContext: z.string(),
+    explanation: z.string(),
+  }).nullable().optional(),
   flags: z.array(z.object({
     label: z.string(), // e.g., "Gaslighting", "Love bombing"
     severity: z.number(),
@@ -103,6 +113,11 @@ export const RedFlagAnalysisSchema = z.object({
 // 2. Green Flag Analysis
 export const GreenFlagAnalysisSchema = z.object({
   type: z.literal("green_flag"),
+  schemaVersion: z.literal("2.0.0").nullable().optional(),
+  overview: z.object({
+    emotionalContext: z.string(),
+    explanation: z.string(),
+  }).nullable().optional(),
   traits: z.array(z.object({
     label: z.string(), // e.g., "Respectful boundaries", "Clear communication"
     positivityScore: z.number(),
@@ -114,6 +129,11 @@ export const GreenFlagAnalysisSchema = z.object({
 // 3. Vibe Check Analysis
 export const VibeCheckAnalysisSchema = z.object({
   type: z.literal("vibe_check"),
+  schemaVersion: z.literal("2.0.0").nullable().optional(),
+  overview: z.object({
+    emotionalContext: z.string(),
+    explanation: z.string(),
+  }).nullable().optional(),
   overallVibe: z.enum(["positive", "neutral", "awkward", "flirty", "chaotic", "dry"]),
   keywords: z.array(z.string()),
   emojiScore: z.number(),
@@ -125,6 +145,11 @@ export const VibeCheckAnalysisSchema = z.object({
 // 4. Simp-O-Meter Analysis
 export const SimpOMeterAnalysisSchema = z.object({
   type: z.literal("simp_o_meter"),
+  schemaVersion: z.literal("2.0.0").nullable().optional(),
+  overview: z.object({
+    emotionalContext: z.string(),
+    explanation: z.string(),
+  }).nullable().optional(),
   simpScore: z.number(),
   behaviorsDetected: z.array(z.string()), // e.g., "excessive compliments", "one-sided texting"
   messageRefs: z.array(MessageRefSchema),
@@ -133,6 +158,11 @@ export const SimpOMeterAnalysisSchema = z.object({
 // 5. Ghost Risk Analysis
 export const GhostRiskAnalysisSchema = z.object({
   type: z.literal("ghost_risk"),
+  schemaVersion: z.literal("2.0.0").nullable().optional(),
+  overview: z.object({
+    emotionalContext: z.string(),
+    explanation: z.string(),
+  }).nullable().optional(),
   riskLevel: z.enum(["low", "medium", "high"]),
   signals: z.array(z.object({
     label: z.string(), // e.g., "Delayed replies", "Dry responses"
@@ -145,6 +175,11 @@ export const GhostRiskAnalysisSchema = z.object({
 // 6. Main Character Energy Analysis
 export const MainCharacterEnergyAnalysisSchema = z.object({
   type: z.literal("main_character_energy"),
+  schemaVersion: z.literal("2.0.0").nullable().optional(),
+  overview: z.object({
+    emotionalContext: z.string(),
+    explanation: z.string(),
+  }).nullable().optional(),
   mceScore: z.number(),
   traits: z.array(z.string()), // e.g., "Flamboyant humor", "Dramatic storytelling"
   standoutMoments: z.array(MessageRefSchema),
@@ -153,6 +188,11 @@ export const MainCharacterEnergyAnalysisSchema = z.object({
 // 7. Emotional Depth Analysis
 export const EmotionalDepthAnalysisSchema = z.object({
   type: z.literal("emotional_depth"),
+  schemaVersion: z.literal("2.0.0").nullable().optional(),
+  overview: z.object({
+    emotionalContext: z.string(),
+    explanation: z.string(),
+  }).nullable().optional(),
   depthScore: z.number(),
   vulnerableMoments: z.array(z.object({
     description: z.string(),
@@ -164,6 +204,8 @@ export const EmotionalDepthAnalysisSchema = z.object({
 // Combined schema for all analyses in one API call
 export const AllAnalysesSchema = z.object({
   type: z.literal("all_analyses"),
+  // schemaVersion: z.literal("2.0.0").default("2.0.0").optional(),
+  schemaVersion: z.literal("2.0.0").nullable().optional(),
   analyses: z.object({
     chatStats: ChatStatsSchema.omit({ type: true }),
     redFlag: RedFlagAnalysisSchema.omit({ type: true }),

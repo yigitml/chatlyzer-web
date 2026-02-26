@@ -1,4 +1,4 @@
-import { MetricCard, ScoreCard, InsightCard, WarningCard, ComparisonCard, MessageExampleCard, TimelineCard } from "./analysis-cards";
+import { MetricCard, ScoreCard, InsightCard, WarningCard, ComparisonCard, MessageExampleCard, TimelineCard, OverviewCard } from "./analysis-cards";
 import { getVibeEmoji, getSimpLevel, getGhostRiskLevel, getMainCharacterLevel, getEmotionalDepthLevel } from "@/shared/types/analysis";
 
 // Analysis Builders
@@ -12,6 +12,12 @@ export const VibeCheckAnalysisBuilder = ({ data }: { data: any }) => {
 
   return (
     <div className="space-y-4">
+      {data.overview && (
+        <OverviewCard 
+          emotionalContext={data.overview.emotionalContext} 
+          explanation={data.overview.explanation} 
+        />
+      )}
       <div className="grid grid-cols-2 gap-4">
         <MetricCard 
           title="Overall Vibe" 
@@ -52,6 +58,12 @@ export const RedFlagAnalysisBuilder = ({ data }: { data: any }) => {
   
   return (
     <div className="space-y-4">
+      {data.overview && (
+        <OverviewCard 
+          emotionalContext={data.overview.emotionalContext} 
+          explanation={data.overview.explanation} 
+        />
+      )}
       <MetricCard 
         title="Red Flags Detected" 
         value={flags.length.toString()} 
@@ -77,6 +89,12 @@ export const GreenFlagAnalysisBuilder = ({ data }: { data: any }) => {
   
   return (
     <div className="space-y-4">
+      {data.overview && (
+        <OverviewCard 
+          emotionalContext={data.overview.emotionalContext} 
+          explanation={data.overview.explanation} 
+        />
+      )}
       <MetricCard 
         title="Green Flags Detected" 
         value={traits.length.toString()} 
@@ -104,6 +122,12 @@ export const SimpOMeterAnalysisBuilder = ({ data }: { data: any }) => {
 
   return (
     <div className="space-y-4">
+      {data.overview && (
+        <OverviewCard 
+          emotionalContext={data.overview.emotionalContext} 
+          explanation={data.overview.explanation} 
+        />
+      )}
       <ScoreCard
         title="Simp Score"
         score={simpScore}
@@ -129,6 +153,12 @@ export const GhostRiskAnalysisBuilder = ({ data }: { data: any }) => {
 
   return (
     <div className="space-y-4">
+      {data.overview && (
+        <OverviewCard 
+          emotionalContext={data.overview.emotionalContext} 
+          explanation={data.overview.explanation} 
+        />
+      )}
       <div className="grid grid-cols-2 gap-4">
         <MetricCard 
           title="Risk Level" 
@@ -163,6 +193,12 @@ export const MainCharacterEnergyAnalysisBuilder = ({ data }: { data: any }) => {
 
   return (
     <div className="space-y-4">
+      {data.overview && (
+        <OverviewCard 
+          emotionalContext={data.overview.emotionalContext} 
+          explanation={data.overview.explanation} 
+        />
+      )}
       <ScoreCard
         title="Main Character Energy"
         score={mceScore}
@@ -188,6 +224,12 @@ export const EmotionalDepthAnalysisBuilder = ({ data }: { data: any }) => {
 
   return (
     <div className="space-y-4">
+      {data.overview && (
+        <OverviewCard 
+          emotionalContext={data.overview.emotionalContext} 
+          explanation={data.overview.explanation} 
+        />
+      )}
       <ScoreCard
         title="Emotional Depth"
         score={depthScore}
@@ -220,6 +262,12 @@ export const ChatStatsAnalysisBuilder = ({ data }: { data: any }) => {
 
   return (
     <div className="space-y-6">
+      {data.overview && (
+        <OverviewCard 
+          emotionalContext={data.overview.emotionalContext} 
+          explanation={data.overview.explanation} 
+        />
+      )}
       {/* Overview Section */}
       <div>
         <h3 className="text-lg font-semibold text-white mb-3 flex items-center gap-2">

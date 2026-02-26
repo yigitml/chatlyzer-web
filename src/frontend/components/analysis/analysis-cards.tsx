@@ -208,4 +208,32 @@ export const TimelineCard = ({ phases }: TimelineCardProps) => {
       </div>
     </div>
   );
-}; 
+};
+
+interface OverviewCardProps {
+  emotionalContext: string;
+  explanation: string;
+}
+
+export const OverviewCard = ({ emotionalContext, explanation }: OverviewCardProps) => (
+  <div className="bg-white/5 rounded-xl p-5 border border-white/10 bg-gradient-to-br from-blue-500/10 to-purple-500/10">
+    <div className="flex items-center gap-2 mb-3">
+      <span className="text-xl">✨</span>
+      <h3 className="font-semibold text-lg text-white">AI Overview</h3>
+    </div>
+    <div className="space-y-3">
+      {emotionalContext && (
+        <div>
+          <h4 className="text-sm font-medium text-blue-300 mb-1">Emotional Context</h4>
+          <p className="text-sm text-white/90 leading-relaxed">{emotionalContext}</p>
+        </div>
+      )}
+      {explanation && (
+        <div>
+          <h4 className="text-sm font-medium text-purple-300 mb-1">Detailed Explanation</h4>
+          <p className="text-sm text-white/80 leading-relaxed">{explanation}</p>
+        </div>
+      )}
+    </div>
+  </div>
+); 
