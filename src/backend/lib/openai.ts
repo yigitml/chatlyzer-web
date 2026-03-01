@@ -34,7 +34,7 @@ const ANALYSIS_PROMPTS: Record<AnalysisType, string> = {
 const COMPREHENSIVE_ANALYSIS_PROMPT = `You are an expert chat analyzer capable of performing comprehensive multi-faceted analysis. You will analyze the conversation and provide ALL of the following analysis types in a single response.
 
 IMPORTANT: For each analysis section, you must:
-- Populate the "overview" with a massive, highly detailed 300+ word explanation and deep emotional context.
+- Populate the "overview" with a massive, highly detailed 100+ word explanation and deep emotional context.
 - For EVERY single trait, flag, or signal you find, the "explanation" MUST be an extremely thorough, 1-3 paragraph deep-dive (100+ words). NEVER use 1-2 short sentences. Break down the psychology, subtext, and relationship dynamics in exhaustive detail.
 - Balance numerical scores with highly analytical, empathetic, and descriptive long-form language.
 
@@ -58,17 +58,11 @@ const formatTimestamp = (timestamp: Date | string): string => {
 };
 
 const createMinimalChat = (chatJson: any) => {
-  const senderMap = new Map<string, string>();
   return {
     title: chatJson.title,
     messages: chatJson.messages.map((msg: any) => {
-      let mappedSender = senderMap.get(msg.sender);
-      if (!mappedSender) {
-        mappedSender = senderMap.size === 0 ? "A" : String.fromCharCode(65 + senderMap.size); // A, B, C...
-        senderMap.set(msg.sender, mappedSender);
-      }
       return {
-        sender: mappedSender,
+        sender: msg.sender,
         timestamp: formatTimestamp(msg.timestamp),
         content: msg.content,
         ...(msg.metadata && { metadata: msg.metadata })
@@ -229,17 +223,11 @@ export async function analyzeAllChatTypes(chatId: string): Promise<z.infer<typeo
 
 // Helper function to create minimal chat structure from raw messages
 const createMinimalChatFromMessages = (title: string, messages: any[]) => {
-  const senderMap = new Map<string, string>();
   return {
     title,
     messages: messages.map((msg: any) => {
-      let mappedSender = senderMap.get(msg.sender);
-      if (!mappedSender) {
-        mappedSender = senderMap.size === 0 ? "A" : String.fromCharCode(65 + senderMap.size); // A, B, C...
-        senderMap.set(msg.sender, mappedSender);
-      }
       return {
-        sender: mappedSender,
+        sender: msg.sender,
         timestamp: formatTimestamp(msg.timestamp),
         content: msg.content,
         ...(msg.metadata && { metadata: msg.metadata })

@@ -123,7 +123,18 @@ export const useAnalysisManagement = () => {
     }
     
     setPollingChatId(chatId);
+    
+    const startTime = Date.now();
+    const TIMEOUT_MS = 10 * 60 * 1000; // 10 minutes
+
     pollingIntervalRef.current = setInterval(async () => {
+      // Stop polling if we exceed the timeout
+      if (Date.now() - startTime > TIMEOUT_MS) {
+        stopPolling();
+        console.error("Analysis polling timed out after 10 minutes");
+        return;
+      }
+
       try {
         const auth = useAuthStore.getState();
         if (!auth.isAuthenticated || !auth.accessToken) {
@@ -145,7 +156,7 @@ export const useAnalysisManagement = () => {
         console.error("Polling error:", error);
         // Continue polling even on error, but stop after too many failures
       }
-    }, 3000); // Poll every 3 seconds
+    }, 5000); // Poll every 5 seconds
   };
 
   const stopPolling = () => {
