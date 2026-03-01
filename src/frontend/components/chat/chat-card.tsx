@@ -32,10 +32,10 @@ export const ChatCard = ({
   isPrivacy
 }: ChatCardProps) => (
   <div className={`
-    p-3 rounded-lg cursor-pointer transition-all duration-200 border
+    p-3 rounded-none cursor-pointer transition-all duration-100 border-2 border-primary font-mono
     ${isSelected 
-      ? 'bg-white/10 border-white/30' 
-      : 'bg-white/5 border-white/10 hover:bg-white/8 hover:border-white/20'
+      ? 'bg-primary text-primary-foreground translate-x-1 translate-y-1 shadow-none' 
+      : 'bg-card text-card-foreground hover:-translate-y-0.5 hover:-translate-x-0.5 hover:shadow-brutal active:translate-x-1 active:translate-y-1 active:shadow-none'
     }
   `}>
     <div className="flex items-center justify-between">
@@ -54,7 +54,7 @@ export const ChatCard = ({
                   onCancel();
                 }
               }}
-              className="text-sm bg-white/10 border-white/20 text-white"
+              className="text-sm rounded-none border-2 border-primary bg-background text-foreground"
               autoFocus
             />
             <div className="flex gap-1">
@@ -79,8 +79,8 @@ export const ChatCard = ({
           </div>
         ) : (
           <div onClick={onSelect} className="flex items-center gap-2">
-            {isPrivacy && <Shield className="w-4 h-4 text-green-400 flex-shrink-0" />}
-            <p className="text-white text-sm font-medium truncate">
+            {isPrivacy && <Shield className="w-4 h-4 text-current flex-shrink-0" />}
+            <p className="text-current text-sm font-bold uppercase tracking-wider truncate">
               {chat.title || "Untitled Chat"}
             </p>
           </div>
@@ -89,10 +89,10 @@ export const ChatCard = ({
       
       {!isEditing && (
         <Button
-          size="sm"
+          size="icon"
           variant="ghost"
           onClick={onEdit}
-          className="h-6 w-6 p-0 text-white/40 hover:text-white/60"
+          className="h-6 w-6 p-0 text-current opacity-50 hover:opacity-100"
         >
           <Edit2 className="w-3 h-3" />
         </Button>
@@ -100,7 +100,7 @@ export const ChatCard = ({
     </div>
     
     {isPrivacy && (
-      <p className="text-green-400 text-xs mt-1">Privacy Mode</p>
+      <p className="text-current opacity-70 font-bold uppercase text-xs mt-1">Privacy Mode</p>
     )}
   </div>
 );

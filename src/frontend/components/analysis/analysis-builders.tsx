@@ -242,8 +242,8 @@ export const EmotionalDepthAnalysisBuilder = ({ data }: { data: any }) => {
       )}
       
       {vulnerableMoments.map((moment: any, index: number) => (
-        <div key={index} className="bg-white/5 rounded-xl p-4 border border-white/10">
-          <h4 className="font-semibold text-white mb-2">{moment.description}</h4>
+        <div key={index} className="bg-background rounded-none p-4 border-2 border-primary shadow-brutal-sm">
+          <h4 className="font-bold font-mono uppercase tracking-wider text-foreground mb-2">{moment.description}</h4>
           {moment.messageRefs?.slice(0, 2).map((ref: any, refIndex: number) => (
             <MessageExampleCard key={refIndex} example={ref} />
           ))}
@@ -270,7 +270,7 @@ export const ChatStatsAnalysisBuilder = ({ data }: { data: any }) => {
       )}
       {/* Overview Section */}
       <div>
-        <h3 className="text-lg font-semibold text-white mb-3 flex items-center gap-2">
+        <h3 className="text-lg font-bold font-mono uppercase tracking-wider text-card-foreground mb-3 flex items-center gap-2">
           <span>📊</span> Overview
         </h3>
         <div className="grid grid-cols-3 gap-4">
@@ -295,7 +295,7 @@ export const ChatStatsAnalysisBuilder = ({ data }: { data: any }) => {
       {/* Balance Section */}
       {Object.keys(vibeBalance).length > 0 && (
         <div>
-          <h3 className="text-lg font-semibold text-white mb-3 flex items-center gap-2">
+          <h3 className="text-lg font-bold font-mono uppercase tracking-wider text-card-foreground mb-3 flex items-center gap-2">
             <span>⚖️</span> Conversation Balance
           </h3>
           <div className="space-y-4">
@@ -325,7 +325,7 @@ export const ChatStatsAnalysisBuilder = ({ data }: { data: any }) => {
       {/* User Comparison */}
       {totals.messagesPerUser && totals.messagesPerUser.length >= 2 && (
         <div>
-          <h3 className="text-lg font-semibold text-white mb-3 flex items-center gap-2">
+          <h3 className="text-lg font-bold font-mono uppercase tracking-wider text-card-foreground mb-3 flex items-center gap-2">
             <span>👥</span> User Activity
           </h3>
           <div className="space-y-4">
@@ -354,7 +354,7 @@ export const ChatStatsAnalysisBuilder = ({ data }: { data: any }) => {
       {/* Behavior Insights */}
       {userRoles.length > 0 && (
         <div>
-          <h3 className="text-lg font-semibold text-white mb-3 flex items-center gap-2">
+          <h3 className="text-lg font-bold font-mono uppercase tracking-wider text-card-foreground mb-3 flex items-center gap-2">
             <span>🎭</span> Behavior Insights
           </h3>
           <InsightCard
@@ -386,7 +386,7 @@ export const ChatStatsAnalysisBuilder = ({ data }: { data: any }) => {
       {/* Timeline */}
       {conversationPhases.length > 0 && (
         <div>
-          <h3 className="text-lg font-semibold text-white mb-3 flex items-center gap-2">
+          <h3 className="text-lg font-bold font-mono uppercase tracking-wider text-card-foreground mb-3 flex items-center gap-2">
             <span>📈</span> Conversation Journey
           </h3>
           <TimelineCard phases={conversationPhases} />

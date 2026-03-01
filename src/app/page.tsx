@@ -3,21 +3,8 @@ import Image from "next/image"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useEffect } from "react"
-import { ArrowRight, Zap, Skull, Heart, Brain, Ghost, Star, AlertTriangle, CheckCircle, MessageCircle, Send, Twitter } from "lucide-react"
+import { ArrowRight, Zap, Heart, Brain, Ghost, Star, AlertTriangle, CheckCircle, MessageCircle, Send } from "lucide-react"
 import { useAuthStore } from "@/frontend/store/authStore"
-
-const whatsappMessages = [
-  "hey, what's up?",
-  "heard you got some tea to spill 👀",
-  "are we still on for tonight?",
-  "just checking in! 😊",
-  "you there?",
-  "omg you won't believe what happened!",
-  "sending good vibes ✨",
-  "can't wait to see you!",
-  "did you finish the report?",
-  "what do you think?",
-];
 
 export default function Home() {
   const router = useRouter()
@@ -30,309 +17,173 @@ export default function Home() {
   }, [isAuthenticated, isInitialized, router])
 
   return (
-    <div className="min-h-screen text-white bg-background relative overflow-hidden">
-      {/* WhatsApp Background */}
-      <div className="absolute inset-0 z-0 overflow-hidden"
-           style={{ pointerEvents: "none" }}
-      >
-        {Array.from({ length: 20 }).map((_, i) => {
-          const message = whatsappMessages[i % whatsappMessages.length];
-          const isUser = i % 2 === 0; // Alternate between sent/received messages
-          const delay = `${i * 4}s`; // Stagger animation start
-          const duration = `${20 + i * 2}s`; // Vary animation duration for randomness
-
-          return (
-            <div
-              key={i}
-              className={`absolute whitespace-nowrap text-sm p-2 rounded-lg max-w-[70%] animate-whatsapp-scroll`}
-              style={{
-                top: `${Math.random() * 100}%`,
-                left: `${Math.random() * 100}%`,
-                animationDelay: delay,
-                animationDuration: duration,
-                backgroundColor: isUser ? '#075E54' : '#262D31', // WhatsApp sent/received dark mode colors
-                color: '#E1E1E1', // Light text for dark background
-                opacity: 0.7 + Math.random() * 0.3, // Vary opacity
-                transform: `scale(${0.7 + Math.random() * 0.3})`, // Vary size
-                zIndex: 0,
-              }}
-            >
-              {message}
-            </div>
-          );
-        })}
-      </div>
+    <div className="min-h-screen text-foreground bg-background relative overflow-hidden flex flex-col selection:bg-primary selection:text-primary-foreground">
       
       {/* Navigation */}
-      <header className="container mx-auto px-4 py-6 flex items-center justify-between relative z-10">
-        <div className="flex items-center gap-2">
-          <Image src="/favicon.ico" alt="Chatlyzer" width={32} height={32} className="w-8 h-8" />
-          <span className="font-bold text-xl text-white relative after:content-[''] after:block after:h-0.5 after:w-full after:bg-gradient-to-r from-blue-400/40 to-cyan-400/40 after:rounded-full">Chatlyzer AI</span>
+      <header className="border-b-4 border-primary bg-background py-4 px-4 md:px-8 flex items-center justify-between sticky top-0 z-50">
+        <div className="flex items-center gap-3">
+          <Image src="/iconsvg.svg" alt="Chatlyzer" width={32} height={32} className="w-8 h-8 rounded-none border-2 border-primary shadow-[4px_4px_0px_0px_hsl(var(--primary))] bg-card p-0.5" />
+          <span className="font-display font-black text-2xl tracking-widest uppercase">Chatlyzer</span>
         </div>
 
-        <nav className="hidden md:flex items-center gap-8">
-          <Link href="#features" className="text-gray-300 hover:text-white transition">
-            Features
-          </Link>
-          <Link href="#analyses" className="text-gray-300 hover:text-white transition">
-            Analyses
-          </Link>
-          <Link href="/contact" className="text-gray-300 hover:text-white transition">
-            Contact
-          </Link>
-          <Link href="#" className="text-gray-300 hover:text-white transition flex items-center gap-2">
+        <nav className="hidden md:flex items-center gap-8 font-mono uppercase font-bold text-sm tracking-widest">
+          <Link href="#features" className="hover:line-through transition-all">Features</Link>
+          <Link href="#analyses" className="hover:line-through transition-all">Analyses</Link>
+          <Link href="/contact" className="hover:line-through transition-all">Contact</Link>
+          <Link href="#" className="hover:line-through transition-all flex items-center gap-2">
             Blog
-            <span className="inline-flex rounded-full p-[1px] bg-gradient-to-r from-blue-500/50 to-cyan-500/50">
-              <span className="text-white text-xs px-2 py-0.5 rounded-full bg-white/5">NEW</span>
-            </span>
+            <span className="bg-primary text-primary-foreground px-2 py-0.5 text-xs inline-block shadow-[2px_2px_0px_0px_hsl(var(--primary))]">NEW</span>
           </Link>
         </nav>
 
-        <div className="flex items-center gap-4">
-          <Link href="/auth/sign-in" className="text-gray-300 hover:text-white transition">
-            Login
-          </Link>
+        <div className="flex items-center gap-4 font-mono uppercase font-bold text-sm">
+          <Link href="/auth/sign-in" className="hover:line-through transition-all hidden sm:block">Login</Link>
           <Link
             href="/auth/sign-in"
-            className="inline-flex rounded-full p-[1px] bg-gradient-to-r from-blue-500/50 to-cyan-500/50"
+            className="border-2 border-primary bg-primary text-primary-foreground px-6 py-2 hover:-translate-x-1 hover:-translate-y-1 hover:shadow-[4px_4px_0px_0px_hsl(var(--primary))] active:translate-x-0 active:translate-y-0 active:shadow-none transition-all"
           >
-            <span className="text-white font-medium px-6 py-2 rounded-full bg-white/5">Start vibing ✨</span>
+            Start Vibing //
           </Link>
         </div>
       </header>
 
       {/* Hero Section */}
-      <main className="container mx-auto px-4 mt-16 text-center relative z-10">
-        <div className="inline-flex items-center gap-2 text-blue-300 bg-white/10 rounded-full px-4 py-2 mb-6 backdrop-blur-sm">
-          <span>🔥 New: Simp-O-Meter & Ghost Risk Analysis</span>
-          <Link href="#analyses" className="text-cyan-300 hover:text-cyan-200 flex items-center gap-1 transition">
-            Check it out <ArrowRight className="w-4 h-4" />
+      <main className="flex-1 container mx-auto px-4 mt-16 mb-20 text-center relative z-10 flex flex-col items-center">
+        <div className="inline-flex items-center gap-2 border-2 border-primary bg-card text-card-foreground px-4 py-3 mb-12 shadow-[4px_4px_0px_0px_hsl(var(--primary))] font-mono uppercase text-sm font-bold rotate-[1deg]">
+          <span className="text-destructive animate-pulse">🔥 NEW SYSTEM UPDATE</span>
+          <span className="hidden sm:inline">:: SIMP-O-METER OVERRIDE INSTALLED</span>
+          <Link href="#analyses" className="ml-2 underline flex items-center gap-1 hover:text-primary transition">
+            SCAN NOW <ArrowRight className="w-4 h-4" />
           </Link>
         </div>
 
-        <h1 className="text-5xl md:text-7xl font-bold mb-6">
-          Your chats are
-          <br className="hidden md:block" />
-          <span className="text-white relative after:content-[''] after:block after:h-1 after:w-full after:bg-gradient-to-r from-blue-400/30 to-cyan-400/30 after:mt-1 after:rounded-full">lowkey sus</span> 👀
+        <h1 className="text-6xl md:text-[7rem] font-display font-black uppercase tracking-tighter mb-8 leading-[0.9] text-balance">
+          YOUR CHATS ARE<br />
+          <span className="relative inline-block mt-2 bg-primary text-primary-foreground px-6 py-2 border-4 border-primary shadow-[12px_12px_0px_0px_hsl(var(--foreground))] rotate-[-2deg] hover:rotate-[0deg] transition-transform duration-300">
+            LOWKEY SUS
+          </span>
         </h1>
 
-        <p className="text-xl text-gray-300 max-w-3xl mx-auto mb-12">
-          Find out if you're getting played, if they're about to ghost you, or if you're being a simp. 
-          Chatlyzer uses AI to analyze your conversations and give you the real tea ☕
+        <p className="text-lg md:text-xl font-mono text-muted-foreground uppercase max-w-3xl mx-auto mb-16 tracking-widest leading-loose mt-12 bg-card border-2 border-primary p-6 shadow-[6px_6px_0px_0px_hsl(var(--primary))]">
+          Run diagnostics to check if you're getting played, if they'll ghost you, or if you're a simp. Let the AI extract the raw, unfiltered truth.
         </p>
 
         {/* CTA Buttons */}
-        <div className="flex flex-col md:flex-row items-center justify-center gap-4 mb-16">
+        <div className="flex flex-col sm:flex-row items-stretch justify-center gap-6 mb-32 w-full max-w-2xl mx-auto">
           <Link
             href="/auth/sign-in"
-            className="inline-flex rounded-full p-[1px] bg-gradient-to-r from-blue-500/50 to-cyan-500/50 w-full md:w-auto justify-center"
+            className="flex-1 text-center border-4 border-primary bg-primary text-primary-foreground font-mono font-black uppercase tracking-widest text-lg px-8 py-5 hover:-translate-x-1 hover:-translate-y-1 hover:shadow-[8px_8px_0px_0px_hsl(var(--primary))] active:translate-x-0 active:translate-y-0 active:shadow-none transition-all"
           >
-            <span className="text-white font-medium px-8 py-3 rounded-full bg-white/5">Expose my texts 💀</span>
+            Expose My Texts //
           </Link>
 
           <Link
             href="#"
-            className="bg-white/10 hover:bg-white/20 text-white font-medium px-8 py-3 rounded-full flex items-center gap-2 transition w-full md:w-auto justify-center border border-blue-400/30 backdrop-blur-sm"
+            className="flex-1 text-center border-4 border-primary bg-card text-card-foreground font-mono font-black uppercase tracking-widest text-lg px-8 py-5 hover:-translate-x-1 hover:-translate-y-1 hover:shadow-[8px_8px_0px_0px_hsl(var(--primary))] active:translate-x-0 active:translate-y-0 active:shadow-none transition-all"
           >
-            Watch the chaos 🍿
+            Watch Demo_
           </Link>
         </div>
 
         {/* Analysis Types */}
-        <div id="analyses" className="mt-24">
-          <h2 className="text-3xl font-bold mb-4">The Analysis Menu 📋</h2>
-          <p className="text-gray-400 mb-12">Pick your poison - each one hits different 💯</p>
+        <div id="analyses" className="w-full mt-12 text-left relative">
+          <div className="border-b-4 border-primary pb-4 mb-16 flex justify-between items-end">
+            <h2 className="text-4xl md:text-6xl font-display font-black uppercase tracking-tight">The Payload_</h2>
+            <p className="hidden md:block font-mono text-muted-foreground uppercase tracking-widest font-bold">// SELECT ANALYSIS VECTOR</p>
+          </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            <div className="bg-white/5 border border-blue-400/20 rounded-xl p-6 hover:bg-white/10 transition-all duration-200 hover:scale-105">
-              <div className="w-12 h-12 bg-red-500/20 rounded-full flex items-center justify-center mb-4 mx-auto">
-                <AlertTriangle className="w-6 h-6 text-red-500" />
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+            {[
+              { id: '01', icon: AlertTriangle, color: 'text-destructive', title: 'Red Flag', desc: 'Spots toxic behavior before you catch feelings', bg: 'bg-destructive/10 border-destructive' },
+              { id: '02', icon: CheckCircle, color: 'text-green-500', title: 'Green Flag', desc: 'When they\'re actually worth your time (rare)', bg: 'bg-green-500/10 border-green-500' },
+              { id: '03', icon: Heart, color: 'text-pink-500', title: 'Simp-O-Meter', desc: 'Measures exactly how down bad you really are', bg: 'bg-pink-500/10 border-pink-500' },
+              { id: '04', icon: Ghost, color: 'text-blue-500', title: 'Ghost Risk', desc: 'Predicts when you\'re about to get left on read', bg: 'bg-blue-500/10 border-blue-500' },
+              { id: '05', icon: Star, color: 'text-yellow-500', title: 'Main Character', desc: 'See who\'s serving drama and personality', bg: 'bg-yellow-500/10 border-yellow-500' },
+              { id: '06', icon: Brain, color: 'text-purple-500', title: 'Emotional Depth', desc: 'Rates how real your conversations actually get', bg: 'bg-purple-500/10 border-purple-500' },
+              { id: '07', icon: Zap, color: 'text-cyan-500', title: 'Vibe Check', desc: 'Overall energy and mood frequency analysis', bg: 'bg-cyan-500/10 border-cyan-500' },
+              { id: '08', icon: MessageCircle, color: 'text-orange-500', title: 'Chat Stats', desc: 'Who texts more, emoji usage, metric tracking', bg: 'bg-orange-500/10 border-orange-500' },
+            ].map((feature, i) => (
+              <div key={i} className={`bg-card border-4 border-primary p-6 hover:-translate-y-2 hover:-translate-x-2 hover:shadow-[10px_10px_0px_0px_hsl(var(--primary))] transition-all flex flex-col items-start group relative overflow-hidden bg-gradient-to-br from-card to-${feature.bg.split(' ')[0]} ${[1, 4, 6].includes(i) ? 'rotate-1 hover:rotate-0' : ''} ${[2, 5].includes(i) ? '-rotate-1 hover:rotate-0' : ''}`}>
+                <div className={`w-14 h-14 border-4 border-primary ${feature.bg.split(' ')[0]} flex items-center justify-center mb-8 shadow-[4px_4px_0px_0px_hsl(var(--primary))] group-hover:-translate-y-1 transition-transform`}>
+                  <feature.icon className={`w-7 h-7 ${feature.color}`} strokeWidth={3} />
+                </div>
+                <div className="font-mono text-sm font-black text-muted-foreground mb-3 tracking-widest">// ARCHIVE_{feature.id}</div>
+                <h3 className="text-xl font-black font-display uppercase mb-4 text-foreground tracking-wide leading-tight">{feature.title}</h3>
+                <p className="text-muted-foreground font-mono text-sm uppercase leading-relaxed font-bold">{feature.desc}</p>
               </div>
-              <h3 className="text-lg font-medium mb-2">🚩 Red Flag Detector</h3>
-              <p className="text-gray-400 text-sm">Spots the toxic behavior before you catch feelings</p>
-            </div>
-            
-            <div className="bg-white/5 border border-blue-400/20 rounded-xl p-6 hover:bg-white/10 transition-all duration-200 hover:scale-105">
-              <div className="w-12 h-12 bg-green-500/20 rounded-full flex items-center justify-center mb-4 mx-auto">
-                <CheckCircle className="w-6 h-6 text-green-500" />
-              </div>
-              <h3 className="text-lg font-medium mb-2">✅ Green Flag Spotter</h3>
-              <p className="text-gray-400 text-sm">When they're actually worth your time (rare)</p>
-            </div>
-            
-            <div className="bg-white/5 border border-blue-400/20 rounded-xl p-6 hover:bg-white/10 transition-all duration-200 hover:scale-105">
-              <div className="w-12 h-12 bg-cyan-500/20 rounded-full flex items-center justify-center mb-4 mx-auto">
-                <Heart className="w-6 h-6 text-cyan-500" />
-              </div>
-              <h3 className="text-lg font-medium mb-2">💕 Simp-O-Meter</h3>
-              <p className="text-gray-400 text-sm">Measures how down bad you really are</p>
-            </div>
-            
-            <div className="bg-white/5 border border-blue-400/20 rounded-xl p-6 hover:bg-white/10 transition-all duration-200 hover:scale-105">
-              <div className="w-12 h-12 bg-blue-500/20 rounded-full flex items-center justify-center mb-4 mx-auto">
-                <Ghost className="w-6 h-6 text-blue-500" />
-              </div>
-              <h3 className="text-lg font-medium mb-2">👻 Ghost Risk</h3>
-              <p className="text-gray-400 text-sm">Predicts when you're about to get left on read</p>
-            </div>
-
-            <div className="bg-white/5 border border-blue-400/20 rounded-xl p-6 hover:bg-white/10 transition-all duration-200 hover:scale-105">
-              <div className="w-12 h-12 bg-yellow-500/20 rounded-full flex items-center justify-center mb-4 mx-auto">
-                <Star className="w-6 h-6 text-yellow-500" />
-              </div>
-              <h3 className="text-lg font-medium mb-2">⭐ Main Character Energy</h3>
-              <p className="text-gray-400 text-sm">See who's serving drama and personality</p>
-            </div>
-            
-            <div className="bg-white/5 border border-blue-400/20 rounded-xl p-6 hover:bg-white/10 transition-all duration-200 hover:scale-105">
-              <div className="w-12 h-12 bg-blue-500/20 rounded-full flex items-center justify-center mb-4 mx-auto">
-                <Brain className="w-6 h-6 text-blue-500" />
-              </div>
-              <h3 className="text-lg font-medium mb-2">💙 Emotional Depth</h3>
-              <p className="text-gray-400 text-sm">Rates how real your conversations get</p>
-            </div>
-            
-            <div className="bg-white/5 border border-blue-400/20 rounded-xl p-6 hover:bg-white/10 transition-all duration-200 hover:scale-105">
-              <div className="w-12 h-12 bg-cyan-500/20 rounded-full flex items-center justify-center mb-4 mx-auto">
-                <Zap className="w-6 h-6 text-cyan-500" />
-              </div>
-              <h3 className="text-lg font-medium mb-2">🔮 Vibe Check</h3>
-              <p className="text-gray-400 text-sm">Overall energy and mood analysis</p>
-            </div>
-            
-            <div className="bg-white/5 border border-blue-400/20 rounded-xl p-6 hover:bg-white/10 transition-all duration-200 hover:scale-105">
-              <div className="w-12 h-12 bg-orange-500/20 rounded-full flex items-center justify-center mb-4 mx-auto">
-                <MessageCircle className="w-6 h-6 text-orange-500" />
-              </div>
-              <h3 className="text-lg font-medium mb-2">📊 Chat Stats</h3>
-              <p className="text-gray-400 text-sm">Who texts more, emoji usage, response times</p>
-            </div>
+            ))}
           </div>
         </div>
 
         {/* Supported Platforms */}
-        <div id="platforms" className="mt-24">
-          <h2 className="text-3xl font-bold mb-4">Works With Your Fave Apps 📱</h2>
-          <p className="text-gray-400 mb-12">Upload your chats from anywhere and get the tea</p>
+        <div id="platforms" className="w-full mt-40 text-left">
+           <div className="border-b-4 border-primary pb-4 mb-16 flex justify-between items-end">
+            <h2 className="text-4xl md:text-6xl font-display font-black uppercase tracking-tight">Data Ingestion_</h2>
+            <p className="hidden md:block font-mono text-muted-foreground uppercase tracking-widest font-bold">// PLATFORM COMPATIBILITY MAP</p>
+          </div>
           
           <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-            <div className="bg-white/5 border border-blue-400/20 rounded-xl p-6 hover:bg-white/10 transition-all duration-200 hover:scale-105">
-              <div className="w-12 h-12 bg-green-500/20 rounded-full flex items-center justify-center mb-4 mx-auto">
-                <MessageCircle className="w-6 h-6 text-green-500" />
+            {[
+              { icon: MessageCircle, color: 'text-green-500', title: 'WhatsApp', desc: 'Export TXT' },
+              { icon: Send, color: 'text-blue-500', title: 'Telegram', desc: 'Manual Input' },
+              { icon: MessageCircle, color: 'text-indigo-400', title: 'Discord', desc: 'Manual Input' },
+              { icon: MessageCircle, color: 'text-muted-foreground', title: 'Raw Text', desc: 'Copy & Paste' },
+            ].map((platform, i) => (
+              <div key={i} className="bg-background border-4 border-primary p-8 text-center hover:-translate-y-2 hover:bg-card hover:shadow-[8px_8px_0px_0px_hsl(var(--primary))] transition-all flex flex-col items-center group">
+                <platform.icon className={`w-10 h-10 ${platform.color} mb-6 group-hover:scale-110 transition-transform`} strokeWidth={2.5} />
+                <h3 className="text-xl font-black font-display uppercase tracking-widest mb-3">{platform.title}</h3>
+                <p className="text-muted-foreground font-mono text-xs uppercase font-bold tracking-widest">{platform.desc}</p>
               </div>
-              <h3 className="text-lg font-medium">WhatsApp</h3>
-              <p className="text-gray-400 text-sm">Export & analyze</p>
-            </div>
-            
-            <div className="bg-white/5 border border-blue-400/20 rounded-xl p-6 hover:bg-white/10 transition-all duration-200 hover:scale-105">
-              <div className="w-12 h-12 bg-blue-500/20 rounded-full flex items-center justify-center mb-4 mx-auto">
-                <Send className="w-6 h-6 text-blue-500" />
-              </div>
-              <h3 className="text-lg font-medium">Telegram</h3>
-              <p className="text-gray-400 text-sm">Manual input</p>
-            </div>
-            
-            <div className="bg-white/5 border border-blue-400/20 rounded-xl p-6 hover:bg-white/10 transition-all duration-200 hover:scale-105">
-              <div className="w-12 h-12 bg-blue-500/20 rounded-full flex items-center justify-center mb-4 mx-auto">
-                <MessageCircle className="w-6 h-6 text-blue-500" />
-              </div>
-              <h3 className="text-lg font-medium">Discord</h3>
-              <p className="text-gray-400 text-sm">Manual input</p>
-            </div>
-            
-            <div className="bg-white/5 border border-blue-400/20 rounded-xl p-6 hover:bg-white/10 transition-all duration-200 hover:scale-105">
-              <div className="w-12 h-12 bg-gray-500/20 rounded-full flex items-center justify-center mb-4 mx-auto">
-                <MessageCircle className="w-6 h-6 text-gray-400" />
-              </div>
-              <h3 className="text-lg font-medium">Any Chat</h3>
-              <p className="text-gray-400 text-sm">Copy & paste</p>
-            </div>
+            ))}
           </div>
         </div>
 
-        {/* Key Features */}
-        <div id="features" className="mt-24">
-          <h2 className="text-3xl font-bold mb-16">Why You Need This In Your Life</h2>
-          
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-10">
-            <div className="text-left">
-              <div className="w-10 h-10 bg-gradient-to-r from-blue-500/60 to-cyan-500/60 rounded-full flex items-center justify-center mb-4">
-                <span className="font-bold">1</span>
-              </div>
-              <h3 className="text-xl font-medium mb-3">No More Guessing Games</h3>
-              <p className="text-gray-400">Stop overthinking every text. Get AI-powered insights into what's really happening</p>
-            </div>
+        {/* Big CTA Component */}
+        <div className="w-full mt-40 mb-10">
+          <div className="bg-primary/5 border-8 border-primary p-12 md:p-24 shadow-[16px_16px_0px_0px_hsl(var(--primary))] relative overflow-hidden text-left sm:text-center flex flex-col items-center">
             
-            <div className="text-left">
-              <div className="w-10 h-10 bg-gradient-to-r from-blue-500/60 to-cyan-500/60 rounded-full flex items-center justify-center mb-4">
-                <span className="font-bold">2</span>
-              </div>
-              <h3 className="text-xl font-medium mb-3">Catch Red Flags Early</h3>
-              <p className="text-gray-400">Spot toxic patterns before you waste your time and energy</p>
+            <div className="relative z-10 w-full flex flex-col items-center">
+              <h2 className="text-5xl md:text-[5rem] font-display font-black uppercase mb-8 leading-[0.9] text-primary">
+                STOP GUESSING.<br/>START COMPILING.
+              </h2>
+              <p className="text-xl font-mono text-muted-foreground uppercase mb-16 max-w-2xl mx-auto tracking-widest leading-loose font-bold bg-background border-2 border-primary p-4 text-center">
+                Join thousands running diagnostics on their relationships. No cap, it's actually free to try.
+              </p>
+              <Link
+                href="/auth/sign-in"
+                className="inline-block border-4 border-primary bg-primary text-primary-foreground font-mono font-black uppercase tracking-widest text-2xl px-16 py-8 hover:-translate-x-2 hover:-translate-y-2 hover:shadow-[12px_12px_0px_0px_hsl(var(--foreground))] active:translate-x-0 active:translate-y-0 active:shadow-none transition-all w-full md:w-auto text-center"
+              >
+                Execute Analysis [ENTER]
+              </Link>
             </div>
-            
-            <div className="text-left">
-              <div className="w-10 h-10 bg-gradient-to-r from-blue-500/60 to-cyan-500/60 rounded-full flex items-center justify-center mb-4">
-                <span className="font-bold">3</span>
-              </div>
-              <h3 className="text-xl font-medium mb-3">Your Data Stays Private</h3>
-              <p className="text-gray-400">We analyze, you get insights, nobody else sees your business</p>
-            </div>
+            {/* Background decorative elements */}
+            <div className="absolute -top-10 -left-10 w-40 h-40 border-8 border-primary rounded-full opacity-20 pointer-events-none"></div>
+            <div className="absolute -bottom-10 -right-10 w-60 h-60 border-8 border-primary rounded-none opacity-20 rotate-45 pointer-events-none"></div>
           </div>
-        </div>
-
-        {/* Testimonial */}
-        <div className="mt-24 bg-gradient-to-r from-blue-500/10 to-cyan-500/10 rounded-2xl p-12 border border-blue-400/20 backdrop-blur-sm">
-          <blockquote className="text-2xl font-light italic mb-6">
-            "Bro this app literally saved me from getting played 💀 The ghost risk analysis was spot on - they left me on read the next day"
-          </blockquote>
-          <div className="flex items-center justify-center gap-3">
-            <div className="w-10 h-10 bg-gradient-to-r from-blue-500/60 to-cyan-500/60 rounded-full flex items-center justify-center">
-              <span className="text-sm font-bold">AJ</span>
-            </div>
-            <div>
-              <div className="font-medium">@alexj_02</div>
-              <div className="text-sm text-gray-400">College Student, Age 19</div>
-            </div>
-          </div>
-        </div>
-
-        {/* CTA Section */}
-        <div className="mt-24 mb-20">
-          <h2 className="text-3xl font-bold mb-6">Ready to expose your texts? 👀</h2>
-          <p className="text-xl text-gray-400 max-w-2xl mx-auto mb-10">
-            Join the thousands who've discovered the truth about their conversations. It's giving main character energy ✨
-          </p>
-          <Link
-            href="/auth/sign-in"
-            className="bg-gradient-to-r from-blue-500/70 to-cyan-500/70 hover:from-blue-500/80 hover:to-cyan-500/80 text-white font-medium px-10 py-4 rounded-full inline-block transition-all duration-200 hover:scale-105"
-          >
-            Let's get this tea ☕
-          </Link>
-          <p className="text-sm text-gray-500 mt-4">No cap, it's actually free to try. No credit card needed 💯</p>
         </div>
       </main>
 
       {/* Footer */}
-      <footer className="border-t border-white/10 py-12">
-        <div className="container mx-auto px-4">
-          <div className="flex flex-col md:flex-row justify-between items-center">
-            <div className="flex items-center gap-2 mb-6 md:mb-0">
-              <Image src="/favicon.ico" alt="Chatlyzer" width={32} height={32} className="w-8 h-8" />
-              <span className="font-bold bg-gradient-to-r from-blue-400/70 to-cyan-400/70 bg-clip-text text-transparent">
+      <footer className="border-t-4 border-primary bg-background py-16 z-10 w-full mt-auto">
+        <div className="container mx-auto px-4 md:px-8">
+          <div className="flex flex-col md:flex-row justify-between items-center gap-8 border-b-2 border-primary pb-8 mb-8">
+            <div className="flex items-center gap-4">
+              <Image src="/iconsvg.svg" alt="Chatlyzer" width={48} height={48} className="w-12 h-12 border-2 border-primary bg-card p-1 shadow-[4px_4px_0px_0px_hsl(var(--primary))]" />
+              <span className="font-display font-black text-3xl uppercase tracking-widest">
                 Chatlyzer
               </span>
             </div>
             
-            <div className="flex flex-wrap gap-8 justify-center mb-6 md:mb-0">
-              <Link href="https://www.termsfeed.com/live/b3b472ab-140f-4d73-b570-cbf17b3b7aeb" className="text-gray-400 hover:text-white transition">Privacy</Link>
-              <Link href="/contact" className="text-gray-400 hover:text-white transition">Contact</Link>
-              <Link href="/delete-account" className="text-gray-400 hover:text-white transition">Delete Account</Link>
+            <div className="flex flex-col sm:flex-row flex-wrap gap-x-12 gap-y-4 text-center justify-center font-mono font-bold uppercase text-sm tracking-widest">
+              <Link href="#" className="hover:line-through hover:text-primary transition">Privacy_Policy.txt</Link>
+              <Link href="/contact" className="hover:line-through hover:text-primary transition">Contact_Us.exe</Link>
+              <Link href="/delete-account" className="hover:line-through text-destructive transition">Purge_Data.sh</Link>
             </div>
-            
-            <div className="text-gray-400 text-sm">
-              © 2025 Chatlyzer. It's giving legitimate business ✨
-            </div>
+          </div>
+          
+          <div className="flex justify-between items-center w-full font-mono uppercase text-xs font-bold tracking-widest text-muted-foreground group">
+            <span>© 2025 // SYSTEM.OPERATIONAL</span>
+            <span className="hidden sm:inline opacity-0 group-hover:opacity-100 transition-opacity">BUILD VERSION 1.0.0-RC</span>
           </div>
         </div>
       </footer>

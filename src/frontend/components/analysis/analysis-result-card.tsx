@@ -66,8 +66,8 @@ export const AnalysisResultCard = ({ analysis }: AnalysisResultCardProps) => {
         return <ChatStatsAnalysisBuilder data={analysisData} />;
       default:
         return (
-          <div className="bg-black/20 rounded-lg p-4 border border-white/10">
-            <pre className="text-sm text-white/80 whitespace-pre-wrap font-mono overflow-x-auto">
+          <div className="bg-background border-2 border-primary rounded-none p-4 shadow-brutal-sm">
+            <pre className="text-sm text-foreground whitespace-pre-wrap font-mono overflow-x-auto">
               {JSON.stringify(analysisData, null, 2)}
             </pre>
           </div>
@@ -76,13 +76,13 @@ export const AnalysisResultCard = ({ analysis }: AnalysisResultCardProps) => {
   };
   
   return (
-    <Card className="bg-white/5 border-white/20">
-      <CardHeader className="pb-3">
+    <Card>
+      <CardHeader className="pb-3 border-b-2 border-primary">
         <div className="flex items-center gap-3">
           <span className="text-2xl">{config.emoji}</span>
           <div>
-            <CardTitle className="text-white text-lg">{config.title}</CardTitle>
-            <p className="text-white/60 text-sm">{config.description}</p>
+            <CardTitle className="text-card-foreground font-mono uppercase tracking-widest text-lg">{config.title}</CardTitle>
+            <p className="text-muted-foreground font-mono uppercase text-sm mt-1">{config.description}</p>
           </div>
         </div>
       </CardHeader>

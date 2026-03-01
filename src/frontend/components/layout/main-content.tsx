@@ -48,15 +48,15 @@ export const MainContent = ({
   if (!selectedChat) {
     return (
       <div className="flex items-center justify-center h-full p-4">
-        <div className="text-center max-w-md">
-          <Sparkles className="w-16 sm:w-20 h-16 sm:h-20 text-white/20 mx-auto mb-4 sm:mb-6" />
-          <h2 className="text-xl sm:text-2xl font-bold text-white mb-4">Select a chat to analyze</h2>
-          <p className="text-sm sm:text-base text-white/60 mb-6 sm:mb-8">Choose a conversation from the sidebar to get started</p>
+        <div className="text-center max-w-md border-2 border-primary bg-card p-12 shadow-brutal">
+          <Sparkles className="w-16 sm:w-20 h-16 sm:h-20 text-muted-foreground mx-auto mb-4 sm:mb-6" />
+          <h2 className="text-xl sm:text-2xl font-bold font-mono uppercase tracking-widest text-foreground mb-4">Select a chat to analyze</h2>
+          <p className="text-sm sm:text-base text-muted-foreground font-mono mb-6 sm:mb-8">Choose a conversation from the sidebar to get started.</p>
           <Button
             onClick={onCreateChat}
-            className="bg-gradient-to-r from-blue-500/70 to-cyan-500/70 hover:from-blue-500/80 hover:to-cyan-500/80"
+            className="w-full"
           >
-            <Plus className="w-4 h-4 mr-2" />
+            <Plus className="w-5 h-5 mr-2" />
             Create New Chat
           </Button>
         </div>
@@ -67,16 +67,16 @@ export const MainContent = ({
   return (
     <div className="flex flex-col h-full">
       {/* Header */}
-      <div className="border-b border-white/10 p-4 sm:p-6">
+      <div className="border-b-2 border-primary p-4 sm:p-6 bg-background">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div className="flex flex-col gap-2">
-            <h1 className="text-lg sm:text-xl font-semibold text-white truncate">
+            <h1 className="text-lg sm:text-2xl font-bold font-mono tracking-widest uppercase text-foreground truncate">
               {selectedChat.title || "Untitled Chat"}
             </h1>
             {/* Chat info inline with title */}
-            <div className="flex items-center gap-4 text-sm text-white/60">
+            <div className="flex items-center gap-4 text-sm text-muted-foreground font-mono uppercase">
               <span>{selectedChatMessages.length} messages</span>
-              <span>{Array.isArray(selectedChat.participants) ? selectedChat.participants.length : 0} participants</span>
+              <span>{Array.isArray(selectedChat.participants) ? selectedChat.participants.length : 0} par.</span>
               <span>{selectedChatAnalyzes.length} analyses</span>
             </div>
           </div>
@@ -87,7 +87,6 @@ export const MainContent = ({
               <Button
                 onClick={onAnalyzeChat}
                 disabled={isAnalyzing || hasInProgressAnalysis || totalCredits < 8}
-                className="bg-gradient-to-r from-blue-500/70 to-cyan-500/70 hover:from-blue-500/80 hover:to-cyan-500/80 text-sm"
               >
                 {isAnalyzing || hasInProgressAnalysis ? (
                   <>
@@ -104,10 +103,9 @@ export const MainContent = ({
             )}
             
             <Button
-              variant="outline"
-              size="sm"
+              variant="destructive"
+              size="icon"
               onClick={onDeleteChat}
-              className="text-red-400 hover:text-red-300 border-red-400/20"
             >
               <Trash2 className="w-4 h-4" />
             </Button>
@@ -174,7 +172,7 @@ export const MainContent = ({
                 
                 {filteredAnalyses.length === 0 && selectedAnalysisType && (
                   <div className="text-center py-8">
-                    <p className="text-white/60">No results for {ANALYSIS_CONFIG[selectedAnalysisType]?.title}</p>
+                    <p className="text-muted-foreground font-mono uppercase tracking-widest border-2 border-primary bg-background p-4 shadow-brutal-sm">No results for {ANALYSIS_CONFIG[selectedAnalysisType]?.title}</p>
                   </div>
                 )}
               </div>
@@ -182,12 +180,12 @@ export const MainContent = ({
             
             {/* No Analyses State */}
             {!hasAnalyses && (
-              <div className="text-center py-12">
-                <BarChart3 className="w-16 h-16 text-white/20 mx-auto mb-4" />
-                <h3 className="text-lg font-medium text-white mb-2">
+              <div className="text-center py-16 border-2 border-primary bg-card shadow-brutal mt-8 p-8">
+                <BarChart3 className="w-16 h-16 text-muted-foreground mx-auto mb-6" />
+                <h3 className="text-xl font-bold font-mono tracking-widest uppercase text-foreground mb-4">
                   {hasInProgressAnalysis ? "Analysis in Progress" : "No Analysis Yet"}
                 </h3>
-                <p className="text-white/60 mb-6">
+                <p className="text-muted-foreground font-mono text-sm mb-8">
                   {hasInProgressAnalysis 
                     ? "Your analysis is being processed. This may take a few moments..." 
                     : "Analyze this chat to see insights"
@@ -196,7 +194,6 @@ export const MainContent = ({
                 <Button
                   onClick={onAnalyzeChat}
                   disabled={isAnalyzing || hasInProgressAnalysis || totalCredits < 8}
-                  className="bg-gradient-to-r from-blue-500/70 to-cyan-500/70 hover:from-blue-500/80 hover:to-cyan-500/80"
                 >
                   {isAnalyzing || hasInProgressAnalysis ? (
                     <>

@@ -61,6 +61,21 @@ const config = {
         yellow: {
           400: "#F7DF1E",
         },
+        neo: {
+          light: '#F2F1EC',
+          dark: '#1A1A1A',
+          accent: '#2A5032',
+          textMain: '#0D0D0D',
+          textLight: '#F2F1EC',
+        }
+      },
+      fontFamily: {
+        mono: ['var(--font-space-mono)', 'monospace'],
+        display: ['var(--font-syne)', 'sans-serif'],
+      },
+      boxShadow: {
+        brutal: '6px 6px 0px 0px rgba(0,0,0,1)',
+        'brutal-sm': '4px 4px 0px 0px rgba(0,0,0,1)',
       },
       borderRadius: {
         lg: "var(--radius)",

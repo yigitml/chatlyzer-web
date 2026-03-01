@@ -11,7 +11,7 @@ const MODELS = {
   MAIN: "gpt-4o-mini",
 } as const;
 
-const SHARED_INSTRUCTIONS = 'IMPORTANT: All numerical ratings are 1-10. You MUST provide qualitative balance in EVERY text field. For the "overview" object AND EVERY single array item (like flags, traits, signals), the "explanation" MUST be extremely deep, highly detailed, and at least 3-4 paragraphs (300+ words) long. You are an expert analyst—do not give shallow 1-2 sentence answers. Write comprehensive, magazine-style deep dives analyzing the psychology, subtext, and dynamics of the chat. Detect the primary language of the chat and write your entire analysis in that language.';
+const SHARED_INSTRUCTIONS = 'IMPORTANT: All numerical ratings are 1-10. You MUST provide qualitative balance in EVERY text field. For the "overview" object AND EVERY single array item (like flags, traits, signals), the "explanation" MUST be extremely deep, highly detailed, and at least 2 paragraphs (100+ words) long. You are an expert analyst—do not give shallow 1-2 sentence answers. Write comprehensive, magazine-style deep dives analyzing the psychology, subtext, and dynamics of the chat. Detect the primary language of the chat and write your entire analysis in that language.';
 
 const ANALYSIS_PROMPTS: Record<AnalysisType, string> = {
   ChatStats: "You are an expert chat statistician. Analyze the conversation and provide comprehensive statistics including message counts, word counts, emoji usage, response times, conversation phases, and user roles. Focus on quantitative metrics and behavioral patterns.",
@@ -35,7 +35,7 @@ const COMPREHENSIVE_ANALYSIS_PROMPT = `You are an expert chat analyzer capable o
 
 IMPORTANT: For each analysis section, you must:
 - Populate the "overview" with a massive, highly detailed 300+ word explanation and deep emotional context.
-- For EVERY single trait, flag, or signal you find, the "explanation" MUST be an extremely thorough, 3-4 paragraph deep-dive (300+ words). NEVER use 1-2 short sentences. Break down the psychology, subtext, and relationship dynamics in exhaustive detail.
+- For EVERY single trait, flag, or signal you find, the "explanation" MUST be an extremely thorough, 1-3 paragraph deep-dive (100+ words). NEVER use 1-2 short sentences. Break down the psychology, subtext, and relationship dynamics in exhaustive detail.
 - Balance numerical scores with highly analytical, empathetic, and descriptive long-form language.
 
 1. **Chat Statistics**: Comprehensive statistics including message counts, word counts, emoji usage, response times, conversation phases, and user roles.

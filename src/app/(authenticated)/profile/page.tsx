@@ -40,10 +40,10 @@ const LoadingSpinner = ({ size = "sm" }: { size?: "sm" | "lg" }) => (
 
 const Toast = ({ message, type, onClose }: { message: string; type: "success" | "error"; onClose: () => void }) => (
   <div className="fixed top-6 right-6 z-50 animate-in slide-in-from-right duration-300">
-    <div className={`flex items-center gap-3 px-4 py-3 rounded-lg shadow-lg backdrop-blur-sm border ${
+    <div className={`flex items-center gap-3 px-4 py-3 rounded-none border-2 border-primary shadow-brutal ${
       type === "success" 
-        ? "bg-green-500/20 border-green-500/30 text-green-300" 
-        : "bg-red-500/20 border-red-500/30 text-red-300"
+        ? "bg-card text-foreground" 
+        : "bg-destructive text-destructive-foreground"
     }`}>
       {type === "success" ? (
         <CheckCircle className="w-5 h-5 flex-shrink-0" />
@@ -74,15 +74,15 @@ const StatCard = ({
   value: string | number; 
   description?: string;
 }) => (
-  <Card className="bg-white/5 border-white/20">
+  <Card className="hover:-translate-y-1 hover:shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] transition-transform duration-200">
     <CardContent className="p-6">
-      <div className="flex items-center gap-3 mb-2">
-        <Icon className="w-5 h-5 text-blue-400" />
-        <span className="text-white/60 text-sm font-medium">{label}</span>
+      <div className="flex items-center gap-3 mb-2 border-b-2 border-primary pb-2">
+        <Icon className="w-5 h-5" />
+        <span className="text-muted-foreground font-mono text-sm font-medium uppercase tracking-wider">{label}</span>
       </div>
-      <div className="text-2xl font-bold text-white mb-1">{value.toLocaleString()}</div>
+      <div className="text-3xl font-bold font-mono text-foreground mt-4 mb-1">{value.toLocaleString()}</div>
       {description && (
-        <div className="text-xs text-white/40">{description}</div>
+        <div className="text-xs text-muted-foreground font-mono uppercase">{description}</div>
       )}
     </CardContent>
   </Card>
@@ -90,9 +90,9 @@ const StatCard = ({
 
 const CreditsDisplay = ({ credits }: { credits: number }) => {
   return (
-    <div className="flex items-center gap-2 bg-white/10 rounded-full px-4 py-2">
-      <Zap className="w-5 h-5 text-green-400 flex-shrink-0" />
-      <span className="font-mono text-lg text-white whitespace-nowrap">{credits.toLocaleString()}</span>
+    <div className="flex items-center gap-2 bg-card border-2 border-primary shadow-brutal-sm rounded-none px-4 py-2">
+      <Zap className="w-5 h-5 text-card-foreground flex-shrink-0" />
+      <span className="font-mono font-bold text-lg text-card-foreground whitespace-nowrap">{credits.toLocaleString()}</span>
     </div>
   );
 };
@@ -223,21 +223,22 @@ export default function ProfilePage() {
 
       <div className="max-w-4xl mx-auto p-6 space-y-8">
         {/* Back Button */}
-        <Link href="/home" className="inline-flex items-center gap-2 text-white/60 hover:text-white transition-colors group">
-          <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
-          <span className="text-sm">Back</span>
+        <Link href="/home" className="inline-flex items-center gap-2 bg-card border-2 border-primary text-card-foreground px-4 py-2 hover:-translate-x-1 hover:-translate-y-1 hover:shadow-brutal transition-all font-mono font-bold text-sm uppercase">
+          <ArrowLeft className="w-4 h-4" />
+          <span>Back</span>
         </Link>
 
         {/* Profile Header */}
-        <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-white mb-2">Profile Settings</h1>
-          <p className="text-white/60">Manage your account and preferences</p>
+        <div className="text-center mb-8 border-b-2 border-primary pb-8">
+          <h1 className="text-5xl font-extrabold font-display text-foreground mb-4">PROFILE_SETTINGS</h1>
+          <p className="text-muted-foreground font-mono uppercase tracking-widest">Manage your account and preferences</p>
         </div>
 
         {/* Profile Info Card */}
-        <Card className="bg-white/5 border-white/20">
+        <Card>
           <CardHeader>
-            <CardTitle className="text-white flex items-center gap-2">
+            <CardTitle className="text-foreground flex items-center gap-2 font-mono uppercase tracking-wider text-xl">
+              <span className="text-muted-foreground text-sm mr-2">/01</span>
               <User className="w-5 h-5" />
               Profile Information
             </CardTitle>
@@ -306,22 +307,23 @@ export default function ProfilePage() {
                     </Button>
                   </div>
                 )}
-                
                 {/* Static Info - Always Visible */}
-                <div className="flex items-center gap-2 text-white/60">
-                  <Mail className="w-4 h-4" />
-                  <span>{user.email}</span>
-                </div>
-                <div className="flex items-center gap-2 text-white/60">
-                  <Calendar className="w-4 h-4" />
-                  <span>Joined {new Date(user.createdAt).toLocaleDateString()}</span>
-                </div>
-                {user.lastLoginAt && (
-                  <div className="flex items-center gap-2 text-white/60">
-                    <Clock className="w-4 h-4" />
-                    <span>Last active {new Date(user.lastLoginAt).toLocaleDateString()}</span>
+                <div className="mt-4 border-t-2 border-primary pt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="flex items-center gap-2 text-muted-foreground font-mono text-sm">
+                    <Mail className="w-4 h-4" />
+                    <span>{user.email}</span>
                   </div>
-                )}
+                  <div className="flex items-center gap-2 text-muted-foreground font-mono text-sm">
+                    <Calendar className="w-4 h-4" />
+                    <span>Joined {new Date(user.createdAt).toLocaleDateString()}</span>
+                  </div>
+                  {user.lastLoginAt && (
+                    <div className="flex items-center gap-2 text-muted-foreground font-mono text-sm">
+                      <Clock className="w-4 h-4" />
+                      <span>Last active {new Date(user.lastLoginAt).toLocaleDateString()}</span>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           </CardContent>
@@ -329,11 +331,12 @@ export default function ProfilePage() {
 
         {/* Account Statistics */}
         <div>
-          <h2 className="text-xl font-semibold text-white mb-4 flex items-center gap-2">
+          <h2 className="text-xl font-bold font-mono text-foreground mb-4 flex items-center gap-2 uppercase tracking-wider">
+            <span className="text-muted-foreground text-sm mr-2">/02</span>
             <BarChart3 className="w-5 h-5" />
             Account Statistics
           </h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             <StatCard
               icon={MessageCircle}
               label="Total Chats"
@@ -356,9 +359,10 @@ export default function ProfilePage() {
         </div>
 
         {/* Credits & Subscription */}
-        <Card className="bg-white/5 border-white/20">
+        <Card>
           <CardHeader>
-            <CardTitle className="text-white flex items-center gap-2">
+            <CardTitle className="text-foreground flex items-center gap-2 font-mono uppercase tracking-wider text-xl">
+              <span className="text-muted-foreground text-sm mr-2">/03</span>
               <Crown className="w-5 h-5" />
               Credits & Subscription
             </CardTitle>
@@ -404,9 +408,10 @@ export default function ProfilePage() {
         </Card>
 
         {/* Account Settings */}
-        <Card className="bg-white/5 border-white/20">
+        <Card>
           <CardHeader>
-            <CardTitle className="text-white flex items-center gap-2">
+            <CardTitle className="text-foreground flex items-center gap-2 font-mono uppercase tracking-wider text-xl">
+              <span className="text-muted-foreground text-sm mr-2">/04</span>
               <Settings className="w-5 h-5" />
               Account Settings
             </CardTitle>
@@ -445,9 +450,10 @@ export default function ProfilePage() {
         </Card>
 
         {/* Danger Zone */}
-        <Card className="bg-red-500/5 border-red-500/20">
+        <Card className="border-destructive">
           <CardHeader>
-            <CardTitle className="text-red-300 flex items-center gap-2">
+            <CardTitle className="text-destructive flex items-center gap-2 font-mono uppercase tracking-wider text-xl">
+              <span className="text-muted-foreground text-sm mr-2">/05</span>
               <Shield className="w-5 h-5" />
               Danger Zone
             </CardTitle>

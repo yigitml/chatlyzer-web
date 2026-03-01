@@ -131,10 +131,10 @@ export default function UserDashboard() {
 
   if (!isInitialized) {
     return (
-      <div className="min-h-screen bg-black flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center text-foreground">
         <div className="flex flex-col items-center">
           <LoadingSpinner size="lg" />
-          <p className="text-white/60 mt-4">Loading...</p>
+          <p className="text-muted-foreground font-mono uppercase mt-4">Loading...</p>
         </div>
       </div>
     );
@@ -142,10 +142,10 @@ export default function UserDashboard() {
 
   if (!user) {
     return (
-      <div className="min-h-screen bg-black flex items-center justify-center">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold text-white mb-4">Not authenticated</h1>
-          <Link href="/auth/sign-in" className="text-purple-400 hover:text-purple-300">
+      <div className="min-h-screen flex items-center justify-center text-foreground">
+        <div className="text-center bg-card border-2 border-primary shadow-brutal p-12">
+          <h1 className="text-2xl font-bold font-mono uppercase tracking-widest text-card-foreground mb-4">Not authenticated</h1>
+          <Link href="/auth/sign-in" className="text-primary font-mono uppercase hover:underline">
             Sign in to continue
           </Link>
         </div>
@@ -154,7 +154,7 @@ export default function UserDashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-black text-white">
+    <div className="min-h-screen text-foreground">
       {/* Header */}
       <Header user={user} totalCredits={analysisManagement.totalCredits} />
 

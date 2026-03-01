@@ -32,17 +32,17 @@ export const Header = ({ user, totalCredits }: HeaderProps) => {
   };
 
   return (
-    <header className="border-b border-white/10 px-3 sm:px-6 py-4">
+    <header className="border-b-2 border-primary bg-card text-card-foreground px-3 sm:px-6 py-4">
       <div className="flex items-center justify-between">
         <Link href="/" className="flex items-center gap-2 sm:gap-3 min-w-0">
-          <Image src="/favicon.ico" alt="Chatlyzer" width={28} height={28} className="flex-shrink-0" />
-          <span className="font-bold text-lg sm:text-xl truncate">Chatlyzer</span>
+          <Image src="/iconsvg.svg" alt="Chatlyzer" width={28} height={28} className="flex-shrink-0" />
+          <span className="font-display font-extrabold tracking-widest text-lg sm:text-xl truncate uppercase">Chatlyzer</span>
         </Link>
 
         <div className="flex items-center gap-2 sm:gap-4 flex-shrink-0">
           <CreditsDisplay credits={totalCredits} />
           <Link href="/profile">
-            <Avatar className="w-8 h-8 cursor-pointer hover:ring-2 hover:ring-white/20 transition-all flex-shrink-0">
+            <Avatar className="w-8 h-8 cursor-pointer border-2 border-primary hover:-translate-y-0.5 hover:shadow-brutal-sm transition-all flex-shrink-0">
               <AvatarImage src={user.image || ""} alt={user.name || "User"} />
               <AvatarFallback>{user.name?.substring(0, 2).toUpperCase() || "U"}</AvatarFallback>
             </Avatar>

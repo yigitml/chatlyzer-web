@@ -130,7 +130,7 @@ export default function ContactPage() {
       {/* Navigation */}
       <header className="container mx-auto px-4 py-6 flex items-center justify-between">
         <Link href="/" className="flex items-center gap-2">
-          <Image src="/favicon.ico" alt="Chatlyzer" width={32} height={32} className="w-8 h-8" />
+          <Image src="/iconsvg.svg" alt="Chatlyzer" width={32} height={32} className="w-8 h-8" />
           <span className="font-bold text-xl text-white relative after:content-[''] after:block after:h-0.5 after:w-full after:mt-1 after:rounded-full">Chatlyzer</span>
         </Link>
 

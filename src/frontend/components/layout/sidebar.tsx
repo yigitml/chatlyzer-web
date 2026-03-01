@@ -76,7 +76,7 @@ export const Sidebar = ({
   return (
     <div 
       ref={resizeRef}
-      className={`transition-all duration-300 border-r border-white/10 bg-black z-50 relative ${
+      className={`transition-all duration-300 border-r-2 border-primary bg-card z-50 relative ${
         isCollapsed 
           ? 'w-16' 
           : 'lg:relative fixed lg:translate-x-0'
@@ -87,18 +87,17 @@ export const Sidebar = ({
       }}
     >
       <div className="p-4">
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center justify-between mb-6 pb-4 border-b-2 border-primary">
           {!isCollapsed && (
             <div>
-              <h2 className="font-semibold text-white">Your Chats</h2>
-              <p className="text-sm text-white/60">{chats.length} {chats.length == 1 ? 'conversation' : 'conversations'}</p>
+              <h2 className="font-bold font-mono uppercase tracking-wider text-card-foreground">Your Chats</h2>
+              <p className="text-xs font-mono uppercase text-muted-foreground">{chats.length} {chats.length == 1 ? 'conversation' : 'conversations'}</p>
             </div>
           )}
           <Button
             variant="ghost"
-            size="sm"
+            size="icon"
             onClick={onToggleCollapse}
-            className="text-white/60 hover:text-white"
           >
             {isCollapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
           </Button>
@@ -109,7 +108,7 @@ export const Sidebar = ({
             <div className="mb-6">
               <Button 
                 onClick={onCreateChat}
-                className="w-full bg-white/10 hover:bg-white/20 text-white border-0"
+                className="w-full"
               >
                 <Plus className="w-4 h-4 mr-2" />
                 New Chat
@@ -136,10 +135,10 @@ export const Sidebar = ({
                   />
                 ))
               ) : (
-                <div className="text-center py-12">
-                  <MessageCircle className="w-12 h-12 text-white/20 mx-auto mb-4" />
-                  <p className="text-white/60 text-sm">No chats yet</p>
-                  <p className="text-white/40 text-xs">Create your first chat to get started</p>
+                <div className="text-center py-12 border-2 border-primary bg-background shadow-brutal-sm mt-4 p-4">
+                  <MessageCircle className="w-10 h-10 text-muted-foreground mx-auto mb-4" />
+                  <p className="text-foreground font-mono font-bold uppercase tracking-widest text-sm mb-1">No chats yet</p>
+                  <p className="text-muted-foreground font-mono text-xs uppercase text-balance">Create your first chat to get started</p>
                 </div>
               )}
             </div>
@@ -150,8 +149,8 @@ export const Sidebar = ({
       {/* Resize Handle */}
       {!isCollapsed && (
         <div
-          className={`absolute top-0 right-0 w-1 h-full cursor-col-resize hover:bg-white/50 transition-colors ${
-            isResizing ? 'bg-white' : ''
+          className={`absolute top-0 right-0 w-1 h-full cursor-col-resize hover:bg-primary transition-colors ${
+            isResizing ? 'bg-primary' : ''
           }`}
           onMouseDown={handleMouseDown}
           style={{ zIndex: 10 }}

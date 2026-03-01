@@ -5,10 +5,10 @@ interface MetricCardProps {
 }
 
 export const MetricCard = ({ title, value, icon }: MetricCardProps) => (
-  <div className="bg-white/5 rounded-xl p-4 text-center border border-white/10">
+  <div className="bg-background rounded-none p-4 text-center border-2 border-primary shadow-brutal-sm">
     <div className="text-2xl mb-2">{icon}</div>
-    <div className="text-xl font-bold text-white">{value}</div>
-    <div className="text-sm text-white/60">{title}</div>
+    <div className="text-xl font-bold font-mono tracking-wider text-foreground">{value}</div>
+    <div className="text-sm text-muted-foreground font-mono mt-1">{title}</div>
   </div>
 );
 
@@ -31,15 +31,15 @@ export const ScoreCard = ({
   const displayValue = isPercentage ? `${Math.round(score)}%` : `${score}/${maxScore}`;
   
   return (
-    <div className="bg-white/5 rounded-xl p-4 border border-white/10">
+    <div className="bg-background rounded-none p-4 border-2 border-primary shadow-brutal-sm">
       <div className="flex justify-between items-center mb-2">
-        <h3 className="font-semibold text-white">{title}</h3>
-        <span className="text-lg font-bold text-blue-400">{displayValue}</span>
+        <h3 className="font-bold font-mono uppercase tracking-wider text-foreground">{title}</h3>
+        <span className="text-lg font-bold font-mono text-primary">{displayValue}</span>
       </div>
-      <p className="text-sm text-white/60 mb-3">{description}</p>
-      <div className="w-full bg-white/10 rounded-full h-2">
+      <p className="text-sm text-muted-foreground font-mono mb-3">{description}</p>
+      <div className="w-full bg-muted rounded-none h-3 border border-primary">
         <div 
-          className="bg-gradient-to-r from-blue-500/70 to-cyan-500/70 h-2 rounded-full transition-all duration-300"
+          className="bg-primary h-full border-r-2 border-primary transition-all duration-300"
           style={{ width: `${Math.min(percentage, 100)}%` }}
         />
       </div>
@@ -54,14 +54,17 @@ interface InsightCardProps {
 }
 
 export const InsightCard = ({ title, items, icon }: InsightCardProps) => (
-  <div className="bg-white/5 rounded-xl p-4 border border-white/10">
-    <div className="flex items-center gap-2 mb-3">
+  <div className="bg-background rounded-none p-4 border-2 border-primary shadow-brutal-sm">
+    <div className="flex items-center gap-2 mb-3 border-b border-primary pb-2">
       <span className="text-lg">{icon}</span>
-      <h3 className="font-semibold text-white">{title}</h3>
+      <h3 className="font-bold font-mono uppercase tracking-wider text-foreground">{title}</h3>
     </div>
-    <div className="space-y-1">
+    <div className="space-y-2">
       {items.map((item, index) => (
-        <div key={index} className="text-sm text-white/80">• {item}</div>
+        <div key={index} className="text-sm text-muted-foreground font-mono flex items-start">
+          <span className="mr-2 text-primary font-bold">{'>'}</span> 
+          <span>{item}</span>
+        </div>
       ))}
     </div>
   </div>
@@ -82,19 +85,18 @@ export const WarningCard = ({
   examples = [], 
   isGreenFlag = false 
 }: WarningCardProps) => {
-  const colorClass = isGreenFlag ? 'border-green-500/30 bg-green-500/10' : 'border-red-500/30 bg-red-500/10';
-  const textColorClass = isGreenFlag ? 'text-green-300' : 'text-red-300';
+  const colorClass = isGreenFlag ? 'bg-card text-foreground' : 'bg-destructive text-destructive-foreground';
   
   return (
-    <div className={`rounded-xl p-4 border ${colorClass}`}>
-      <div className="flex justify-between items-center mb-2">
-        <h3 className={`font-bold ${textColorClass}`}>{title}</h3>
-        <span className={`text-sm font-bold ${textColorClass}`}>{severity}/10</span>
+    <div className={`rounded-none p-4 border-2 border-primary shadow-brutal-sm ${colorClass}`}>
+      <div className="flex justify-between items-center mb-2 pb-2 border-b-2 border-primary/20">
+        <h3 className="font-bold font-mono uppercase tracking-wider">{title}</h3>
+        <span className="text-sm font-bold font-mono">{severity}/10</span>
       </div>
-      <p className="text-white/80 text-sm mb-3">{description}</p>
+      <p className="text-sm font-mono mt-2 mb-3 opacity-90">{description}</p>
       {examples.length > 0 && (
         <div className="space-y-2">
-          <p className="text-xs font-semibold text-white/60">Examples:</p>
+          <p className="text-xs font-bold font-mono uppercase opacity-70">Examples:</p>
           {examples.slice(0, 2).map((example, index) => (
             <MessageExampleCard key={index} example={example} />
           ))}
@@ -127,28 +129,28 @@ export const ComparisonCard = ({
   const user1Percentage = total > 0 ? (val1 / total) * 100 : 50;
   
   return (
-    <div className="bg-white/5 rounded-xl p-4 border border-white/10">
-      <div className="flex items-center gap-2 mb-3">
+    <div className="bg-background rounded-none p-4 border-2 border-primary shadow-brutal-sm">
+      <div className="flex items-center gap-2 mb-3 border-b-2 border-primary pb-2">
         <span className="text-lg">{icon}</span>
-        <h3 className="font-semibold text-white">{title}</h3>
+        <h3 className="font-bold font-mono uppercase tracking-wider text-foreground">{title}</h3>
       </div>
       <div className="flex justify-between items-center mb-3">
-        <div className="text-left">
-          <div className="text-sm font-medium text-white">{user1Name}</div>
-          <div className="text-xs text-blue-400">{user1Value} ({Math.round(user1Percentage)}%)</div>
+        <div className="text-left font-mono">
+          <div className="text-sm font-bold uppercase text-foreground">{user1Name}</div>
+          <div className="text-xs font-bold text-muted-foreground">{user1Value} ({Math.round(user1Percentage)}%)</div>
         </div>
-        <div className="text-right">
-          <div className="text-sm font-medium text-white">{user2Name}</div>
-          <div className="text-xs text-cyan-400">{user2Value} ({Math.round(100 - user1Percentage)}%)</div>
+        <div className="text-right font-mono">
+          <div className="text-sm font-bold uppercase text-foreground">{user2Name}</div>
+          <div className="text-xs font-bold text-muted-foreground">{user2Value} ({Math.round(100 - user1Percentage)}%)</div>
         </div>
       </div>
-      <div className="w-full bg-white/10 rounded-full h-2 flex overflow-hidden">
+      <div className="w-full bg-muted border border-primary h-3 flex overflow-hidden">
         <div 
-          className="bg-blue-500 h-full"
+          className="bg-primary h-full border-r border-primary"
           style={{ width: `${user1Percentage}%` }}
         />
         <div 
-          className="bg-cyan-500 h-full"
+          className="bg-card h-full"
           style={{ width: `${100 - user1Percentage}%` }}
         />
       </div>
@@ -161,12 +163,12 @@ interface MessageExampleCardProps {
 }
 
 export const MessageExampleCard = ({ example }: MessageExampleCardProps) => (
-  <div className="bg-white/5 rounded-lg p-3 border border-white/10">
-    <div className="flex justify-between items-center mb-1">
-      <span className="text-xs font-medium text-blue-300">{example.sender}</span>
-      <span className="text-xs text-white/40">{example.timestamp}</span>
+  <div className="bg-card rounded-none p-3 border-2 border-primary shadow-brutal-sm mt-2">
+    <div className="flex justify-between items-center mb-2 pb-1 border-b-2 border-primary/20">
+      <span className="text-xs font-bold font-mono tracking-widest uppercase text-primary">{example.sender}</span>
+      <span className="text-xs font-mono text-muted-foreground">{example.timestamp}</span>
     </div>
-    <p className="text-sm text-white/80">{example.contentSnippet || example.content}</p>
+    <p className="text-sm font-mono text-card-foreground">{example.contentSnippet || example.content}</p>
   </div>
 );
 
@@ -188,18 +190,18 @@ export const TimelineCard = ({ phases }: TimelineCardProps) => {
   };
 
   return (
-    <div className="bg-white/5 rounded-xl p-4 border border-white/10">
-      <div className="flex items-center gap-2 mb-4">
+    <div className="bg-background rounded-none p-4 border-2 border-primary shadow-brutal-sm">
+      <div className="flex items-center gap-2 mb-4 border-b-2 border-primary pb-2">
         <span className="text-lg">📈</span>
-        <h3 className="font-semibold text-white">Conversation Timeline</h3>
+        <h3 className="font-bold font-mono uppercase text-foreground">Conversation Timeline</h3>
       </div>
-      <div className="space-y-3">
+      <div className="space-y-3 relative before:absolute before:inset-0 before:ml-5 before:-translate-x-px md:before:mx-auto md:before:translate-x-0 before:h-full before:w-0.5 before:bg-gradient-to-b before:from-transparent before:via-slate-300 before:to-transparent">
         {phases.map((phase, index) => (
-          <div key={index} className="flex items-center gap-3">
-            <span className="text-lg">{getPhaseEmoji(phase.phase)}</span>
-            <div className="flex-1">
-              <div className="text-sm font-medium text-white">{phase.phase}</div>
-              <div className="text-xs text-white/60">
+          <div key={index} className="flex items-center gap-3 relative z-10">
+            <span className="text-lg bg-card border-2 border-primary w-10 h-10 flex items-center justify-center rounded-none shadow-brutal-sm">{getPhaseEmoji(phase.phase)}</span>
+            <div className="flex-1 bg-card border-2 border-primary p-2 shadow-brutal-sm">
+              <div className="text-sm font-bold font-mono uppercase text-foreground">{phase.phase}</div>
+              <div className="text-xs font-mono text-muted-foreground mt-1">
                 {phase.start} {phase.end && `- ${phase.end}`}
               </div>
             </div>
@@ -216,22 +218,22 @@ interface OverviewCardProps {
 }
 
 export const OverviewCard = ({ emotionalContext, explanation }: OverviewCardProps) => (
-  <div className="bg-white/5 rounded-xl p-5 border border-white/10 bg-gradient-to-br from-blue-500/10 to-purple-500/10">
-    <div className="flex items-center gap-2 mb-3">
+  <div className="bg-card rounded-none p-5 border-2 border-primary shadow-brutal">
+    <div className="flex items-center gap-2 mb-4 border-b border-primary pb-2">
       <span className="text-xl">✨</span>
-      <h3 className="font-semibold text-lg text-white">AI Overview</h3>
+      <h3 className="font-bold font-mono text-lg text-foreground uppercase tracking-wider">AI Overview</h3>
     </div>
-    <div className="space-y-3">
+    <div className="space-y-4">
       {emotionalContext && (
-        <div>
-          <h4 className="text-sm font-medium text-blue-300 mb-1">Emotional Context</h4>
-          <p className="text-sm text-white/90 leading-relaxed">{emotionalContext}</p>
+        <div className="bg-background border border-primary p-3 shadow-brutal-sm">
+          <h4 className="text-sm font-bold font-mono uppercase text-foreground mb-1">Emotional Context</h4>
+          <p className="text-sm text-muted-foreground font-mono leading-relaxed">{emotionalContext}</p>
         </div>
       )}
       {explanation && (
-        <div>
-          <h4 className="text-sm font-medium text-purple-300 mb-1">Detailed Explanation</h4>
-          <p className="text-sm text-white/80 leading-relaxed">{explanation}</p>
+        <div className="bg-background border border-primary p-3 shadow-brutal-sm">
+          <h4 className="text-sm font-bold font-mono uppercase text-foreground mb-1">Detailed Explanation</h4>
+          <p className="text-sm text-muted-foreground font-mono leading-relaxed">{explanation}</p>
         </div>
       )}
     </div>
