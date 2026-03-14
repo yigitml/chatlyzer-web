@@ -1,4 +1,4 @@
-import { PrismaClient } from "../../generated/client/client";
+import { PrismaClient } from "../../generated/client";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { Pool } from "pg";
 
@@ -7,7 +7,9 @@ const prismaClientSingleton = () => {
   const pool = new Pool({ connectionString });
   const adapter = new PrismaPg(pool);
 
-  return new PrismaClient({ adapter }).$extends({
+  const baseClient = new PrismaClient({ adapter });
+
+  const extendedClient = baseClient.$extends({
     name: 'softDelete',
     query: {
       $allModels: {
@@ -30,16 +32,33 @@ const prismaClientSingleton = () => {
       },
     },
   });
+
+  return { baseClient, extendedClient };
 };
 
-type PrismaClientSingleton = ReturnType<typeof prismaClientSingleton>;
+type PrismaClientPair = ReturnType<typeof prismaClientSingleton>;
 
 const globalForPrisma = globalThis as unknown as {
-  prisma: PrismaClientSingleton | undefined;
+  prismaPair: PrismaClientPair | undefined;
 };
 
-const prisma = globalForPrisma.prisma ?? prismaClientSingleton();
+const prismaPair = globalForPrisma.prismaPair ?? prismaClientSingleton();
+
+/**
+ * Extended Prisma client with soft-delete filtering on findMany.
+ * Use this for most queries.
+ */
+const prisma = prismaPair.extendedClient;
+
+/**
+ * Raw Prisma client without extensions.
+ * Use this for new models/fields that the $extends wrapper can't resolve
+ * (e.g. Order, polarCustomerId).
+ * Cast to PrismaClient to restore full type access since the adapter
+ * constructor produces PrismaClient<never, ...>.
+ */
+export const rawPrisma = prismaPair.baseClient as unknown as PrismaClient;
 
 export default prisma;
 
-if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = prisma;
+if (process.env.NODE_ENV !== "production") globalForPrisma.prismaPair = prismaPair;

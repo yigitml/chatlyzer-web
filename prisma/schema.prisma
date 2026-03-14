@@ -15,9 +15,11 @@ model User {
   isOnboarded      Boolean           @default(false)
   image            String?
   googleId         String?
+  polarCustomerId  String?
   files            File[]
   credits          UserCredit[]
   subscription     Subscription?
+  orders           Order[]
   tokenVersion     Int               @default(0)
   devices          UserDevice[]
   sessions         UserSession[]
@@ -66,20 +68,34 @@ model Subscription {
 }
 
 model UserCredit {
-  id             String       @id @default(cuid())
-  user           User         @relation(fields: [userId], references: [id])
+  id             String        @id @default(cuid())
+  user           User          @relation(fields: [userId], references: [id])
   userId         String
   type           CreditType
-  subscription   Subscription @relation(fields: [subscriptionId], references: [id])
-  subscriptionId String
-  totalAmount    Int          @default(0)
-  amount         Int          @default(0)
-  createdAt      DateTime     @default(now())
-  updatedAt      DateTime     @updatedAt
-  minimumBalance Int          @default(0)
+  subscription   Subscription? @relation(fields: [subscriptionId], references: [id])
+  subscriptionId String?
+  totalAmount    Int           @default(0)
+  amount         Int           @default(0)
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+  minimumBalance Int           @default(0)
   deletedAt      DateTime?
 
   @@unique([userId, type])
+}
+
+model Order {
+  id             String    @id @default(cuid())
+  polarOrderId   String    @unique
+  userId         String
+  user           User      @relation(fields: [userId], references: [id])
+  productId      String
+  amount         Int
+  currency       String    @default("usd")
+  creditsGranted Int       @default(0)
+  status         String    @default("paid")
+  createdAt      DateTime  @default(now())
+  deletedAt      DateTime?
 }
 
 enum CreditType {

@@ -86,3 +86,31 @@ export async function refundUserCredits(
     return false;
   }
 }
+
+export async function grantUserCredits(
+  userId: string,
+  creditType: CreditType,
+  amount: number,
+  tx?: Prisma.TransactionClient | any
+): Promise<void> {
+  const client = tx || prisma;
+
+  await client.userCredit.upsert({
+    where: {
+      userId_type: {
+        userId,
+        type: creditType,
+      },
+    },
+    update: {
+      amount: { increment: amount },
+      totalAmount: { increment: amount },
+    },
+    create: {
+      userId,
+      type: creditType,
+      amount,
+      totalAmount: amount,
+    },
+  });
+}

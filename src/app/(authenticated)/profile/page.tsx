@@ -102,7 +102,7 @@ export default function ProfilePage() {
   const { chats, fetchChats } = useChatStore();
   const { messages, fetchMessages } = useMessageStore();
   const { analyzes, fetchAnalyzes } = useAnalysisStore();
-  const { credits, subscription, fetchCredits, fetchSubscription } = useCreditStore();
+  const { credits, subscription, fetchCredits, fetchSubscription, purchaseCredits } = useCreditStore();
   
   // UI State
   const [isEditing, setIsEditing] = useState(false);
@@ -395,15 +395,18 @@ export default function ProfilePage() {
                   </div>
                 </div>
               </div>
-            ) : (
-              <div className="text-center py-6">
-                <p className="text-white/60 mb-4">No active subscription</p>
-                <Button className="bg-gradient-to-r from-purple-500/70 to-pink-500/70 hover:from-purple-500/80 hover:to-pink-500/80">
-                  <Crown className="w-4 h-4 mr-2" />
-                  Upgrade Plan
-                </Button>
-              </div>
-            )}
+            ) : null}
+
+            <div className="text-center py-6 border-t border-white/10">
+              <p className="text-white/60 mb-4">Purchase 24 analysis credits to analyze your chats</p>
+              <Button 
+                onClick={() => purchaseCredits()}
+                className="bg-gradient-to-r from-purple-500/70 to-pink-500/70 hover:from-purple-500/80 hover:to-pink-500/80"
+              >
+                <Zap className="w-4 h-4 mr-2" />
+                Buy 24 Credits
+              </Button>
+            </div>
           </CardContent>
         </Card>
 

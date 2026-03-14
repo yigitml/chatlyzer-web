@@ -18,6 +18,7 @@ import {
   AnalysisDeleteRequest,
   SubscriptionDeleteRequest,
   PrivacyAnalysisPostRequest,
+  OrderGetRequest,
 } from "@/shared/types/api/apiRequest";
 import { API_ENDPOINTS } from "@/shared/types/api/apiEndpoints";
 import {
@@ -176,6 +177,13 @@ export class NetworkService {
     await this.api.delete(API_ENDPOINTS.SUBSCRIPTION, data);
   } 
 
+  // ===== Order API =====
+
+  async fetchOrders(params?: OrderGetRequest): Promise<any[]> {
+    const response = await this.api.get(API_ENDPOINTS.ORDER, params);
+    return response.data;
+  }
+
   // ===== Privacy Analysis API =====
 
   async createPrivacyAnalysis(data: PrivacyAnalysisPostRequest): Promise<{ chat: Chat; analyses: Analysis[] }> {
@@ -184,8 +192,19 @@ export class NetworkService {
   }
 }
 
+/**
+ * Build the checkout URL for purchasing credits.
+ * Redirects the user to the Polar checkout via our API route.
+ * Product ID is determined server-side by polarConfig.
+ */
+export function getCheckoutUrl(userId: string, userEmail: string): string {
+  const metadata = encodeURIComponent(JSON.stringify({ userId }));
+  return `/api/checkout?customerEmail=${encodeURIComponent(userEmail)}&metadata=${metadata}`;
+}
+
 export const createNetworkService = (
   getToken: () => string | null,
 ): NetworkService => {
   return NetworkService.getInstance(getToken);
 }
+

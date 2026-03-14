@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { UserCredit, Subscription } from "../../generated/client/browser";
-import { createNetworkService } from "@/shared/utils/network";
+import { createNetworkService, getCheckoutUrl } from "@/shared/utils/network";
 import { useAuthStore } from "./authStore";
 
 interface CreditState {
@@ -13,6 +13,7 @@ interface CreditState {
 interface CreditActions {
   fetchCredits: () => Promise<UserCredit[]>;
   fetchSubscription: () => Promise<Subscription | null>;
+  purchaseCredits: () => void;
   initialize: () => Promise<void>;
 }
 
@@ -73,6 +74,17 @@ export const useCreditStore = create<CreditStore>((set) => {
         set({ error: error as Error, isLoading: false });
         throw error;
       }
+    },
+
+    purchaseCredits: () => {
+      const authState = useAuthStore.getState();
+      const user = authState.user;
+      if (!user) {
+        console.error("User not authenticated");
+        return;
+      }
+      const url = getCheckoutUrl(user.id, user.email);
+      window.location.href = url;
     },
   };
 });

@@ -1,115 +1,95 @@
-import { Webhooks } from "@polar-sh/nextjs"
+import { NextRequest, NextResponse } from "next/server";
+import { Webhook } from "standardwebhooks";
+import {
+  handleOrderPaid,
+  handleOrderRefunded,
+  handleCustomerCreated,
+} from "@/backend/lib/polarWebhookHandlers";
+import { polarConfig } from "@/backend/lib/polarConfig";
 
-export const POST = Webhooks({
-  webhookSecret: process.env.POLAR_WEBHOOK_SECRET!,
-  onPayload: async (payload) => {
-    console.log(payload)
-  },
+/**
+ * Polar webhook handler using the `standardwebhooks` library for signature
+ * verification. We avoid @polar-sh/sdk's validateEvent because it internally
+ * uses Zod v3 which is incompatible with this project's Zod v4.
+ *
+ * Polar follows the Standard Webhooks spec, so the `standardwebhooks` library
+ * handles verification correctly.
+ */
 
-  // BILLING EVENTS
-  // Checkout
+export async function POST(request: NextRequest) {
+  try {
+    const body = await request.text();
+    const headers: Record<string, string> = {};
+    request.headers.forEach((value, key) => {
+      headers[key] = value;
+    });
 
-  onCheckoutCreated: async (payload) => {
-    console.log(payload)
-  },
-  onCheckoutUpdated: async (payload) => {
-    console.log(payload)
-  },
+    // Verify signature using the Standard Webhooks library.
+    // The Webhook constructor expects a base64-encoded secret.
+    // Polar secrets are NOT base64-encoded, so we must encode them.
+    const encodedSecret = Buffer.from(polarConfig.webhookSecret).toString("base64");
+    const wh = new Webhook(encodedSecret);
+    try {
+      wh.verify(body, headers);
+    } catch (error) {
+      console.error("[Polar Webhook] Signature verification failed:", error);
+      return NextResponse.json(
+        { error: "Invalid webhook signature" },
+        { status: 403 }
+      );
+    }
 
-  // Customers
+    // Signature valid — parse event manually to avoid Zod v4 incompatibility
+    const event = JSON.parse(body);
 
-  onCustomerCreated: async (payload) => {
-    console.log(payload)
-  },
-  onCustomerUpdated: async (payload) => {
-    console.log(payload)
-  },
-  onCustomerDeleted: async (payload) => {
-    console.log(payload)
-  },
-  onCustomerStateChanged: async (payload) => {
-    console.log(payload)
-  },
+    const eventType = event.type as string;
 
-  // Subscriptions
+    console.log("[Polar Webhook] Received event:", eventType);
 
-  onSubscriptionCreated: async (payload) => {
-    console.log(payload)
-  },
-  onSubscriptionUpdated: async (payload) => {
-    console.log(payload)
-  },
-  onSubscriptionActive: async (payload) => {
-    console.log(payload)
-  },
-  onSubscriptionCanceled: async (payload) => {
-    console.log(payload)
-  },
-  onSubscriptionUncanceled: async (payload) => {
-    console.log(payload)
-  },
-  onSubscriptionRevoked: async (payload) => {
-    console.log(payload)
-  },
+    // Dispatch to appropriate handler
+    switch (eventType) {
+      case "order.paid":
+        await handleOrderPaid(event);
+        break;
 
-  // Order
+      case "order.refunded":
+        await handleOrderRefunded(event);
+        break;
 
-  onOrderCreated: async (payload) => {
-    console.log(payload)
-  },
-  onOrderPaid: async (payload) => {
-    console.log(payload)
-  },
-  onOrderUpdated: async (payload) => {
-    console.log(payload)
-  },
-  onOrderRefunded: async (payload) => {
-    console.log(payload)
-  },
+      case "customer.created":
+        await handleCustomerCreated(event);
+        break;
 
-  // Refunds
+      case "customer.updated":
+        console.log("[Polar Webhook] Customer updated:", event.data?.id);
+        break;
 
-  onRefundCreated: async (payload) => {
-    console.log(payload)
-  },
-  onRefundUpdated: async (payload) => {
-    console.log(payload)
-  },
+      case "checkout.created":
+        console.log("[Polar Webhook] Checkout created:", event.data?.id);
+        break;
 
-  // Benefit Grants
+      case "checkout.updated":
+        console.log("[Polar Webhook] Checkout updated:", event.data?.id);
+        break;
 
-  onBenefitGrantCreated: async (payload) => {
-    console.log(payload)
-  },
-  onBenefitGrantUpdated: async (payload) => {
-    console.log(payload)
-  },
-  onBenefitGrantRevoked: async (payload) => {
-    console.log(payload)
-  },
-  
-  // ORGANIZATION EVENTS
-  // Benefits
+      case "subscription.created":
+      case "subscription.active":
+      case "subscription.canceled":
+      case "subscription.revoked":
+        console.log(`[Polar Webhook] Subscription event ${eventType}:`, event.data?.id);
+        break;
 
-  onBenefitCreated: async (payload) => {
-    console.log(payload)
-  },
-  onBenefitUpdated: async (payload) => {
-    console.log(payload)
-  },
-  
-  // Products
+      default:
+        console.log(`[Polar Webhook] Unhandled event type: ${eventType}`);
+        break;
+    }
 
-  onProductCreated: async (payload) => {
-    console.log(payload)
-  },
-  onProductUpdated: async (payload) => {
-    console.log(payload)
-  },
-
-  // Organization
-
-  onOrganizationUpdated: async (payload) => {
-    console.log(payload)
+    return NextResponse.json({ received: true }, { status: 200 });
+  } catch (error) {
+    console.error("[Polar Webhook] Error processing webhook:", error);
+    return NextResponse.json(
+      { error: "Webhook processing failed" },
+      { status: 500 }
+    );
   }
-})
+}
