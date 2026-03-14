@@ -65,10 +65,10 @@ export async function GET(request: NextRequest) {
     if (!response.ok) {
       const errorData = await response.text();
       console.error("[Checkout] Polar API error:", response.status, errorData);
-      return NextResponse.json(
-        { error: "Failed to create checkout session" },
-        { status: 502 }
-      );
+      
+      const url = new URL("/home", request.url);
+      url.searchParams.set("error", "polar_checkout_failed");
+      return NextResponse.redirect(url);
     }
 
     const checkout = await response.json();
@@ -88,9 +88,25 @@ export async function GET(request: NextRequest) {
     );
   } catch (error) {
     console.error("[Checkout] Error creating checkout:", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
+    
+    // In Next.js, redirect() literally throws an error. We MUST rethrow it 
+    // or Next.js will catch it here and return a 500/502 instead of redirecting.
+    if (error instanceof Error && error.message === "NEXT_REDIRECT") {
+      throw error;
+    }
+
+    // Try to safely redirect the user back to the app on failure rather than returning a raw 500 JSON
+    try {
+      const { searchParams } = new URL(request.url);
+      const url = new URL("/home", request.url);
+      url.searchParams.set("error", "checkout_failed");
+      return NextResponse.redirect(url);
+    } catch {
+      // Fallback
+      return NextResponse.json(
+        { error: "Internal server error" },
+        { status: 500 }
+      );
+    }
   }
 }
