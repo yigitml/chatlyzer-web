@@ -25,9 +25,10 @@ jobs:
 
       - name: Install & Build
         run: |
-          npm ci
+          #npm ci
           # Note: Since your package.json runs prisma generate automatically 
           # during postinstall, we actually don't need a separate step for it here!
+          npm install
           npm run build
 
       - name: Copy built files to server
