@@ -83,7 +83,7 @@ export default function Home() {
           
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
             {[
-              { id: '01', icon: AlertTriangle, color: 'text-destructive', title: 'Red Flag', desc: 'Spots toxic behavior before you catch feelings', bg: 'bg-destructive/10 border-destructive' },
+              { id: '01', icon: AlertTriangle, color: 'text-destructive', title: 'Red Flag', desc: 'Spots toxic behavior before you fall for them', bg: 'bg-destructive/10 border-destructive' },
               { id: '02', icon: CheckCircle, color: 'text-green-500', title: 'Green Flag', desc: 'When they\'re actually worth your time (rare)', bg: 'bg-green-500/10 border-green-500' },
               { id: '03', icon: Heart, color: 'text-pink-500', title: 'Simp-O-Meter', desc: 'Measures exactly how down bad you really are', bg: 'bg-pink-500/10 border-pink-500' },
               { id: '04', icon: Ghost, color: 'text-blue-500', title: 'Ghost Risk', desc: 'Predicts when you\'re about to get left on read', bg: 'bg-blue-500/10 border-blue-500' },
