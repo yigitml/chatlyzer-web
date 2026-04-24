@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { polarConfig } from "@/backend/lib/polarConfig";
+import { withProtectedRoute } from "@/backend/middleware/jwtAuth";
 
 /**
  * Checkout route that creates a Polar checkout session directly via the API.
@@ -10,31 +11,21 @@ import { polarConfig } from "@/backend/lib/polarConfig";
  * Automatically uses sandbox API in development and production API in production.
  * 
  * Query params:
- *   - products: Polar product ID
- *   - customerEmail: (optional) pre-fill customer email
- *   - metadata: (optional) URL-encoded JSON string with custom metadata (e.g. userId)
+ *   - mobileRedirect: (optional) redirect URL for mobile clients
+ *   - json: (optional) "true" to return JSON instead of redirecting
  */
-export async function GET(request: NextRequest) {
+export const GET = withProtectedRoute(async (request: NextRequest) => {
   try {
+    const authenticatedUserId = request.user!.id;
+    const authenticatedEmail = request.user!.email;
+
     const { searchParams } = new URL(request.url);
     const productId = searchParams.get("products") || polarConfig.productId;
-    const customerEmail = searchParams.get("customerEmail");
-    const metadataParam = searchParams.get("metadata");
     const mobileRedirect = searchParams.get("mobileRedirect");
     const returnJson = searchParams.get("json") === "true";
 
-    // Parse metadata if provided
-    let metadata: Record<string, string> | undefined;
-    if (metadataParam) {
-      try {
-        metadata = JSON.parse(metadataParam);
-      } catch {
-        return NextResponse.json(
-          { error: "Invalid metadata JSON" },
-          { status: 400 }
-        );
-      }
-    }
+    // Use authenticated user's data instead of user-supplied params
+    const metadata = { userId: authenticatedUserId };
 
     const successUrl = mobileRedirect || `${polarConfig.webhookDeliveryUrl}/checkout/success`;
 
@@ -42,15 +33,9 @@ export async function GET(request: NextRequest) {
     const body: Record<string, any> = {
       product_id: productId,
       success_url: successUrl,
+      customer_email: authenticatedEmail,
+      metadata,
     };
-
-    if (customerEmail) {
-      body.customer_email = customerEmail;
-    }
-
-    if (metadata) {
-      body.metadata = metadata;
-    }
 
     // Create checkout session via Polar API (sandbox in dev, production in prod)
     const response = await fetch(`${polarConfig.apiBaseUrl}/checkouts/`, {
@@ -97,7 +82,6 @@ export async function GET(request: NextRequest) {
 
     // Try to safely redirect the user back to the app on failure rather than returning a raw 500 JSON
     try {
-      const { searchParams } = new URL(request.url);
       const url = new URL("/home", request.url);
       url.searchParams.set("error", "checkout_failed");
       return NextResponse.redirect(url);
@@ -109,4 +93,5 @@ export async function GET(request: NextRequest) {
       );
     }
   }
-}
+});
+

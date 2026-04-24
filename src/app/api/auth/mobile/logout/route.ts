@@ -5,14 +5,24 @@ import { withProtectedRoute } from "@/backend/middleware/jwtAuth";
 export const POST = withProtectedRoute(async (request: NextRequest) => {
   try {
     const userId = request.user!.id;
+    const deviceId = request.user!.deviceId;
+
     if (!userId) {
       return ApiResponse.error("Unauthorized", 401).toResponse();
     }
 
-    await prisma.user.update({
-      where: { id: userId },
-      data: { tokenVersion: { increment: 1 } },
-    });
+    // Soft-delete only this specific device session (not all sessions)
+    if (deviceId) {
+      await prisma.userDevice.update({
+        where: {
+          userId_deviceId: {
+            userId,
+            deviceId,
+          },
+        },
+        data: { deletedAt: new Date() },
+      });
+    }
 
     return ApiResponse.success({
       message: "Logged out successfully",

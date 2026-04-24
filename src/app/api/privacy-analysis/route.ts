@@ -43,10 +43,15 @@ export const POST = withProtectedRoute(async (request: NextRequest) => {
       return ApiResponse.error("At least one message is required", 400).toResponse();
     }
 
-    // Consume 8 credits for comprehensive analysis
-    const creditConsumption = await consumeUserCredits(authenticatedUserId, CreditType.ANALYSIS, 8);
+    // Consume 8 credits for comprehensive analysis — use advisory lock 
+    // to prevent race conditions from concurrent requests
+    const creditResult = await prisma.$transaction(async (tx) => {
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${authenticatedUserId}))`;
+      const consumed = await consumeUserCredits(authenticatedUserId, CreditType.ANALYSIS, 8, tx);
+      return consumed;
+    });
 
-    if (creditConsumption) {
+    if (creditResult) {
       creditsConsumed = true;
     } else {
       return ApiResponse.error("Insufficient credits", 402).toResponse();
@@ -183,6 +188,6 @@ export const POST = withProtectedRoute(async (request: NextRequest) => {
       await refundUserCredits(authenticatedUserId, CreditType.ANALYSIS, 8);
     }
 
-    return ApiResponse.error(`Failed to process privacy analysis request, ${error}`, 500).toResponse();
+    return ApiResponse.error("Internal server error", 500).toResponse();
   }
 });

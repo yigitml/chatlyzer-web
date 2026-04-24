@@ -83,7 +83,7 @@ export const useCreditStore = create<CreditStore>((set) => {
         console.error("User not authenticated");
         return;
       }
-      const url = getCheckoutUrl(user.id, user.email);
+      const url = getCheckoutUrl();
       window.location.href = url;
     },
   };

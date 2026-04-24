@@ -195,11 +195,11 @@ export class NetworkService {
 /**
  * Build the checkout URL for purchasing credits.
  * Redirects the user to the Polar checkout via our API route.
- * Product ID is determined server-side by polarConfig.
+ * The server uses the authenticated user's session to determine
+ * the customer email and userId — no query params needed.
  */
-export function getCheckoutUrl(userId: string, userEmail: string): string {
-  const metadata = encodeURIComponent(JSON.stringify({ userId }));
-  return `/api/checkout?customerEmail=${encodeURIComponent(userEmail)}&metadata=${metadata}`;
+export function getCheckoutUrl(): string {
+  return `/api/checkout`;
 }
 
 export const createNetworkService = (

@@ -3,8 +3,9 @@ import jwt from "jsonwebtoken";
 import prisma from "@/backend/lib/prisma";
 import { ApiResponse } from "@/shared/types/api/apiResponse";
 import type { AuthWebPostRequest } from "@/shared/types/api/apiRequest";
+import { withAuthRateLimiter } from "@/backend/middleware/rateLimiter";
 
-export async function POST(request: NextRequest) {
+export const POST = withAuthRateLimiter(async (request: NextRequest) => {
   try {
     const data: AuthWebPostRequest = await request.json();
     const { accessToken, sessionId } = data;
@@ -121,25 +122,29 @@ export async function POST(request: NextRequest) {
       { expiresIn: "30d" },
     );
 
-    return NextResponse.json(
-      ApiResponse.success({
-        token: jwtToken,
-        expiresAt: Math.floor(Date.now() / 1000) + 7 * 24 * 60 * 60,
-        user: {
-          id: user.id,
-          email: user.email,
-          name: user.name,
-          avatarUrl: user.image,
-        },
-      }),
-      {
-        headers: {
-          "Set-Cookie": `refreshToken=${refreshToken}; HttpOnly; Path=/api/auth/web/refresh; Secure; SameSite=Strict`,
-        },
-      },
+    const accessTokenMaxAge = 7 * 24 * 60 * 60; // 7 days in seconds
+    const isProduction = process.env.NODE_ENV === "production";
+    const securePart = isProduction ? "; Secure" : "";
+
+    const response = ApiResponse.success({
+      token: jwtToken,
+      expiresAt: Math.floor(Date.now() / 1000) + accessTokenMaxAge,
+      user: user,
+    }).toResponse();
+
+    response.headers.append(
+      "Set-Cookie",
+      `accessToken=${jwtToken}; HttpOnly; Path=/; Max-Age=${accessTokenMaxAge}${securePart}; SameSite=Strict`
     );
-  } catch (error: unknown) {
-    console.error("Web auth error:", error);
-    return NextResponse.json(ApiResponse.error("Authentication failed", 500));
+    response.headers.append(
+      "Set-Cookie",
+      `refreshToken=${refreshToken}; HttpOnly; Path=/api/auth/web/refresh${securePart}; SameSite=Strict`
+    );
+
+    return response;
+  } catch (error: any) {
+    console.error("Web auth error:", error?.message || error);
+    if (error?.code) console.error("Prisma error code:", error.code, "meta:", error?.meta);
+    return ApiResponse.error("Authentication failed", 500).toResponse();
   }
-}
+});

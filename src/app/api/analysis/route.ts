@@ -86,6 +86,14 @@ export const POST = withProtectedRoute(async (request: NextRequest) => {
    const authenticatedUserId = request.user!.id;
    const data: AnalysisPostRequest = await request.json();
 
+    // Verify the authenticated user owns this chat (prevents IDOR)
+    const chat = await prisma.chat.findFirst({
+      where: { id: data.chatId, userId: authenticatedUserId, deletedAt: null },
+    });
+    if (!chat) {
+      return ApiResponse.error("Chat not found or unauthorized", 404).toResponse();
+    }
+
     // Start transaction with default isolation level (ReadCommitted)
     const placeholderAnalyses = await prisma.$transaction(async (tx) => {
       // Acquire advisory lock for this chat ID to prevent concurrent analysis creation
@@ -217,7 +225,7 @@ export const POST = withProtectedRoute(async (request: NextRequest) => {
     if (error.message === "Analyses already exist for this chat" || error.message === "Analysis is already in progress for this chat") {
       return ApiResponse.error(error.message, 400).toResponse();
     }
-    return ApiResponse.error(`Failed to process request: ${error.message}`, 500).toResponse();
+    return ApiResponse.error("Internal server error", 500).toResponse();
   }
 });
 

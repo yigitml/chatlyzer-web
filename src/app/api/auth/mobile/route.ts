@@ -5,8 +5,9 @@ import prisma from "@/backend/lib/prisma";
 import { ApiResponse } from "@/shared/types/api/apiResponse";
 import type { AuthMobilePostRequest } from "@/shared/types/api/apiRequest";
 import { verifyGoogleIdToken } from "@/backend/lib/verifyGoogleIdToken";
+import { withAuthRateLimiter } from "@/backend/middleware/rateLimiter";
 
-export async function POST(request: NextRequest) {
+export const POST = withAuthRateLimiter(async (request: NextRequest) => {
   try {
     const data: AuthMobilePostRequest = await request.json();
     const { accessToken, deviceId } = data;
@@ -113,12 +114,7 @@ export async function POST(request: NextRequest) {
     return ApiResponse.success({
       token: jwtToken,
       expiresAt: Math.floor(Date.now() / 1000) + 30 * 24 * 60 * 60,
-      user: {
-        id: user.id,
-        email: user.email,
-        name: user.name,
-        avatarUrl: user.image,
-      },
+      user: user,
     }).toResponse({
       "Set-Cookie": `refreshToken=${refreshToken}; HttpOnly; Path=/api/auth/mobile/refresh; Secure; SameSite=Strict`,
     });
@@ -126,4 +122,4 @@ export async function POST(request: NextRequest) {
     console.error("Mobile auth error:", error);
     return ApiResponse.error("Authentication failed", 500).toResponse();
   }
-}
+});

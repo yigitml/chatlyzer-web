@@ -165,7 +165,7 @@ export async function analyzeChat<T extends ChatlyzerSchemaType>(
     const systemPrompt = createSystemPrompt(analysisType, detectedLanguage);
     const content = `Analyze this chat and provide a complete ${analysisType} analysis following the exact format in your instructions:\nChat: ${JSON.stringify(minimalChat)}`;
 
-    console.log(content);
+    console.log(`[analyzeChat] Analyzing chat ${chatId}, content length: ${content.length} chars`);
     const response = await openai.chat.completions.create({
       model: MODELS.MAIN,
       messages: [

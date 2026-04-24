@@ -74,8 +74,6 @@ export function removeStorageItem(key: string): boolean {
 }
 
 export const LOCAL_STORAGE_KEYS = {
-  ACCESS_TOKEN: "accessToken",
-  EXPIRES_AT: "expiresAt",
   SELECTED_CHAT_ID: "selectedChatId",
   SIDEBAR_WIDTH: "sidebarWidth",
   SIDEBAR_COLLAPSED: "sidebarCollapsed",

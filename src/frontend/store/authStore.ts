@@ -24,9 +24,7 @@ interface AuthState {
 
 export const useAuthStore = create<AuthState>((set, get) => {
   const getCurrentToken = () => {
-    const token = get().accessToken;
-    if (token) return token;
-    return localStorage.getItem(LOCAL_STORAGE_KEYS.ACCESS_TOKEN);
+    return get().accessToken;
   };
 
   const sharedNetworkService = createNetworkService(getCurrentToken);
@@ -42,9 +40,8 @@ export const useAuthStore = create<AuthState>((set, get) => {
       try {
         const response = await sharedNetworkService.login(data);
         
-        localStorage.setItem(LOCAL_STORAGE_KEYS.ACCESS_TOKEN, response.token);
-        localStorage.setItem(LOCAL_STORAGE_KEYS.EXPIRES_AT, response.expiresAt);
-        
+        // Token is now set as an HttpOnly cookie by the server.
+        // Keep in-memory copy for Bearer header backward compat.
         set({
           user: response.user,
           accessToken: response.token,
@@ -59,28 +56,19 @@ export const useAuthStore = create<AuthState>((set, get) => {
     },
 
     initialize: async () => {
-      const token = localStorage.getItem(LOCAL_STORAGE_KEYS.ACCESS_TOKEN);
-      
-      let userNetworkService = null;
-      
-      if (token) {
-        set({ accessToken: token });
+      // Try to validate the session using the HttpOnly cookie.
+      // The cookie is sent automatically with credentials: 'include'.
+      try {
+        const userData = await sharedNetworkService.fetchUser();
         
-        try {
-          userNetworkService = createNetworkService(() => token);
-          
-          const userData = await userNetworkService.fetchUser();
-          
-          set({
-            user: userData,
-            isAuthenticated: true,
-            networkService: userNetworkService,
-          });
-        } catch (error) {
-          console.error('AUTH STORE: Error validating token:', error);
-          // TODO: Clear invalid token
-          // localStorage.removeItem(LOCAL_STORAGE_KEYS.ACCESS_TOKEN);
-        }
+        set({
+          user: userData,
+          isAuthenticated: true,
+          networkService: sharedNetworkService,
+        });
+      } catch (error) {
+        // No valid session cookie — user is not authenticated
+        console.debug('AUTH STORE: No valid session, user not authenticated');
       }
       
       set({ isInitialized: true });
@@ -133,10 +121,8 @@ export const useAuthStore = create<AuthState>((set, get) => {
       if (networkService) {
         await networkService.logout();
       }
-      // Clear persisted auth/session data from storage
+      // Clear any remaining localStorage data (non-auth preferences)
       try {
-        localStorage.removeItem(LOCAL_STORAGE_KEYS.ACCESS_TOKEN);
-        localStorage.removeItem(LOCAL_STORAGE_KEYS.EXPIRES_AT);
         localStorage.removeItem(LOCAL_STORAGE_KEYS.SELECTED_CHAT_ID);
       } catch (e) {
         console.error("Failed to clear localStorage on logout", e);

@@ -2,8 +2,9 @@ import { NextRequest } from "next/server";
 import jwt from "jsonwebtoken";
 import prisma from "@/backend/lib/prisma";
 import { ApiResponse } from "@/shared/types/api/apiResponse";
+import { withAuthRateLimiter } from "@/backend/middleware/rateLimiter";
 
-export async function POST(request: NextRequest) {
+export const POST = withAuthRateLimiter(async (request: NextRequest) => {
   try {
     const refreshToken = request.cookies.get("refreshToken")?.value;
     if (!refreshToken) {
@@ -12,7 +13,7 @@ export async function POST(request: NextRequest) {
 
     let decoded: any;
     try {
-      decoded = jwt.verify(refreshToken, process.env.REFRESH_TOKEN_SECRET!);
+      decoded = jwt.verify(refreshToken, process.env.REFRESH_TOKEN_SECRET!, { algorithms: ['HS256'] });
     } catch {
       return ApiResponse.error("Invalid refresh token", 401).toResponse();
     }
@@ -69,12 +70,18 @@ export async function POST(request: NextRequest) {
       { expiresIn: "7d" },
     );
 
+    const accessTokenMaxAge = 7 * 24 * 60 * 60; // 7 days in seconds
+    const isProduction = process.env.NODE_ENV === "production";
+    const securePart = isProduction ? "; Secure" : "";
+
     return ApiResponse.success({
       token: newJwtToken,
-      expiresAt: Math.floor(Date.now() / 1000) + 7 * 24 * 60 * 60,
-    }).toResponse();
+      expiresAt: Math.floor(Date.now() / 1000) + accessTokenMaxAge,
+    }).toResponse({
+      "Set-Cookie": `accessToken=${newJwtToken}; HttpOnly; Path=/; Max-Age=${accessTokenMaxAge}${securePart}; SameSite=Strict`,
+    });
   } catch (error: unknown) {
     console.error("Refresh token error:", error);
     return ApiResponse.error("Token refresh failed", 500).toResponse();
   }
-}
+});

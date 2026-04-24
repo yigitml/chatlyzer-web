@@ -12,7 +12,7 @@ export async function POST(request: NextRequest) {
 
     let decoded: any;
     try {
-      decoded = jwt.verify(refreshToken, process.env.REFRESH_TOKEN_SECRET!);
+      decoded = jwt.verify(refreshToken, process.env.REFRESH_TOKEN_SECRET!, { algorithms: ['HS256'] });
     } catch {
       return ApiResponse.error("Invalid refresh token", 401).toResponse();
     }

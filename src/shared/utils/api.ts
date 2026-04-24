@@ -90,6 +90,7 @@ export const createApiClient = (getToken: () => string | null) => {
       const response = await fetch(url, {
         method: "GET",
         headers: getDefaultHeaders(),
+        credentials: "include",
       });
       return handleResponse(response);
     },
@@ -101,6 +102,7 @@ export const createApiClient = (getToken: () => string | null) => {
         method: "POST",
         headers: getDefaultHeaders(isFileUpload),
         body: isFileUpload ? data : data ? JSON.stringify(data) : undefined,
+        credentials: "include",
       });
       return handleResponse(response);
     },
@@ -111,6 +113,7 @@ export const createApiClient = (getToken: () => string | null) => {
         method: "PUT",
         headers: getDefaultHeaders(),
         body: data ? JSON.stringify(data) : undefined,
+        credentials: "include",
       });
       return handleResponse(response);
     },
@@ -121,6 +124,7 @@ export const createApiClient = (getToken: () => string | null) => {
         method: "DELETE",
         headers: getDefaultHeaders(),
         body: data ? JSON.stringify(data) : undefined,
+        credentials: "include",
       });
       return handleResponse(response);
     },

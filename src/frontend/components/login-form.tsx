@@ -1,6 +1,7 @@
 "use client"
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/frontend/components/ui/card"
+import { Button } from "@/frontend/components/ui/button"
 
 interface LoginFormProps {
   onSignIn: () => void;
@@ -27,8 +28,9 @@ export function LoginForm({
   if (compact) {
     return (
       <div className="w-full max-w-sm mx-auto">
-        <button
-          className="w-full flex items-center justify-center bg-black/60 border-[1.5px] border-blue-500 text-white hover:border-blue-400 transition-all duration-200 h-12 rounded-lg shadow-sm"
+        <Button
+          size="lg"
+          className="w-full h-12"
           onClick={handleSignIn}
           disabled={isLoading}
         >
@@ -50,7 +52,7 @@ export function LoginForm({
               <span className="text-base font-medium">Redirecting...</span>
             </div>
           </div>
-        </button>
+        </Button>
       </div>
     )
   }
@@ -70,8 +72,9 @@ export function LoginForm({
           </CardDescription>
         </CardHeader>
         <CardContent className="pt-4">
-          <button
-            className="w-full flex items-center justify-center bg-black border-[1.5px] border-blue-500 text-white hover:bg-black-900 hover:border-blue-400 transition-all duration-200 h-16 rounded-lg shadow-sm"
+          <Button
+            size="lg"
+            className="w-full h-16 text-lg"
             onClick={handleSignIn}
             disabled={isLoading}
           >
@@ -105,7 +108,7 @@ export function LoginForm({
                 <span className="text-lg font-medium">Redirecting...</span>
               </div>
             </div>
-          </button>
+          </Button>
         </CardContent>
       </Card>
     </div>

@@ -30,17 +30,13 @@ export default function Home() {
           <Link href="#features" className="hover:line-through transition-all">Features</Link>
           <Link href="#analyses" className="hover:line-through transition-all">Analyses</Link>
           <Link href="/contact" className="hover:line-through transition-all">Contact</Link>
-          <Link href="#" className="hover:line-through transition-all flex items-center gap-2">
-            Blog
-            <span className="bg-primary text-primary-foreground px-2 py-0.5 text-xs inline-block shadow-[2px_2px_0px_0px_hsl(var(--primary))]">NEW</span>
-          </Link>
         </nav>
 
-        <div className="flex items-center gap-4 font-mono uppercase font-bold text-sm">
+        <div className="flex items-center gap-2 sm:gap-4 font-mono uppercase font-bold text-xs sm:text-sm">
           <Link href="/auth/sign-in" className="hover:line-through transition-all hidden sm:block">Login</Link>
           <Link
             href="/auth/sign-in"
-            className="border-2 border-primary bg-primary text-primary-foreground px-6 py-2 hover:-translate-x-1 hover:-translate-y-1 hover:shadow-[4px_4px_0px_0px_hsl(var(--primary))] active:translate-x-0 active:translate-y-0 active:shadow-none transition-all"
+            className="border-2 border-primary bg-primary text-primary-foreground px-3 sm:px-6 py-1.5 sm:py-2 hover:-translate-x-1 hover:-translate-y-1 hover:shadow-[4px_4px_0px_0px_hsl(var(--primary))] active:translate-x-0 active:translate-y-0 active:shadow-none transition-all whitespace-nowrap min-w-0"
           >
             Start Vibing //
           </Link>
@@ -69,19 +65,12 @@ export default function Home() {
         </p>
 
         {/* CTA Buttons */}
-        <div className="flex flex-col sm:flex-row items-stretch justify-center gap-6 mb-32 w-full max-w-2xl mx-auto">
+        <div className="flex flex-col sm:flex-row items-stretch justify-center gap-6 mb-32 w-full max-w-md mx-auto">
           <Link
             href="/auth/sign-in"
-            className="flex-1 text-center border-4 border-primary bg-primary text-primary-foreground font-mono font-black uppercase tracking-widest text-lg px-8 py-5 hover:-translate-x-1 hover:-translate-y-1 hover:shadow-[8px_8px_0px_0px_hsl(var(--primary))] active:translate-x-0 active:translate-y-0 active:shadow-none transition-all"
+            className="flex-1 w-full text-center border-4 border-primary bg-primary text-primary-foreground font-mono font-black uppercase tracking-widest text-lg px-8 py-5 hover:-translate-x-1 hover:-translate-y-1 hover:shadow-[8px_8px_0px_0px_hsl(var(--primary))] active:translate-x-0 active:translate-y-0 active:shadow-none transition-all"
           >
             Expose My Texts //
-          </Link>
-
-          <Link
-            href="#"
-            className="flex-1 text-center border-4 border-primary bg-card text-card-foreground font-mono font-black uppercase tracking-widest text-lg px-8 py-5 hover:-translate-x-1 hover:-translate-y-1 hover:shadow-[8px_8px_0px_0px_hsl(var(--primary))] active:translate-x-0 active:translate-y-0 active:shadow-none transition-all"
-          >
-            Watch Demo_
           </Link>
         </div>
 
