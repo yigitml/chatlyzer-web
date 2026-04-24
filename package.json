@@ -38,7 +38,6 @@
     "pg": "^8.16.3",
     "posthog-js": "^1.306.1",
     "posthog-node": "^5.17.2",
-    "prisma": "^7.1.0",
     "rate-limiter-flexible": "^9.0.1",
     "react": "^19.2.3",
     "react-dom": "^19.2.3",
@@ -64,6 +63,7 @@
     "eslint": "^9.39.2",
     "eslint-config-next": "^16.0.10",
     "prettier": "^3.7.4",
+    "prisma": "^7.1.0",
     "typescript": "^5.9.3"
   }
 }
