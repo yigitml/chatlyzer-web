@@ -21,7 +21,7 @@ jobs:
 
       - name: Create Environment File
         # FIX 2: Named exactly .env so Prisma's postinstall script can find DATABASE_URL
-        run: echo "${{ secrets.PRODUCTION_ENV_FILE }}" > .env
+        run: echo "${{ secrets.PROD_ENV_FILE }}" > .env
 
       - name: Install & Build
         run: |
