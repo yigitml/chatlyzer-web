@@ -3,13 +3,44 @@ name: Remote Update (CD)
 on:
   push:
     branches:
-      - main  # Make sure this matches your default branch name
+      - main
 
 jobs:
-  deploy:
+  build-and-deploy:
     runs-on: ubuntu-latest
     steps:
-      - name: Deploying to Server
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20' # Match your project version
+          cache: 'npm'       # Caches dependencies to speed up future builds
+
+      - name: Create Environment File
+        # Pulls your .env file from GitHub Secrets so Next.js can bake in public variables
+        run: echo "${{ secrets.PRODUCTION_ENV_FILE }}" > .env.production
+
+      - name: Install & Build
+        run: |
+          npm ci
+          npx prisma generate
+          npm run build
+
+      - name: Copy built files to server
+        uses: appleboy/scp-action@master
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: 2222
+          # Transfers only the compiled code and required files
+          source: ".next/,public/,package.json,package-lock.json,prisma/" 
+          target: "/home/prod/chatlyzer-web"
+          strip_components: 1
+
+      - name: Update Server and Restart
         uses: appleboy/ssh-action@master
         with:
           host: ${{ secrets.SERVER_HOST }}
@@ -18,10 +49,13 @@ jobs:
           port: 2222
           script: |
             cd /home/prod/chatlyzer-web
-            git fetch --all
-            git reset --hard origin/main
-            npm ci
+            
+            # Install only production dependencies (skips devDependencies)
+            npm ci --omit=dev
+            
+            # Generate Prisma client for the server's specific OS architecture
             npx prisma generate
             npx prisma migrate deploy
-            npm run build
+            
+            # Standard restart since zero-downtime is not required
             pm2 restart 0
