@@ -17,7 +17,7 @@ jobs:
         with:
           # FIX 1: Upgraded to Node 22 to satisfy Prisma requirements
           node-version: '22' 
-          cache: 'npm'
+          #cache: 'npm'
 
       - name: Create Environment File
         # FIX 2: Named exactly .env so Prisma's postinstall script can find DATABASE_URL
