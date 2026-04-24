@@ -20,7 +20,7 @@ jobs:
 
       - name: Create Environment File
         # Pulls your .env file from GitHub Secrets so Next.js can bake in public variables
-        run: echo "${{ secrets.PRODUCTION_ENV_FILE }}" > .env.production
+        run: echo "${{ secrets.PROD_ENV_FILE }}" > .env.production
 
       - name: Install & Build
         run: |
