@@ -15,17 +15,19 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20' # Match your project version
-          cache: 'npm'       # Caches dependencies to speed up future builds
+          # FIX 1: Upgraded to Node 22 to satisfy Prisma requirements
+          node-version: '22' 
+          cache: 'npm'
 
       - name: Create Environment File
-        # Pulls your .env file from GitHub Secrets so Next.js can bake in public variables
-        run: echo "${{ secrets.PROD_ENV_FILE }}" > .env.production
+        # FIX 2: Named exactly .env so Prisma's postinstall script can find DATABASE_URL
+        run: echo "${{ secrets.PRODUCTION_ENV_FILE }}" > .env
 
       - name: Install & Build
         run: |
           npm ci
-          npx prisma generate
+          # Note: Since your package.json runs prisma generate automatically 
+          # during postinstall, we actually don't need a separate step for it here!
           npm run build
 
       - name: Copy built files to server
@@ -35,7 +37,6 @@ jobs:
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           port: 2222
-          # Transfers only the compiled code and required files
           source: ".next/,public/,package.json,package-lock.json,prisma/" 
           target: "/home/prod/chatlyzer-web"
           strip_components: 1
@@ -50,12 +51,11 @@ jobs:
           script: |
             cd /home/prod/chatlyzer-web
             
-            # Install only production dependencies (skips devDependencies)
+            # Install production dependencies
             npm ci --omit=dev
             
-            # Generate Prisma client for the server's specific OS architecture
+            # Generate Prisma client for the server's OS
             npx prisma generate
             npx prisma migrate deploy
             
-            # Standard restart since zero-downtime is not required
             pm2 restart 0
