@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { UserCredit, Subscription } from "../../generated/client/browser";
+import { UserCredit, Subscription } from "../../generated/client";
 import { createNetworkService, getCheckoutUrl } from "@/shared/utils/network";
 import { useAuthStore } from "./authStore";
 

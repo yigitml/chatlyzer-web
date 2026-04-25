@@ -5,7 +5,7 @@ import {
   Message,
   Chat,
   Analysis,
-} from "../../generated/client/browser";
+} from "../../generated/client";
 
 import {
   AuthWebPostRequest,

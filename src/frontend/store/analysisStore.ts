@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { Analysis, Chat, AnalysisStatus } from "../../generated/client/browser";
+import { Analysis, Chat, AnalysisStatus } from "../../generated/client";
 import { createNetworkService } from "@/shared/utils/network";
 import { useAuthStore } from "./authStore";
 import { 

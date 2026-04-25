@@ -1,4 +1,4 @@
-import { Message } from "../../../generated/client/browser";
+import { Message } from "../../../generated/client";
 
 export interface AuthWebPostRequest {
   accessToken: string;

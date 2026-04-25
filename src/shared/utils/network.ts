@@ -29,7 +29,7 @@ import {
   Chat,
   Message,
   Analysis,
-} from "../../generated/client/browser";
+} from "../../generated/client";
 
 export class NetworkService {
   private api: ApiClient;
