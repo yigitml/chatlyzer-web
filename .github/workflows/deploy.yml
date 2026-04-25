@@ -15,19 +15,24 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          # FIX 1: Upgraded to Node 22 to satisfy Prisma requirements
-          node-version: '22' 
-          #cache: 'npm'
+          node-version: '22'
+          cache: 'npm' # Safe to turn this back on now!
+
+      - name: Next.js Build Cache
+        uses: actions/cache@v4
+        with:
+          # Tells GitHub exactly which folder to save
+          path: .next/cache
+          # Creates a unique fingerprint based on your dependencies and source files
+          key: ${{ runner.os }}-nextjs-${{ hashFiles('**/package-lock.json') }}-${{ hashFiles('**/*.[jt]s', '**/*.[jt]sx') }}
+          restore-keys: |
+            ${{ runner.os }}-nextjs-${{ hashFiles('**/package-lock.json') }}-
 
       - name: Create Environment File
-        # FIX 2: Named exactly .env so Prisma's postinstall script can find DATABASE_URL
         run: echo "${{ secrets.PROD_ENV_FILE }}" > .env
 
       - name: Install & Build
         run: |
-          # npm ci
-          # Note: Since your package.json runs prisma generate automatically 
-          # during postinstall, we actually don't need a separate step for it here!
           npm install
           npm run build
 
