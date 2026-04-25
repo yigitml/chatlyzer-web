@@ -89,7 +89,7 @@ export default function Home() {
               { id: '04', icon: Ghost, color: 'text-blue-500', title: 'Ghost Risk', desc: 'Predicts when you\'re about to get left on read', bg: 'bg-blue-500/10 border-blue-500' },
               { id: '05', icon: Star, color: 'text-yellow-500', title: 'Main Character', desc: 'See who\'s serving drama and personality', bg: 'bg-yellow-500/10 border-yellow-500' },
               { id: '06', icon: Brain, color: 'text-purple-500', title: 'Emotional Depth', desc: 'Rates how real your conversations actually get', bg: 'bg-purple-500/10 border-purple-500' },
-              { id: '07', icon: Zap, color: 'text-cyan-500', title: 'Vibe Check', desc: 'Overall vibe and mood frequency analysis', bg: 'bg-cyan-500/10 border-cyan-500' },
+              { id: '07', icon: Zap, color: 'text-cyan-500', title: 'Vibe Check', desc: 'Overall energy and mood frequency analysis', bg: 'bg-cyan-500/10 border-cyan-500' },
               { id: '08', icon: MessageCircle, color: 'text-orange-500', title: 'Chat Stats', desc: 'Who texts more, emoji usage, metric tracking', bg: 'bg-orange-500/10 border-orange-500' },
             ].map((feature, i) => (
               <div key={i} className={`bg-card border-4 border-primary p-6 hover:-translate-y-2 hover:-translate-x-2 hover:shadow-[10px_10px_0px_0px_hsl(var(--primary))] transition-all flex flex-col items-start group relative overflow-hidden bg-gradient-to-br from-card to-${feature.bg.split(' ')[0]} ${[1, 4, 6].includes(i) ? 'rotate-1 hover:rotate-0' : ''} ${[2, 5].includes(i) ? '-rotate-1 hover:rotate-0' : ''}`}>
