@@ -43,10 +43,10 @@ jobs:
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           port: 2222
-          # Added src/generated/ so the server gets your custom Prisma client!
-          # Also removed strip_components: 1 as it can sometimes swallow root files like package.json
-          source: ".next/,public/,package.json,package-lock.json,prisma/,src/generated/" 
-          target: "/home/prod/chatlyzer-web"
+          # 1. Added .env to the transfer list
+          source: ".next/,public/,package.json,package-lock.json,prisma/,src/generated/,.env" 
+          # 2. Upload to a STAGING folder, not the live one!
+          target: "/home/prod/chatlyzer-web-update" 
 
       - name: Update Server and Restart
         uses: appleboy/ssh-action@master
@@ -56,11 +56,16 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           port: 2222
           script: |
-            cd /home/prod/chatlyzer-web
-            
+            # 1. Go into the staging folder and prep the new app
+            cd /home/prod/chatlyzer-web-update
             npm ci --omit=dev
-            
-            # We removed 'npx prisma generate' because GitHub already did it!
             npx prisma migrate deploy
             
+            # 2. The Atomic Swap
+            cd /home/prod
+            rm -rf chatlyzer-web-backup               # Delete the old backup if it exists
+            mv chatlyzer-web chatlyzer-web-backup     # Move the currently live site to backup
+            mv chatlyzer-web-update chatlyzer-web     # Instantly make the newly prepped app live
+            
+            # 3. Restart PM2
             pm2 restart 0
