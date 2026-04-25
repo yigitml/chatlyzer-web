@@ -38,9 +38,10 @@ jobs:
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           port: 2222
-          source: ".next/,public/,package.json,package-lock.json,prisma/" 
+          # Added src/generated/ so the server gets your custom Prisma client!
+          # Also removed strip_components: 1 as it can sometimes swallow root files like package.json
+          source: ".next/,public/,package.json,package-lock.json,prisma/,src/generated/" 
           target: "/home/prod/chatlyzer-web"
-          strip_components: 1
 
       - name: Update Server and Restart
         uses: appleboy/ssh-action@master
@@ -52,11 +53,9 @@ jobs:
           script: |
             cd /home/prod/chatlyzer-web
             
-            # Install production dependencies
             npm ci --omit=dev
             
-            # Generate Prisma client for the server's OS
-            npx prisma generate
+            # We removed 'npx prisma generate' because GitHub already did it!
             npx prisma migrate deploy
             
             pm2 restart 0
