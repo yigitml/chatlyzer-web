@@ -27,7 +27,10 @@ export const GET = withProtectedRoute(async (request: NextRequest) => {
     // Use authenticated user's data instead of user-supplied params
     const metadata = { userId: authenticatedUserId };
 
-    const successUrl = mobileRedirect || `${polarConfig.webhookDeliveryUrl}/checkout/success`;
+    let successUrl = `${polarConfig.webhookDeliveryUrl}/checkout/success`;
+    if (mobileRedirect) {
+      successUrl += `?mobileRedirect=${encodeURIComponent(mobileRedirect)}`;
+    }
 
     // Build the checkout creation request body
     const body: Record<string, any> = {
@@ -51,6 +54,10 @@ export const GET = withProtectedRoute(async (request: NextRequest) => {
       const errorData = await response.text();
       console.error("[Checkout] Polar API error:", response.status, errorData);
       
+      if (returnJson) {
+        return NextResponse.json({ error: "polar_checkout_failed", details: errorData }, { status: response.status });
+      }
+
       const url = new URL("/home", request.url);
       url.searchParams.set("error", "polar_checkout_failed");
       return NextResponse.redirect(url);
@@ -78,6 +85,10 @@ export const GET = withProtectedRoute(async (request: NextRequest) => {
     // or Next.js will catch it here and return a 500/502 instead of redirecting.
     if (error instanceof Error && error.message === "NEXT_REDIRECT") {
       throw error;
+    }
+
+    if (returnJson) {
+      return NextResponse.json({ error: "checkout_failed" }, { status: 500 });
     }
 
     // Try to safely redirect the user back to the app on failure rather than returning a raw 500 JSON

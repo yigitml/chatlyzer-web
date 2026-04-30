@@ -85,7 +85,7 @@ export default function Home() {
             {[
               { id: '01', icon: AlertTriangle, color: 'text-destructive', title: 'Red Flag', desc: 'Spots toxic behavior before you fall for them', bg: 'bg-destructive/10 border-destructive' },
               { id: '02', icon: CheckCircle, color: 'text-green-500', title: 'Green Flag', desc: 'When they\'re actually worth your time (rare)', bg: 'bg-green-500/10 border-green-500' },
-              { id: '03', icon: Heart, color: 'text-pink-500', title: 'Simp-O-Meter', desc: 'Measures exactly how down bad you really are', bg: 'bg-pink-500/10 border-pink-500' },
+              { id: '03', icon: Heart, color: 'text-pink-500', title: 'BEN SENİ ASLINDA HİÇ SEVMEDİM', desc: 'Measures exactly how down bad you really are', bg: 'bg-pink-500/10 border-pink-500' },
               { id: '04', icon: Ghost, color: 'text-blue-500', title: 'Ghost Risk', desc: 'Predicts when you\'re about to get left on read', bg: 'bg-blue-500/10 border-blue-500' },
               { id: '05', icon: Star, color: 'text-yellow-500', title: 'Main Character', desc: 'See who\'s serving drama and personality', bg: 'bg-yellow-500/10 border-yellow-500' },
               { id: '06', icon: Brain, color: 'text-purple-500', title: 'Emotional Depth', desc: 'Rates how real your conversations actually get', bg: 'bg-purple-500/10 border-purple-500' },
