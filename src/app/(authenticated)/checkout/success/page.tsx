@@ -15,18 +15,6 @@ export default function CheckoutSuccessPage() {
   const [status, setStatus] = useState<CheckoutStatus>("loading");
   const [retryCount, setRetryCount] = useState(0);
 
-  // Redirect back to the mobile app if a mobileRedirect is provided.
-  // This closes the Expo WebBrowser on the mobile app.
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      const params = new URLSearchParams(window.location.search);
-      const mobileRedirect = params.get("mobileRedirect");
-      if (mobileRedirect) {
-        window.location.href = mobileRedirect;
-      }
-    }
-  }, []);
-
   const totalCredits = credits.reduce((sum, credit) => sum + credit.amount, 0);
 
   // Verify that credits were actually granted by polling
