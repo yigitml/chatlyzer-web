@@ -2,6 +2,19 @@ import { PrismaClient } from "../../generated/client";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { Pool } from "pg";
 
+const softDeleteModels = new Set<string>([
+  "User",
+  "UserSession",
+  "UserDevice",
+  "Subscription",
+  "UserCredit",
+  "Order",
+  "File",
+  "Chat",
+  "Message",
+  "Analysis",
+]);
+
 const prismaClientSingleton = () => {
   const connectionString = process.env.DATABASE_URL;
   const pool = new Pool({ connectionString });
@@ -10,23 +23,29 @@ const prismaClientSingleton = () => {
   const baseClient = new PrismaClient({ adapter });
 
   const extendedClient = baseClient.$extends({
-    name: 'softDelete',
+    name: "softDelete",
     query: {
       $allModels: {
-        async findMany({ args, query }) {
-          // Add deletedAt filter to exclude soft-deleted records
+        async findMany({ model, args, query }) {
+          // Add deletedAt filter only to models that actually have deletedAt.
+          // AppSetting is a runtime config table and intentionally has no deletedAt field.
+          if (!softDeleteModels.has(model)) {
+            return query(args);
+          }
+
           if (!args) {
             args = {};
           }
           if (!args.where) {
             args.where = {};
           }
-          
-          // Only add the filter if deletedAt is not already specified
-          if (!('deletedAt' in args.where)) {
-            args.where.deletedAt = null;
+
+          // Only add the filter if deletedAt is not already specified.
+          const where = args.where as Record<string, unknown>;
+          if (!("deletedAt" in where)) {
+            where.deletedAt = null;
           }
-          
+
           return query(args);
         },
       },
@@ -61,4 +80,5 @@ export const rawPrisma = prismaPair.baseClient as unknown as PrismaClient;
 
 export default prisma;
 
-if (process.env.NODE_ENV !== "production") globalForPrisma.prismaPair = prismaPair;
+if (process.env.NODE_ENV !== "production")
+  globalForPrisma.prismaPair = prismaPair;
