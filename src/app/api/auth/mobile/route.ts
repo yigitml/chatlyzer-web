@@ -73,11 +73,13 @@ export const POST = withAuthRateLimiter(async (request: NextRequest) => {
       },
       update: {
         lastLoginAt: new Date(),
+        deletedAt: null,
       },
       create: {
         userId: user.id,
         deviceId: deviceId,
         lastLoginAt: new Date(),
+        deletedAt: null,
       },
     });
 

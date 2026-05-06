@@ -12,7 +12,9 @@ export async function POST(request: NextRequest) {
 
     let decoded: any;
     try {
-      decoded = jwt.verify(refreshToken, process.env.REFRESH_TOKEN_SECRET!, { algorithms: ['HS256'] });
+      decoded = jwt.verify(refreshToken, process.env.REFRESH_TOKEN_SECRET!, {
+        algorithms: ["HS256"],
+      });
     } catch {
       return ApiResponse.error("Invalid refresh token", 401).toResponse();
     }
@@ -31,10 +33,10 @@ export async function POST(request: NextRequest) {
     }
 
     const device = user.devices.find(
-      (d: any) => d.deviceId === decoded.deviceId,
+      (d: any) => d.deviceId === decoded.deviceId && d.deletedAt === null,
     );
     if (!device) {
-      return ApiResponse.error("Device not found", 401).toResponse();
+      return ApiResponse.error("Device session revoked", 401).toResponse();
     }
 
     await prisma.userDevice.update({
