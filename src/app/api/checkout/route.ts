@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { polarConfig } from "@/backend/lib/polarConfig";
 import { withProtectedRoute } from "@/backend/middleware/jwtAuth";
+import { ApiResponse } from "@/shared/types/api/apiResponse";
 
 /**
  * Checkout route that creates a Polar checkout session directly via the API.
@@ -21,7 +22,7 @@ function createErrorResponse(
   status: number,
 ) {
   if (returnJson) {
-    return NextResponse.json({ error, message: error }, { status });
+    return ApiResponse.error(error, status).toResponse();
   }
 
   const url = new URL("/home", request.url);
@@ -82,7 +83,7 @@ export const GET = withProtectedRoute(async (request: NextRequest) => {
     // Return JSON or redirect to the Polar checkout URL
     if (checkout.url) {
       if (returnJson) {
-        return NextResponse.json({ url: checkout.url });
+        return ApiResponse.success({ url: checkout.url }).toResponse();
       }
       return NextResponse.redirect(checkout.url);
     }
