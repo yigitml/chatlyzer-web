@@ -1,15 +1,16 @@
 "use client";
 
-import { useEffect, useMemo } from "react";
+import { Suspense, useEffect, useMemo } from "react";
 import { useSearchParams } from "next/navigation";
 
 const DEFAULT_MOBILE_REDIRECT = "chatlyzer://checkout/success";
 
-export default function MobileCheckoutSuccessPage() {
+function MobileCheckoutSuccessContent() {
   const searchParams = useSearchParams();
 
   const redirectUrl = useMemo(() => {
-    const redirectTarget = searchParams.get("redirect") || DEFAULT_MOBILE_REDIRECT;
+    const redirectTarget =
+      searchParams.get("redirect") || DEFAULT_MOBILE_REDIRECT;
     const forwardedParams = new URLSearchParams(searchParams.toString());
     forwardedParams.delete("redirect");
 
@@ -28,7 +29,9 @@ export default function MobileCheckoutSuccessPage() {
   return (
     <main className="min-h-screen bg-black text-white flex items-center justify-center px-6">
       <div className="max-w-md text-center space-y-4">
-        <h1 className="text-3xl font-extrabold font-display">Returning to Chatlyzer</h1>
+        <h1 className="text-3xl font-extrabold font-display">
+          Returning to Chatlyzer
+        </h1>
         <p className="text-white/70">
           If the app does not open automatically, tap the button below.
         </p>
@@ -40,5 +43,13 @@ export default function MobileCheckoutSuccessPage() {
         </a>
       </div>
     </main>
+  );
+}
+
+export default function MobileCheckoutSuccessPage() {
+  return (
+    <Suspense fallback={null}>
+      <MobileCheckoutSuccessContent />
+    </Suspense>
   );
 }
