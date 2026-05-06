@@ -1,6 +1,7 @@
 import prisma, { rawPrisma } from "@/backend/lib/prisma";
 import { grantUserCredits } from "@/backend/lib/consumeUserCredits";
 import { CreditType } from "../../generated/client/client";
+import type { PolarMode } from "@/backend/lib/polarConfig";
 
 const CREDITS_PER_PURCHASE = 24;
 
@@ -8,7 +9,10 @@ const CREDITS_PER_PURCHASE = 24;
  * Resolve the user from the webhook payload.
  * Tries metadata.userId first, then falls back to customerEmail lookup.
  */
-async function resolveUser(metadata: Record<string, string> | undefined, customerEmail?: string) {
+async function resolveUser(
+  metadata: Record<string, string> | undefined,
+  customerEmail?: string,
+) {
   // Try to find by metadata.userId
   if (metadata?.userId) {
     const user = await prisma.user.findUnique({
@@ -28,7 +32,7 @@ async function resolveUser(metadata: Record<string, string> | undefined, custome
   return null;
 }
 
-export async function handleOrderPaid(payload: any) {
+export async function handleOrderPaid(payload: any, polarMode: PolarMode) {
   const { data } = payload;
   const metadata = data.metadata as Record<string, string> | undefined;
   const customerEmail = data.customer?.email;
@@ -38,6 +42,7 @@ export async function handleOrderPaid(payload: any) {
     productId: data.product?.id,
     metadata,
     customerEmail,
+    polarMode,
   });
 
   const user = await resolveUser(metadata, customerEmail);
@@ -47,11 +52,19 @@ export async function handleOrderPaid(payload: any) {
   }
 
   // Check for duplicate order processing (idempotency)
-  const existingOrder = await rawPrisma.order.findUnique({
-    where: { polarOrderId: data.id },
+  const existingOrder = await (rawPrisma as any).order.findUnique({
+    where: {
+      polarOrderId_polarMode: {
+        polarOrderId: data.id,
+        polarMode,
+      },
+    },
   });
   if (existingOrder) {
-    console.log("[Polar Webhook] Order already processed:", data.id);
+    console.log("[Polar Webhook] Order already processed:", {
+      orderId: data.id,
+      polarMode,
+    });
     return;
   }
 
@@ -59,9 +72,10 @@ export async function handleOrderPaid(payload: any) {
   await grantUserCredits(user.id, CreditType.ANALYSIS, CREDITS_PER_PURCHASE);
 
   // Create order record for audit trail
-  await rawPrisma.order.create({
+  await (rawPrisma as any).order.create({
     data: {
       polarOrderId: data.id,
+      polarMode,
       userId: user.id,
       productId: data.product?.id || "unknown",
       amount: data.amount || 0,
@@ -71,46 +85,76 @@ export async function handleOrderPaid(payload: any) {
     },
   });
 
-  console.log(`[Polar Webhook] Granted ${CREDITS_PER_PURCHASE} ANALYSIS credits to user ${user.id}`);
+  console.log(
+    `[Polar Webhook] Granted ${CREDITS_PER_PURCHASE} ANALYSIS credits to user ${user.id}`,
+  );
 }
 
-export async function handleOrderRefunded(payload: any) {
+export async function handleOrderRefunded(payload: any, polarMode: PolarMode) {
   const { data } = payload;
   const metadata = data.metadata as Record<string, string> | undefined;
   const customerEmail = data.customer?.email;
 
-  console.log("[Polar Webhook] onOrderRefunded received:", { orderId: data.id });
+  console.log("[Polar Webhook] onOrderRefunded received:", {
+    orderId: data.id,
+    polarMode,
+  });
 
   const user = await resolveUser(metadata, customerEmail);
   if (!user) {
-    console.error("[Polar Webhook] Could not resolve user for refunded order:", data.id);
+    console.error(
+      "[Polar Webhook] Could not resolve user for refunded order:",
+      data.id,
+    );
     return;
   }
 
   // Update order status
-  const order = await rawPrisma.order.findUnique({
-    where: { polarOrderId: data.id },
+  const order = await (rawPrisma as any).order.findUnique({
+    where: {
+      polarOrderId_polarMode: {
+        polarOrderId: data.id,
+        polarMode,
+      },
+    },
   });
 
   if (order) {
-    await rawPrisma.order.update({
-      where: { polarOrderId: data.id },
+    await (rawPrisma as any).order.update({
+      where: {
+        polarOrderId_polarMode: {
+          polarOrderId: data.id,
+          polarMode,
+        },
+      },
       data: { status: "refunded" },
     });
 
     // Deduct the credits that were granted
-    const { consumeUserCredits } = await import("@/backend/lib/consumeUserCredits");
-    const deducted = await consumeUserCredits(user.id, CreditType.ANALYSIS, order.creditsGranted);
-    
+    const { consumeUserCredits } =
+      await import("@/backend/lib/consumeUserCredits");
+    const deducted = await consumeUserCredits(
+      user.id,
+      CreditType.ANALYSIS,
+      order.creditsGranted,
+    );
+
     if (!deducted) {
-      console.warn(`[Polar Webhook] Could not deduct ${order.creditsGranted} credits for refund (user may have used them)`);
+      console.warn(
+        `[Polar Webhook] Could not deduct ${order.creditsGranted} credits for refund (user may have used them)`,
+      );
     } else {
-      console.log(`[Polar Webhook] Deducted ${order.creditsGranted} ANALYSIS credits from user ${user.id} due to refund`);
+      console.log(
+        `[Polar Webhook] Deducted ${order.creditsGranted} ANALYSIS credits from user ${user.id} due to refund`,
+      );
     }
   }
 }
 
-export async function handleCustomerCreated(payload: any) {
+export async function handleCustomerCreated(
+  payload: any,
+  polarMode: PolarMode,
+) {
   const { data } = payload;
   const metadata = data.metadata as Record<string, string> | undefined;
   const customerEmail = data.email;
@@ -118,11 +162,15 @@ export async function handleCustomerCreated(payload: any) {
   console.log("[Polar Webhook] onCustomerCreated received:", {
     customerId: data.id,
     email: customerEmail,
+    polarMode,
   });
 
   const user = await resolveUser(metadata, customerEmail);
   if (!user) {
-    console.error("[Polar Webhook] Could not resolve user for customer:", data.id);
+    console.error(
+      "[Polar Webhook] Could not resolve user for customer:",
+      data.id,
+    );
     return;
   }
 
@@ -132,5 +180,7 @@ export async function handleCustomerCreated(payload: any) {
     data: { polarCustomerId: data.id },
   });
 
-  console.log(`[Polar Webhook] Linked Polar customer ${data.id} to user ${user.id}`);
+  console.log(
+    `[Polar Webhook] Linked Polar customer ${data.id} to user ${user.id}`,
+  );
 }

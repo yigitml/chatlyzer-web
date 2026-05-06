@@ -86,7 +86,8 @@ model UserCredit {
 
 model Order {
   id             String    @id @default(cuid())
-  polarOrderId   String    @unique
+  polarOrderId   String
+  polarMode      String    @default("production")
   userId         String
   user           User      @relation(fields: [userId], references: [id])
   productId      String
@@ -96,6 +97,15 @@ model Order {
   status         String    @default("paid")
   createdAt      DateTime  @default(now())
   deletedAt      DateTime?
+
+  @@unique([polarOrderId, polarMode])
+}
+
+model AppSetting {
+  key       String   @id
+  value     String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 enum CreditType {

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { polarConfig } from "@/backend/lib/polarConfig";
+import { getPolarConfig } from "@/backend/lib/polarConfig";
+import { AuthenticatedRequest } from "@/backend/middleware/combinedMiddleware";
 import { withProtectedRoute } from "@/backend/middleware/jwtAuth";
 import { ApiResponse } from "@/shared/types/api/apiResponse";
 
@@ -9,7 +10,7 @@ import { ApiResponse } from "@/shared/types/api/apiResponse";
  * We bypass the @polar-sh/nextjs Checkout adapter because it has a Zod v4
  * incompatibility (the SDK was built for Zod v3).
  *
- * Automatically uses sandbox API in development and production API in production.
+ * Uses the runtime Polar mode configured by admins.
  *
  * Query params:
  *   - mobileRedirect: (optional) app redirect URL for mobile clients
@@ -30,19 +31,30 @@ function createErrorResponse(
   return NextResponse.redirect(url);
 }
 
-export const GET = withProtectedRoute(async (request: NextRequest) => {
+export const GET = withProtectedRoute(async (request: AuthenticatedRequest) => {
   const { searchParams, origin } = new URL(request.url);
   const returnJson = searchParams.get("json") === "true";
 
   try {
     const authenticatedUserId = request.user!.id;
     const authenticatedEmail = request.user!.email;
+    const polarConfig = await getPolarConfig();
 
     const productId = searchParams.get("products") || polarConfig.productId;
     const mobileRedirect = searchParams.get("mobileRedirect");
 
     // Use authenticated user's data instead of user-supplied params
-    const metadata = { userId: authenticatedUserId };
+    const metadata = {
+      userId: authenticatedUserId,
+      polarMode: polarConfig.mode,
+    };
+
+    console.info("[Checkout] Creating Polar checkout", {
+      polarMode: polarConfig.mode,
+      productId,
+      userId: authenticatedUserId,
+      hasMobileRedirect: Boolean(mobileRedirect),
+    });
 
     const successUrl = mobileRedirect
       ? `${origin}/checkout/mobile-success?redirect=${encodeURIComponent(mobileRedirect)}`
@@ -56,7 +68,7 @@ export const GET = withProtectedRoute(async (request: NextRequest) => {
       metadata,
     };
 
-    // Create checkout session via Polar API (sandbox in dev, production in prod)
+    // Create checkout session via the currently selected Polar environment.
     const response = await fetch(`${polarConfig.apiBaseUrl}/checkouts/`, {
       method: "POST",
       headers: {
