@@ -19,7 +19,9 @@ export default function AdminPolarPage() {
     try {
       const response = await fetch("/api/admin/polar-mode");
       if (!response.ok) {
-        throw new Error(response.status === 403 ? "Forbidden" : "Failed to load Polar mode");
+        throw new Error(
+          response.status === 403 ? "Forbidden" : "Failed to load Polar mode",
+        );
       }
 
       const payload = await response.json();
@@ -27,7 +29,11 @@ export default function AdminPolarPage() {
       setMode(loadedMode);
       setNextMode(loadedMode);
     } catch (loadError) {
-      setError(loadError instanceof Error ? loadError.message : "Failed to load Polar mode");
+      setError(
+        loadError instanceof Error
+          ? loadError.message
+          : "Failed to load Polar mode",
+      );
     } finally {
       setLoading(false);
     }
@@ -38,7 +44,11 @@ export default function AdminPolarPage() {
     setError(null);
 
     try {
-      if (nextMode === "production" && mode !== "production" && confirmation !== "GO LIVE") {
+      if (
+        nextMode === "production" &&
+        mode !== "production" &&
+        confirmation !== "GO LIVE"
+      ) {
         throw new Error('Type "GO LIVE" to switch to production.');
       }
 
@@ -58,7 +68,11 @@ export default function AdminPolarPage() {
       setNextMode(updatedMode);
       setConfirmation("");
     } catch (saveError) {
-      setError(saveError instanceof Error ? saveError.message : "Failed to update Polar mode");
+      setError(
+        saveError instanceof Error
+          ? saveError.message
+          : "Failed to update Polar mode",
+      );
     } finally {
       setSaving(false);
     }
@@ -133,7 +147,7 @@ export default function AdminPolarPage() {
           disabled={saving || nextMode === mode}
           className="rounded-md bg-black px-4 py-2 text-white disabled:opacity-50"
         >
-          {saving ? "Saving..." : "Save"}
+          {saving ? "Saving ..." : "Save"}
         </button>
       </div>
     </main>
