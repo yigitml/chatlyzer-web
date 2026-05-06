@@ -4,6 +4,7 @@ export type PolarMode = "sandbox" | "production";
 
 export type PolarConfig = {
   mode: PolarMode;
+  variant: "local-sandbox" | "sandbox" | "production";
   accessToken: string;
   apiBaseUrl: string;
   webhookSecret: string;
@@ -26,6 +27,11 @@ function requiredEnv(name: string): string {
   }
 
   return value;
+}
+
+function optionalEnv(name: string): string | undefined {
+  const value = process.env[name];
+  return value || undefined;
 }
 
 export async function getPolarMode(): Promise<PolarMode> {
@@ -52,27 +58,36 @@ export async function setPolarMode(mode: PolarMode): Promise<PolarMode> {
 
 export function getPolarConfigForMode(mode: PolarMode): PolarConfig {
   const isSandbox = mode === "sandbox";
+  const isLocalSandbox = isSandbox && process.env.NODE_ENV !== "production";
+
+  if (!isSandbox) {
+    return {
+      mode,
+      variant: "production",
+      accessToken: requiredEnv("POLAR_ACCESS_TOKEN"),
+      apiBaseUrl: "https://api.polar.sh/v1",
+      webhookSecret: requiredEnv("POLAR_WEBHOOK_SECRET"),
+      projectId: requiredEnv("POLAR_PROJ_ID"),
+      productId: requiredEnv("POLAR_PRODUCT_ID"),
+      webhookDeliveryUrl: requiredEnv("WEBHOOK_DELIVERY_URL"),
+    };
+  }
 
   return {
     mode,
-    accessToken: isSandbox
-      ? requiredEnv("POLAR_SANDBOX_ACCESS_TOKEN")
-      : requiredEnv("POLAR_ACCESS_TOKEN"),
-    apiBaseUrl: isSandbox
-      ? "https://sandbox-api.polar.sh/v1"
-      : "https://api.polar.sh/v1",
-    webhookSecret: isSandbox
-      ? requiredEnv("POLAR_SANDBOX_WEBHOOK_SECRET")
-      : requiredEnv("POLAR_WEBHOOK_SECRET"),
-    projectId: isSandbox
-      ? requiredEnv("POLAR_SANDBOX_PROJ_ID")
-      : requiredEnv("POLAR_PROJ_ID"),
-    productId: isSandbox
-      ? requiredEnv("POLAR_SANDBOX_PRODUCT_ID")
-      : requiredEnv("POLAR_PRODUCT_ID"),
-    webhookDeliveryUrl: isSandbox
-      ? requiredEnv("POLAR_SANDBOX_WEBHOOK_DELIVERY_URL")
-      : requiredEnv("WEBHOOK_DELIVERY_URL"),
+    variant: isLocalSandbox ? "local-sandbox" : "sandbox",
+    accessToken: requiredEnv("POLAR_SANDBOX_ACCESS_TOKEN"),
+    apiBaseUrl: "https://sandbox-api.polar.sh/v1",
+    webhookSecret: requiredEnv("POLAR_SANDBOX_WEBHOOK_SECRET"),
+    projectId: requiredEnv("POLAR_SANDBOX_PROJ_ID"),
+    productId: isLocalSandbox
+      ? (optionalEnv("POLAR_LOCAL_SANDBOX_PRODUCT_ID") ??
+        requiredEnv("POLAR_SANDBOX_PRODUCT_ID"))
+      : requiredEnv("POLAR_SANDBOX_PRODUCT_ID"),
+    webhookDeliveryUrl: isLocalSandbox
+      ? (optionalEnv("POLAR_LOCAL_SANDBOX_WEBHOOK_DELIVERY_URL") ??
+        requiredEnv("POLAR_SANDBOX_WEBHOOK_DELIVERY_URL"))
+      : requiredEnv("POLAR_SANDBOX_WEBHOOK_DELIVERY_URL"),
   };
 }
 

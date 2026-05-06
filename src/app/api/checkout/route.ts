@@ -47,10 +47,12 @@ export const GET = withProtectedRoute(async (request: AuthenticatedRequest) => {
     const metadata = {
       userId: authenticatedUserId,
       polarMode: polarConfig.mode,
+      polarVariant: polarConfig.variant,
     };
 
     console.info("[Checkout] Creating Polar checkout", {
       polarMode: polarConfig.mode,
+      polarVariant: polarConfig.variant,
       productId,
       userId: authenticatedUserId,
       hasMobileRedirect: Boolean(mobileRedirect),
