@@ -38,7 +38,7 @@ export default function Home() {
             href="/auth/sign-in"
             className="border-2 border-primary bg-primary text-primary-foreground px-3 sm:px-6 py-1.5 sm:py-2 hover:-translate-x-1 hover:-translate-y-1 hover:shadow-[4px_4px_0px_0px_hsl(var(--primary))] active:translate-x-0 active:translate-y-0 active:shadow-none transition-all whitespace-nowrap min-w-0"
           >
-            Start Vibing //
+            Start Vibin' //
           </Link>
         </div>
       </header>
