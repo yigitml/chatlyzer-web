@@ -8,6 +8,8 @@ import { LoadingSpinner } from "@/frontend/components/common/loading-spinner";
 import { X, Shield, EyeOff } from "lucide-react";
 import { convertChatExport, ChatPlatform } from "@/shared/utils/messageConverter";
 import { ImportMode } from "@/shared/types/app";
+import { useCreditStore } from "@/frontend/store/creditStore";
+import { BuyCreditsButton } from "@/frontend/components/common/buy-credits-button";
 
 interface Message {
   sender: string;
@@ -63,6 +65,9 @@ export const CreateChatModal = ({
   onTogglePrivacyMode,
   onToggleGhostMode
 }: CreateChatModalProps) => {
+  const credits = useCreditStore((s) => s.credits);
+  const totalCredits = credits.reduce((sum, credit) => sum + credit.amount, 0);
+
   const addMessage = () => {
     if (!newMessageSender.trim() || !newMessageContent.trim()) return;
     
@@ -221,7 +226,12 @@ export const CreateChatModal = ({
             </div>
         </div>
 
-        <DialogFooter>
+        <DialogFooter className="flex items-center gap-2">
+          {totalCredits === 0 && (
+            <div className="flex-1">
+              <BuyCreditsButton className="w-full" />
+            </div>
+          )}
           <Button
             variant="outline"
             onClick={handleClose}

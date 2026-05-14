@@ -4,6 +4,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { Avatar, AvatarFallback, AvatarImage } from "@/frontend/components/ui/avatar";
 import { CreditsDisplay } from "@/frontend/components/common/credits-display";
+import { BuyCreditsButton } from "@/frontend/components/common/buy-credits-button";
 import { Button } from "@/frontend/components/ui/button";
 import { useAuthStore } from "@/frontend/store/authStore";
 import { useRouter } from "next/navigation";
@@ -40,7 +41,10 @@ export const Header = ({ user, totalCredits }: HeaderProps) => {
         </Link>
 
         <div className="flex items-center gap-2 sm:gap-4 flex-shrink-0">
-          <CreditsDisplay credits={totalCredits} />
+          <div className="flex items-center gap-1">
+            <CreditsDisplay credits={totalCredits} />
+            <BuyCreditsButton variant="icon" className="w-8 h-8 rounded-full" />
+          </div>
           <Link href="/profile">
             <Avatar className="w-8 h-8 cursor-pointer border-2 border-primary hover:-translate-y-0.5 hover:shadow-brutal-sm transition-all flex-shrink-0">
               <AvatarImage src={user.image || ""} alt={user.name || "User"} />

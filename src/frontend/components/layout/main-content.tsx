@@ -2,6 +2,7 @@ import { Button } from "@/frontend/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/frontend/components/ui/card";
 import { SkeletonCard, SkeletonAnalysisGrid } from "@/frontend/components/common/skeleton";
 import { AnalysisResultCard } from "@/frontend/components/analysis/analysis-result-card";
+import { BuyCreditsButton } from "@/frontend/components/common/buy-credits-button";
 import { Plus, Sparkles, Trash2, BarChart3, MessageCircle } from "lucide-react";
 import { AnalysisType } from "@/shared/types/api/apiRequest";
 import { ANALYSIS_CONFIG } from "@/shared/types/analysis";
@@ -52,13 +53,16 @@ export const MainContent = ({
           <Sparkles className="w-16 sm:w-20 h-16 sm:h-20 text-muted-foreground mx-auto mb-4 sm:mb-6" />
           <h2 className="text-xl sm:text-2xl font-bold font-mono uppercase tracking-widest text-foreground mb-4">Select a chat to analyze</h2>
           <p className="text-sm sm:text-base text-muted-foreground font-mono mb-6 sm:mb-8">Choose a conversation from the sidebar to get started.</p>
-          <Button
-            onClick={onCreateChat}
-            className="w-full"
-          >
-            <Plus className="w-5 h-5 mr-2" />
-            Create New Chat
-          </Button>
+          <div className="flex flex-col gap-3">
+            <Button
+              onClick={onCreateChat}
+              className="w-full"
+            >
+              <Plus className="w-5 h-5 mr-2" />
+              Create New Chat
+            </Button>
+            <BuyCreditsButton className="w-full" />
+          </div>
         </div>
       </div>
     );

@@ -21,6 +21,15 @@ export default function CheckoutSuccessPage() {
   useEffect(() => {
     if (!user?.id || !isInitialized) return;
 
+    // Check for checkout_id to prevent false positives when manually navigating
+    const urlParams = new URLSearchParams(window.location.search);
+    const checkoutId = urlParams.get("checkout_id");
+    
+    if (!checkoutId) {
+      setStatus("failed");
+      return;
+    }
+
     const MAX_RETRIES = 10;
     const RETRY_DELAY = 2000; // 2 seconds between retries
 
@@ -82,7 +91,7 @@ export default function CheckoutSuccessPage() {
                 <Loader2 className="w-10 h-10 text-yellow-400 animate-spin" />
               </div>
             </div>
-            <div>
+            <div className="flex flex-col items-center justify-center text-center">
               <h1 className="text-3xl font-extrabold font-display text-foreground mb-2">
                 VERIFYING_PAYMENT
               </h1>
@@ -105,7 +114,7 @@ export default function CheckoutSuccessPage() {
                 <CheckCircle className="w-10 h-10 text-green-400" />
               </div>
             </div>
-            <div>
+            <div className="flex flex-col items-center justify-center text-center">
               <h1 className="text-3xl font-extrabold font-display text-foreground mb-2">
                 PAYMENT_CONFIRMED
               </h1>
@@ -132,7 +141,7 @@ export default function CheckoutSuccessPage() {
                 </Button>
               </Link>
               <Link href="/profile">
-                <Button variant="ghost" className="w-full text-white/60 hover:text-white font-mono uppercase">
+                <Button variant="ghost" className="w-full text-white/60 hover:text-white hover:bg-white/10 font-mono uppercase">
                   <ArrowLeft className="w-4 h-4 mr-2" />
                   Back to Profile
                 </Button>
@@ -149,7 +158,7 @@ export default function CheckoutSuccessPage() {
                 <XCircle className="w-10 h-10 text-red-400" />
               </div>
             </div>
-            <div>
+            <div className="flex flex-col items-center justify-center text-center">
               <h1 className="text-3xl font-extrabold font-display text-foreground mb-2">
                 PAYMENT_UNVERIFIED
               </h1>
@@ -169,7 +178,7 @@ export default function CheckoutSuccessPage() {
                 </Button>
               </Link>
               <Link href="/contact">
-                <Button variant="ghost" className="w-full text-white/60 hover:text-white font-mono uppercase">
+                <Button variant="ghost" className="w-full text-white/60 hover:text-white hover:bg-white/10 font-mono uppercase">
                   Contact Support
                 </Button>
               </Link>

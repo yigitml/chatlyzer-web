@@ -32,7 +32,7 @@ import {
   Trash2
 } from "lucide-react";
 import Link from "next/link";
-
+import { BuyCreditsButton } from "@/frontend/components/common/buy-credits-button";
 // Components
 const LoadingSpinner = ({ size = "sm" }: { size?: "sm" | "lg" }) => (
   <div className={`border-2 border-white/20 border-t-white rounded-full animate-spin ${size === "lg" ? "w-8 h-8" : "w-4 h-4"}`} />
@@ -329,40 +329,11 @@ export default function ProfilePage() {
           </CardContent>
         </Card>
 
-        {/* Account Statistics */}
-        <div>
-          <h2 className="text-xl font-bold font-mono text-foreground mb-4 flex items-center gap-2 uppercase tracking-wider">
-            <span className="text-muted-foreground text-sm mr-2">/02</span>
-            <BarChart3 className="w-5 h-5" />
-            Account Statistics
-          </h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            <StatCard
-              icon={MessageCircle}
-              label="Total Chats"
-              value={totalChats}
-              description="Conversations analyzed"
-            />
-            <StatCard
-              icon={BarChart3}
-              label="Analyses Run"
-              value={totalAnalyses}
-              description="Insights generated"
-            />
-            <StatCard
-              icon={Calendar}
-              label="Days Active"
-              value={Math.floor((Date.now() - new Date(user.createdAt).getTime()) / (1000 * 60 * 60 * 24))}
-              description="Since joining"
-            />
-          </div>
-        </div>
-
         {/* Credits & Subscription */}
         <Card>
           <CardHeader>
             <CardTitle className="text-foreground flex items-center gap-2 font-mono uppercase tracking-wider text-xl">
-              <span className="text-muted-foreground text-sm mr-2">/03</span>
+              <span className="text-muted-foreground text-sm mr-2">/02</span>
               <Crown className="w-5 h-5" />
               Credits & Subscription
             </CardTitle>
@@ -399,16 +370,39 @@ export default function ProfilePage() {
 
             <div className="text-center py-6 border-t border-white/10">
               <p className="text-white/60 mb-4">Purchase 24 analysis credits to analyze your chats</p>
-              <Button 
-                onClick={() => purchaseCredits()}
-                className="bg-gradient-to-r from-purple-500/70 to-pink-500/70 hover:from-purple-500/80 hover:to-pink-500/80"
-              >
-                <Zap className="w-4 h-4 mr-2" />
-                Buy 24 Credits
-              </Button>
+              <BuyCreditsButton />
             </div>
           </CardContent>
         </Card>
+
+        {/* Account Statistics */}
+        <div>
+          <h2 className="text-xl font-bold font-mono text-foreground mb-4 flex items-center gap-2 uppercase tracking-wider">
+            <span className="text-muted-foreground text-sm mr-2">/03</span>
+            <BarChart3 className="w-5 h-5" />
+            Account Statistics
+          </h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <StatCard
+              icon={MessageCircle}
+              label="Total Chats"
+              value={totalChats}
+              description="Conversations analyzed"
+            />
+            <StatCard
+              icon={BarChart3}
+              label="Analyses Run"
+              value={totalAnalyses}
+              description="Insights generated"
+            />
+            <StatCard
+              icon={Calendar}
+              label="Days Active"
+              value={Math.floor((Date.now() - new Date(user.createdAt).getTime()) / (1000 * 60 * 60 * 24))}
+              description="Since joining"
+            />
+          </div>
+        </div>
 
         {/* Account Settings */}
         <Card>

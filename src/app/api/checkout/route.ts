@@ -59,8 +59,8 @@ export const GET = withProtectedRoute(async (request: AuthenticatedRequest) => {
     });
 
     const successUrl = mobileRedirect
-      ? `${origin}/checkout/mobile-success?redirect=${encodeURIComponent(mobileRedirect)}`
-      : `${polarConfig.webhookDeliveryUrl}/checkout/success`;
+      ? `${origin}/checkout/mobile-success?redirect=${encodeURIComponent(mobileRedirect)}&checkout_id={CHECKOUT_ID}`
+      : `${polarConfig.webhookDeliveryUrl}/checkout/success?checkout_id={CHECKOUT_ID}`;
 
     // Build the checkout creation request body
     const body: Record<string, any> = {
