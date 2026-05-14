@@ -5,6 +5,15 @@ import type { PolarMode } from "@/backend/lib/polarConfig";
 
 const CREDITS_PER_PURCHASE = 24;
 
+function isAdminEmail(email: string | undefined): boolean {
+  if (!email) return false;
+  const adminEmails = (process.env.ADMIN_EMAILS || "")
+    .split(",")
+    .map((e) => e.trim().toLowerCase())
+    .filter(Boolean);
+  return adminEmails.includes(email.toLowerCase());
+}
+
 /**
  * Resolve the user from the webhook payload.
  * Tries metadata.userId first, then falls back to customerEmail lookup.
@@ -51,7 +60,7 @@ export async function handleOrderPaid(payload: any, polarMode: PolarMode) {
     return;
   }
 
-  // Check for duplicate order processing (idempotency)
+// Check for duplicate order processing (idempotency)
   const existingOrder = await (rawPrisma as any).order.findUnique({
     where: {
       polarOrderId_polarMode: {
@@ -68,8 +77,18 @@ export async function handleOrderPaid(payload: any, polarMode: PolarMode) {
     return;
   }
 
-  // Grant credits
-  await grantUserCredits(user.id, CreditType.ANALYSIS, CREDITS_PER_PURCHASE);
+  let creditsToGrant = CREDITS_PER_PURCHASE;
+
+  // Sandbox logic: Only grant actual credits if the user is an admin
+  if (polarMode === "sandbox" && !isAdminEmail(user.email)) {
+    console.log("[Polar Webhook] Sandbox payment for non-admin. No credits will be granted.");
+    creditsToGrant = 0;
+  }
+
+  // Grant credits if applicable
+  if (creditsToGrant > 0) {
+    await grantUserCredits(user.id, CreditType.ANALYSIS, creditsToGrant);
+  }
 
   // Create order record for audit trail
   await (rawPrisma as any).order.create({
@@ -80,13 +99,13 @@ export async function handleOrderPaid(payload: any, polarMode: PolarMode) {
       productId: data.product?.id || "unknown",
       amount: data.amount || 0,
       currency: data.currency || "usd",
-      creditsGranted: CREDITS_PER_PURCHASE,
+      creditsGranted: creditsToGrant,
       status: "paid",
     },
   });
 
   console.log(
-    `[Polar Webhook] Granted ${CREDITS_PER_PURCHASE} ANALYSIS credits to user ${user.id}`,
+    `[Polar Webhook] Granted ${creditsToGrant} ANALYSIS credits to user ${user.id}`,
   );
 }
 
