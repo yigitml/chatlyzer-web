@@ -62,7 +62,7 @@ export default function Home() {
       {/* Hero Section */}
       <main className="flex-1 container mx-auto px-4 mt-16 mb-20 text-center relative z-10 flex flex-col items-center">
         <div className="inline-flex items-center gap-2 border-2 border-primary bg-card text-card-foreground px-4 py-3 mb-12 shadow-[4px_4px_0px_0px_hsl(var(--primary))] font-mono uppercase text-sm font-bold rotate-[1deg]">
-          <span className="text-destructive animate-pulse">🔥 NEW SYSTEM UPDATE</span>
+          <span className="text-destructive animate-pulse">🔥 UI TEST UPDATE</span>
           <span className="hidden sm:inline">:: SIMP-O-METER OVERRIDE INSTALLED</span>
           <Link href="#analyses" className="ml-2 underline flex items-center gap-1 hover:text-primary transition">
             SCAN NOW <ArrowRight className="w-4 h-4" />
