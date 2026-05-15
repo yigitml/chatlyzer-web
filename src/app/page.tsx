@@ -3,7 +3,7 @@ import Image from "next/image"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useEffect } from "react"
-import { ArrowRight, Zap, Heart, Brain, Ghost, Star, AlertTriangle, CheckCircle, MessageCircle, Send } from "lucide-react"
+import { ArrowRight, Zap, Heart, Brain, Ghost, Star, AlertTriangle, CheckCircle, MessageCircle, Send, Github } from "lucide-react"
 import { useAuthStore } from "@/frontend/store/authStore"
 
 export default function Home() {
@@ -27,13 +27,29 @@ export default function Home() {
         </div>
 
         <nav className="hidden md:flex items-center gap-8 font-mono uppercase font-bold text-sm tracking-widest">
-          <Link href="#features" className="hover:line-through transition-all">Features</Link>
           <Link href="#analyses" className="hover:line-through transition-all">Analyses</Link>
           <Link href="/contact" className="hover:line-through transition-all">Contact</Link>
+          <Link
+            href="https://github.com/yigitml/chatlyzer-web"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-2 hover:line-through transition-all"
+          >
+            <Github className="w-4 h-4" />
+            GitHub
+          </Link>
         </nav>
 
         <div className="flex items-center gap-2 sm:gap-4 font-mono uppercase font-bold text-xs sm:text-sm">
-          <Link href="/auth/sign-in" className="hover:line-through transition-all hidden sm:block">Login</Link>
+          <Link
+            href="https://github.com/yigitml/chatlyzer-web"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="md:hidden inline-flex items-center justify-center border-2 border-primary bg-card p-2 hover:-translate-x-1 hover:-translate-y-1 hover:shadow-[4px_4px_0px_0px_hsl(var(--primary))] active:translate-x-0 active:translate-y-0 active:shadow-none transition-all"
+            aria-label="Open GitHub repository"
+          >
+            <Github className="w-4 h-4" />
+          </Link>
           <Link
             href="/auth/sign-in"
             className="border-2 border-primary bg-primary text-primary-foreground px-3 sm:px-6 py-1.5 sm:py-2 hover:-translate-x-1 hover:-translate-y-1 hover:shadow-[4px_4px_0px_0px_hsl(var(--primary))] active:translate-x-0 active:translate-y-0 active:shadow-none transition-all whitespace-nowrap min-w-0"
