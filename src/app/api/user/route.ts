@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server";
-import prisma from "@/backend/lib/prisma";
+import prisma, { rawPrisma } from "@/backend/lib/prisma";
 import { ApiResponse } from "@/shared/types/api/apiResponse";
 import { withProtectedRoute } from "@/backend/middleware/jwtAuth";
 import type { UserPutRequest, UserPostRequest } from "@/shared/types/api/apiRequest";
@@ -64,12 +64,61 @@ export const PUT = withProtectedRoute(async (request: NextRequest) => {
 export const DELETE = withProtectedRoute(async (request: NextRequest) => {
   try {
     const authenticatedUserId = request.user!.id;
+    const deletedAt = new Date();
 
-    await prisma.user.update({
-      where: { id: authenticatedUserId },
-      data: {
-        deletedAt: new Date(),
-      },
+    await rawPrisma.$transaction(async (tx) => {
+      await Promise.all([
+        tx.userSession.updateMany({
+          where: { userId: authenticatedUserId, deletedAt: null },
+          data: { deletedAt },
+        }),
+        tx.userDevice.updateMany({
+          where: { userId: authenticatedUserId, deletedAt: null },
+          data: { deletedAt },
+        }),
+        tx.subscription.updateMany({
+          where: { userId: authenticatedUserId, deletedAt: null },
+          data: { deletedAt, isActive: false },
+        }),
+        tx.userCredit.updateMany({
+          where: { userId: authenticatedUserId, deletedAt: null },
+          data: { deletedAt, amount: 0, minimumBalance: 0 },
+        }),
+        tx.file.updateMany({
+          where: { userId: authenticatedUserId, deletedAt: null },
+          data: { deletedAt },
+        }),
+        tx.chat.updateMany({
+          where: { userId: authenticatedUserId, deletedAt: null },
+          data: { deletedAt },
+        }),
+        tx.message.updateMany({
+          where: { userId: authenticatedUserId, deletedAt: null },
+          data: { deletedAt, content: "" },
+        }),
+        tx.analysis.updateMany({
+          where: { userId: authenticatedUserId, deletedAt: null },
+          data: { deletedAt, result: null as any, error: null },
+        }),
+        tx.revenueCatPurchase.updateMany({
+          where: { userId: authenticatedUserId, deletedAt: null },
+          data: { deletedAt, rawPayload: null as any },
+        }),
+      ]);
+
+      await tx.user.update({
+        where: { id: authenticatedUserId },
+        data: {
+          name: "Deleted User",
+          email: `deleted-${authenticatedUserId}@deleted.chatlyzer.local`,
+          image: null,
+          googleId: null,
+          polarCustomerId: null,
+          isActive: false,
+          tokenVersion: { increment: 1 },
+          deletedAt,
+        },
+      });
     });
 
     return ApiResponse.success({
