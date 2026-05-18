@@ -67,9 +67,16 @@ export const POST = withProtectedRoute(async (request: NextRequest) => {
       return ApiResponse.error("Messages are required", 400).toResponse();
     }
 
-    const hasValidMessage = messages.some(msg => msg.content && msg.content.trim().length > 0);
-    if (!hasValidMessage) {
-      return ApiResponse.error("Chat must contain at least one message with content", 400).toResponse();
+    const validMessages = messages.filter(
+      (msg) =>
+        msg.content &&
+        msg.content.trim().length > 0 &&
+        msg.content.length < 500 &&
+        msg.sender &&
+        String(msg.sender).trim().length > 0,
+    );
+    if (validMessages.length === 0) {
+      return ApiResponse.error("Chat must contain at least one valid message", 400).toResponse();
     }
 
     let sampledMessages = [];
@@ -77,7 +84,7 @@ export const POST = withProtectedRoute(async (request: NextRequest) => {
     if (messages.length > 0) {
       // Use smartChatSampler to ensure we don't store excessively large chats
       // We use a slightly higher limit for storage (200k tokens) to preserve more history than analysis
-      sampledMessages = smartChatSampler(messages, 200000);
+      sampledMessages = smartChatSampler(validMessages, 200000);
     } else {
       sampledMessages = messages;
     }
@@ -94,7 +101,6 @@ export const POST = withProtectedRoute(async (request: NextRequest) => {
 
     if (sampledMessages && sampledMessages.length > 0) {
       const messagesToCreate = sampledMessages
-        .filter(message => message.content && message.content.length < 500)
         .map(message => ({
           userId: authenticatedUserId,
           chatId: chat.id,
@@ -109,7 +115,9 @@ export const POST = withProtectedRoute(async (request: NextRequest) => {
           data: messagesToCreate,
         });
       }
-    } 
+    } else {
+      return ApiResponse.error("Chat must contain at least one valid message", 400).toResponse();
+    }
 
     return ApiResponse.success(chat, "Chat created successfully", 200).toResponse();
   } catch (error) {
@@ -128,7 +136,7 @@ export const PUT = withProtectedRoute(async (request: NextRequest) => {
     }
 
     const updatedModel = await prisma.chat.update({
-      where: { id: data.id, userId: authenticatedUserId },
+      where: { id: data.id, userId: authenticatedUserId, deletedAt: null },
       data: {
         title: data.title,
       }
@@ -158,7 +166,7 @@ export const DELETE = withProtectedRoute(async (request: NextRequest) => {
     const result = await prisma.$transaction(async (tx) => {
       // First, soft-delete the chat
       const deletedChat = await tx.chat.update({
-        where: { id, userId: authenticatedUserId },
+        where: { id, userId: authenticatedUserId, deletedAt: null },
         data: {
           deletedAt: new Date(),
         },

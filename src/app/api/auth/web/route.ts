@@ -44,6 +44,10 @@ export const POST = withAuthRateLimiter(async (request: NextRequest) => {
       where: { email: payload.email },
     });
 
+    if (user?.deletedAt || user?.isActive === false) {
+      return ApiResponse.error("Account has been deleted", 403).toResponse();
+    }
+
     if (!user) {
       user = await prisma.user.create({
         data: {
@@ -116,6 +120,7 @@ export const POST = withAuthRateLimiter(async (request: NextRequest) => {
     const refreshToken = jwt.sign(
       {
         userId: user.id,
+        sessionId: sessionId,
         tokenVersion: user.tokenVersion,
       },
       process.env.REFRESH_TOKEN_SECRET!,

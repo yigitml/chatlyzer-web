@@ -61,8 +61,7 @@ export const useAnalysisStore = create<AnalysisStore>((set, get) => {
     fetchAnalysis: async (id) => {
       try {
         set({ isLoading: true, error: null });
-        const analyzes = await networkService.fetchAnalyzes({ id });
-        const analysis = analyzes.length > 0 ? analyzes[0] : null;
+        const analysis = await networkService.fetchAnalysis(id);
         set({ isLoading: false });
         return analysis;
       } catch (error) {
