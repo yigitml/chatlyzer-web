@@ -38,7 +38,7 @@ export function jwtAuth(): MiddlewareHandler {
       where: { id: decoded.userId },
     });
 
-    if (!user) {
+    if (!user || user.deletedAt || !user.isActive) {
       return ApiResponse.error("User not found", 401).toResponse();
     }
 

@@ -5,7 +5,17 @@ import { ApiResponse } from "@/shared/types/api/apiResponse";
 
 export async function POST(request: NextRequest) {
   try {
-    const refreshToken = request.cookies.get("refreshToken")?.value;
+    let bodyRefreshToken: string | undefined;
+    try {
+      const body = await request.json();
+      bodyRefreshToken =
+        typeof body?.refreshToken === "string" ? body.refreshToken : undefined;
+    } catch {
+      bodyRefreshToken = undefined;
+    }
+
+    const refreshToken =
+      bodyRefreshToken || request.cookies.get("refreshToken")?.value;
     if (!refreshToken) {
       return ApiResponse.error("No refresh token provided", 401).toResponse();
     }
@@ -24,7 +34,7 @@ export async function POST(request: NextRequest) {
       include: { devices: true },
     });
 
-    if (!user) {
+    if (!user || user.deletedAt || !user.isActive) {
       return ApiResponse.error("User not found", 401).toResponse();
     }
 

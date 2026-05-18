@@ -16,6 +16,7 @@ export const GET = withProtectedRoute(async (request: NextRequest) => {
         where: {
           id: id,
           userId: authenticatedUserId,
+          deletedAt: null,
         },
       });
 
@@ -76,7 +77,8 @@ export const POST = withProtectedRoute(async (request: NextRequest) => {
       const chat = await prisma.chat.findFirst({
         where: {
           id: chatId,
-          userId: authenticatedUserId
+          userId: authenticatedUserId,
+          deletedAt: null,
         }
       });
 
@@ -120,7 +122,8 @@ export const DELETE = withProtectedRoute(async (request: NextRequest) => {
     const file = await prisma.file.findFirst({
       where: {
         id: id,
-        userId: authenticatedUserId
+        userId: authenticatedUserId,
+        deletedAt: null,
       }
     });
 

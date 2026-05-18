@@ -31,6 +31,17 @@ function createErrorResponse(
   return NextResponse.redirect(url);
 }
 
+function isAllowedMobileRedirect(value: string | null): value is string {
+  if (!value) return false;
+
+  try {
+    const url = new URL(value);
+    return url.protocol === "chatlyzer:";
+  } catch {
+    return false;
+  }
+}
+
 export const GET = withProtectedRoute(async (request: AuthenticatedRequest) => {
   const { searchParams, origin } = new URL(request.url);
   const returnJson = searchParams.get("json") === "true";
@@ -41,7 +52,10 @@ export const GET = withProtectedRoute(async (request: AuthenticatedRequest) => {
     const polarConfig = await getPolarConfig();
 
     const productId = searchParams.get("products") || polarConfig.productId;
-    const mobileRedirect = searchParams.get("mobileRedirect");
+    const requestedMobileRedirect = searchParams.get("mobileRedirect");
+    const mobileRedirect = isAllowedMobileRedirect(requestedMobileRedirect)
+      ? requestedMobileRedirect
+      : null;
 
     // Use authenticated user's data instead of user-supplied params
     const metadata = {

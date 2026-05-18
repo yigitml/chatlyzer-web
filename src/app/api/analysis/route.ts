@@ -243,6 +243,7 @@ export const PUT = withProtectedRoute(async (request: NextRequest) => {
       where: {
         id,
         userId: authenticatedUserId,
+        deletedAt: null,
       },
       data: {
         result: result,
@@ -278,6 +279,7 @@ export const DELETE = withProtectedRoute(async (request: NextRequest) => {
         where: {
           id,
           userId: authenticatedUserId,
+          deletedAt: null,
         },
         data: {
           deletedAt: new Date(),
