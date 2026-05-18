@@ -9,6 +9,7 @@ const softDeleteModels = new Set<string>([
   "Subscription",
   "UserCredit",
   "Order",
+  "RevenueCatPurchase",
   "File",
   "Chat",
   "Message",

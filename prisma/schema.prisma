@@ -20,6 +20,7 @@ model User {
   credits          UserCredit[]
   subscription     Subscription?
   orders           Order[]
+  revenueCatPurchases RevenueCatPurchase[]
   tokenVersion     Int               @default(0)
   devices          UserDevice[]
   sessions         UserSession[]
@@ -99,6 +100,24 @@ model Order {
   deletedAt      DateTime?
 
   @@unique([polarOrderId, polarMode])
+}
+
+model RevenueCatPurchase {
+  id                     String    @id @default(cuid())
+  revenueCatTransactionId String   @unique
+  storeTransactionId     String?
+  userId                 String
+  user                   User      @relation(fields: [userId], references: [id])
+  productId              String
+  store                  String?
+  purchasedAt            DateTime?
+  creditsGranted         Int       @default(0)
+  rawPayload             Json?
+  createdAt              DateTime  @default(now())
+  deletedAt              DateTime?
+
+  @@index([userId])
+  @@index([productId])
 }
 
 model AppSetting {

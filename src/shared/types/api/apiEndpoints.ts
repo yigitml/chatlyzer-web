@@ -11,5 +11,6 @@ export const API_ENDPOINTS = {
   SUBSCRIPTION: "/subscription",
   CREDIT: "/credit",
   CHECKOUT: "/checkout",
+  REVENUECAT_SYNC: "/purchase/revenuecat/sync",
   ORDER: "/order",
 } as const;
