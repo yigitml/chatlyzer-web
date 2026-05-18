@@ -21,6 +21,7 @@ export const POST = withProtectedRoute(async (request: NextRequest) => {
   try {
     authenticatedUserId = request.user!.id;
     const data: PrivacyAnalysisPostRequest = await request.json();
+    const requestKey = data.requestKey?.trim() || null;
 
     // Validate required fields
     if (!data.title || !data.messages || !Array.isArray(data.messages)) {
@@ -41,6 +42,37 @@ export const POST = withProtectedRoute(async (request: NextRequest) => {
 
     if (data.messages.length === 0) {
       return ApiResponse.error("At least one message is required", 400).toResponse();
+    }
+
+    if (requestKey && !data.isGhostMode) {
+      const existingAnalyses = await prisma.analysis.findMany({
+        where: {
+          userId: authenticatedUserId,
+          requestKey,
+          deletedAt: null,
+          chat: {
+            isPrivacy: true,
+            deletedAt: null,
+          },
+        },
+        include: {
+          chat: true,
+        },
+        orderBy: {
+          createdAt: "asc",
+        },
+      });
+
+      if (existingAnalyses.length > 0) {
+        return ApiResponse.success(
+          {
+            chat: existingAnalyses[0].chat,
+            analyses: existingAnalyses,
+          },
+          "Privacy analysis request already exists",
+          200,
+        ).toResponse();
+      }
     }
 
     // Consume 8 credits for comprehensive analysis — use advisory lock 
@@ -161,6 +193,7 @@ export const POST = withProtectedRoute(async (request: NextRequest) => {
         data: {
           chatId: chat.id,
           userId: authenticatedUserId,
+          requestKey,
           result: analysisWithType,
           status: AnalysisStatus.COMPLETED,
           error: null,

@@ -138,6 +138,7 @@ export interface UserPutRequest {
 export interface PrivacyAnalysisPostRequest {
   title: string;
   isGhostMode: boolean;
+  requestKey?: string;
   messages: {
     sender: string;
     timestamp: Date | string;
