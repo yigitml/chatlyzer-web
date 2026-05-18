@@ -187,9 +187,13 @@ model Analysis {
   result    Json?
   status    AnalysisStatus @default(PENDING)
   error     String?
+  requestKey String?
   createdAt DateTime       @default(now())
   updatedAt DateTime       @updatedAt
   deletedAt DateTime?
   User      User           @relation(fields: [userId], references: [id])
   userId    String
+
+  @@index([userId, requestKey])
+  @@index([chatId, requestKey])
 }

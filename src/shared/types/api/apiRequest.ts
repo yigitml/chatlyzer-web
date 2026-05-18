@@ -49,6 +49,7 @@ export interface AnalysisGetRequest {
 
 export interface AnalysisPostRequest {
   chatId: string;
+  requestKey?: string;
 }
 
 export type AnalysisType = 
