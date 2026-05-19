@@ -49,6 +49,7 @@ export interface AnalysisGetRequest {
 
 export interface AnalysisPostRequest {
   chatId: string;
+  requestKey?: string;
 }
 
 export type AnalysisType = 
@@ -137,6 +138,7 @@ export interface UserPutRequest {
 export interface PrivacyAnalysisPostRequest {
   title: string;
   isGhostMode: boolean;
+  requestKey?: string;
   messages: {
     sender: string;
     timestamp: Date | string;

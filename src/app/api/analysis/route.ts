@@ -85,6 +85,7 @@ export const POST = withProtectedRoute(async (request: NextRequest) => {
   try {
    const authenticatedUserId = request.user!.id;
    const data: AnalysisPostRequest = await request.json();
+   const requestKey = data.requestKey?.trim() || null;
 
     // Verify the authenticated user owns this chat (prevents IDOR)
     const chat = await prisma.chat.findFirst({
@@ -95,10 +96,31 @@ export const POST = withProtectedRoute(async (request: NextRequest) => {
     }
 
     // Start transaction with default isolation level (ReadCommitted)
-    const placeholderAnalyses = await prisma.$transaction(async (tx) => {
+    const analysisRequest = await prisma.$transaction(async (tx) => {
       // Acquire advisory lock for this chat ID to prevent concurrent analysis creation
       // hashtext(text) returns an integer, which we use for the lock key
       await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${data.chatId}))`;
+
+      if (requestKey) {
+        const existingForRequest = await tx.analysis.findMany({
+          where: {
+            chatId: data.chatId,
+            userId: authenticatedUserId,
+            requestKey,
+            deletedAt: null,
+          },
+          orderBy: {
+            createdAt: "asc",
+          },
+        });
+
+        if (existingForRequest.length > 0) {
+          return {
+            analyses: existingForRequest,
+            shouldProcess: false,
+          };
+        }
+      }
 
       // Check if analyses already exist or are in progress for this chat
       const existingAnalyses = await tx.analysis.findMany({
@@ -140,6 +162,7 @@ export const POST = withProtectedRoute(async (request: NextRequest) => {
           data: {
             chatId: data.chatId,
             userId: authenticatedUserId,
+            requestKey,
             status: AnalysisStatus.PROCESSING,
             result: {},
           }
@@ -147,8 +170,21 @@ export const POST = withProtectedRoute(async (request: NextRequest) => {
         createdAnalyses.push(analysis);
       }
       
-      return createdAnalyses;
+      return {
+        analyses: createdAnalyses,
+        shouldProcess: true,
+      };
     });
+
+    const placeholderAnalyses = analysisRequest.analyses;
+
+    if (!analysisRequest.shouldProcess) {
+      return ApiResponse.success(
+        placeholderAnalyses,
+        "Analysis request already exists",
+        200,
+      ).toResponse();
+    }
 
     // Get analysis types again for the next step (or reuse if we could, but it's cheap)
     const analysisTypes = getAllAnalysisTypes();

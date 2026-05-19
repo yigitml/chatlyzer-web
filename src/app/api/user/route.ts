@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server";
-import prisma from "@/backend/lib/prisma";
+import prisma, { rawPrisma } from "@/backend/lib/prisma";
 import { ApiResponse } from "@/shared/types/api/apiResponse";
 import { withProtectedRoute } from "@/backend/middleware/jwtAuth";
 import type { UserPutRequest } from "@/shared/types/api/apiRequest";
@@ -59,52 +59,63 @@ export const PUT = withProtectedRoute(async (request: NextRequest) => {
 export const DELETE = withProtectedRoute(async (request: NextRequest) => {
   try {
     const authenticatedUserId = request.user!.id;
-
     const deletedAt = new Date();
 
-    await prisma.$transaction(async (tx) => {
-      await tx.analysis.updateMany({
-        where: { userId: authenticatedUserId, deletedAt: null },
-        data: { deletedAt },
-      });
-      await tx.message.updateMany({
-        where: { userId: authenticatedUserId, deletedAt: null },
-        data: { deletedAt },
-      });
-      await tx.file.updateMany({
-        where: { userId: authenticatedUserId, deletedAt: null },
-        data: { deletedAt },
-      });
-      await tx.chat.updateMany({
-        where: { userId: authenticatedUserId, deletedAt: null },
-        data: { deletedAt },
-      });
-      await tx.userCredit.updateMany({
-        where: { userId: authenticatedUserId, deletedAt: null },
-        data: { deletedAt, amount: 0 },
-      });
-      await tx.subscription.updateMany({
-        where: { userId: authenticatedUserId, deletedAt: null },
-        data: { deletedAt, isActive: false },
-      });
-      await tx.order.updateMany({
-        where: { userId: authenticatedUserId, deletedAt: null },
-        data: { deletedAt },
-      });
-      await tx.userSession.updateMany({
-        where: { userId: authenticatedUserId, deletedAt: null },
-        data: { deletedAt },
-      });
-      await tx.userDevice.updateMany({
-        where: { userId: authenticatedUserId, deletedAt: null },
-        data: { deletedAt },
-      });
+    await rawPrisma.$transaction(async (tx) => {
+      await Promise.all([
+        tx.analysis.updateMany({
+          where: { userId: authenticatedUserId, deletedAt: null },
+          data: { deletedAt, result: {}, error: null },
+        }),
+        tx.message.updateMany({
+          where: { userId: authenticatedUserId, deletedAt: null },
+          data: { deletedAt, content: "" },
+        }),
+        tx.file.updateMany({
+          where: { userId: authenticatedUserId, deletedAt: null },
+          data: { deletedAt },
+        }),
+        tx.chat.updateMany({
+          where: { userId: authenticatedUserId, deletedAt: null },
+          data: { deletedAt },
+        }),
+        tx.userCredit.updateMany({
+          where: { userId: authenticatedUserId, deletedAt: null },
+          data: { deletedAt, amount: 0, minimumBalance: 0 },
+        }),
+        tx.subscription.updateMany({
+          where: { userId: authenticatedUserId, deletedAt: null },
+          data: { deletedAt, isActive: false },
+        }),
+        tx.order.updateMany({
+          where: { userId: authenticatedUserId, deletedAt: null },
+          data: { deletedAt },
+        }),
+        tx.userSession.updateMany({
+          where: { userId: authenticatedUserId, deletedAt: null },
+          data: { deletedAt },
+        }),
+        tx.userDevice.updateMany({
+          where: { userId: authenticatedUserId, deletedAt: null },
+          data: { deletedAt },
+        }),
+        tx.revenueCatPurchase.updateMany({
+          where: { userId: authenticatedUserId, deletedAt: null },
+          data: { deletedAt, rawPayload: {} },
+        }),
+      ]);
+
       await tx.user.update({
         where: { id: authenticatedUserId },
         data: {
-          deletedAt,
+          name: "Deleted User",
+          email: `deleted-${authenticatedUserId}@deleted.chatlyzer.local`,
+          image: null,
+          googleId: null,
+          polarCustomerId: null,
           isActive: false,
           tokenVersion: { increment: 1 },
+          deletedAt,
         },
       });
     });
