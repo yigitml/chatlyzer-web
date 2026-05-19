@@ -6,6 +6,7 @@ import { z } from "zod";
 import { AnalysisType } from "@/shared/types/api/apiRequest";
 import { encodingForModel } from "js-tiktoken";
 import { detect } from "tinyld";
+import { getRequiredServerEnv } from "@/shared/config/env";
 
 const MODELS = {
   MAIN: "gpt-4o-mini",
@@ -72,7 +73,7 @@ const createMinimalChat = (chatJson: any) => {
 };
 
 const createOpenAIClient = () => new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
+  apiKey: getRequiredServerEnv("OPENAI_API_KEY"),
 });
 
 const getAnalysisTypeFromSchema = (schema: ChatlyzerSchemaType): AnalysisType => {

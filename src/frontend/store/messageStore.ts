@@ -12,7 +12,7 @@ interface MessageState {
   deleteMessage: (data: MessageDeleteRequest) => Promise<boolean>;
 }
 
-export const useMessageStore = create<MessageState>((set, get) => ({
+export const useMessageStore = create<MessageState>((set) => ({
   messages: [],
   isLoading: false,
   error: null,

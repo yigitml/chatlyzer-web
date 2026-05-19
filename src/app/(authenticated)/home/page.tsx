@@ -73,6 +73,9 @@ export default function UserDashboard() {
     return () => {
       abortController.abort();
     };
+  // Initial dashboard bootstrap is intentionally gated by hasFetchedData to avoid
+  // refetching when action helpers are recreated by local management hooks.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
 
   useEffect(() => {
@@ -114,6 +117,9 @@ export default function UserDashboard() {
       cancelled = true;
       analysisManagement.stopPolling();
     };
+  // Chat selection drives this effect; including hook action objects here would
+  // restart polling on every render because the management hooks own local state.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [chatManagement.selectedChatId]);
 
   useEffect(() => {
@@ -127,6 +133,8 @@ export default function UserDashboard() {
         chatManagement.selectChat(chatManagement.chats[0].id);
       }
     }
+  // This only reconciles persisted selection when the chat list or selected id changes.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [chatManagement.chats, chatManagement.selectedChatId]);
 
   if (!isInitialized) {
@@ -198,7 +206,6 @@ export default function UserDashboard() {
         whatsappImportText={chatManagement.whatsappImportText}
         onWhatsappImportTextChange={chatManagement.setWhatsappImportText}
         importMode={chatManagement.importMode}
-        onImportModeChange={chatManagement.setImportMode}
         onShowToast={showToast}
         isPrivacyMode={analysisManagement.isPrivacyMode}
         isGhostMode={analysisManagement.isGhostMode}

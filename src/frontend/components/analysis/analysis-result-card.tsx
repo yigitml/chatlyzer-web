@@ -11,9 +11,12 @@ import {
   EmotionalDepthAnalysisBuilder,
   ChatStatsAnalysisBuilder
 } from "./analysis-builders";
+import type { AnalysisResult } from "@/shared/schemas/zodSchemas";
 
 interface AnalysisResultCardProps {
-  analysis: any;
+  analysis: {
+    result: string | AnalysisResult | unknown;
+  };
 }
 
 export const AnalysisResultCard = ({ analysis }: AnalysisResultCardProps) => {
@@ -32,11 +35,12 @@ export const AnalysisResultCard = ({ analysis }: AnalysisResultCardProps) => {
     }
   };
   
-  const getAnalysisData = () => {
+  const getAnalysisData = (): AnalysisResult | Record<string, unknown> => {
     try {
-      return typeof analysis.result === 'string' 
+      const parsed = typeof analysis.result === 'string' 
         ? JSON.parse(analysis.result) 
-        : analysis.result;
+        : analysis.result ?? {};
+      return parsed && typeof parsed === "object" ? parsed as AnalysisResult | Record<string, unknown> : {};
     } catch {
       return {};
     }

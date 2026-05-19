@@ -7,10 +7,13 @@
     "dev": "next dev --turbopack",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
     "format": "prettier --write .",
     "postinstall": "prisma generate",
-    "db:backup": "./scripts/backup.sh"
+    "db:backup": "./scripts/backup.sh",
+    "test": "vitest run",
+    "check:contracts": "node scripts/check-api-contract-drift.mjs"
   },
   "dependencies": {
     "@polar-sh/nextjs": "0.9.1",
@@ -67,6 +70,7 @@
     "eslint-config-next": "^16.0.10",
     "prettier": "^3.7.4",
     "prisma": "^7.1.0",
-    "typescript": "^5.9.3"
+    "typescript": "^5.9.3",
+    "vitest": "^4.1.6"
   }
 }

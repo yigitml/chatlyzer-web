@@ -10,7 +10,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/frontend/components/
 import { Avatar, AvatarFallback, AvatarImage } from "@/frontend/components/ui/avatar";
 import { Button } from "@/frontend/components/ui/button";
 import { Input } from "@/frontend/components/ui/input";
-import { Label } from "@/frontend/components/ui/label";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/frontend/components/ui/dialog";
 import { 
   User, 
@@ -100,9 +99,9 @@ const CreditsDisplay = ({ credits }: { credits: number }) => {
 export default function ProfilePage() {
   const { user, isInitialized, updateUser, setUser, deleteUser } = useAuthStore();
   const { chats, fetchChats } = useChatStore();
-  const { messages, fetchMessages } = useMessageStore();
+  const { fetchMessages } = useMessageStore();
   const { analyzes, fetchAnalyzes } = useAnalysisStore();
-  const { credits, subscription, fetchCredits, fetchSubscription, purchaseCredits } = useCreditStore();
+  const { credits, subscription, fetchCredits, fetchSubscription } = useCreditStore();
   
   // UI State
   const [isEditing, setIsEditing] = useState(false);
@@ -114,7 +113,6 @@ export default function ProfilePage() {
   // Stats
   const totalCredits = credits.reduce((sum, credit) => sum + credit.amount, 0);
   const totalChats = chats.length;
-  const totalMessages = messages.length;
   const totalAnalyses = analyzes.length;
   
   // Toast system
@@ -181,7 +179,7 @@ export default function ProfilePage() {
       await deleteUser();
       showToast("Account deletion initiated", "success");
       setIsDeleteModalOpen(false);
-    } catch (error) {
+    } catch {
       showToast("Failed to delete account", "error");
     }
   };

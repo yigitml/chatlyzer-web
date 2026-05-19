@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import { ApiResponse } from "@/shared/types/api/apiResponse";
 
 export interface AuthenticatedRequest extends NextRequest {
   user?: {

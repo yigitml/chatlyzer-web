@@ -5,7 +5,6 @@ import { Textarea } from "@/frontend/components/ui/textarea";
 import { Button } from "@/frontend/components/ui/button";
 import { Label } from "@/frontend/components/ui/label";
 import { LoadingSpinner } from "@/frontend/components/common/loading-spinner";
-import { X, Shield, EyeOff } from "lucide-react";
 import { convertChatExport, ChatPlatform } from "@/shared/utils/messageConverter";
 import { ImportMode } from "@/shared/types/app";
 import { useCreditStore } from "@/frontend/store/creditStore";
@@ -34,7 +33,6 @@ interface CreateChatModalProps {
   onWhatsappImportTextChange: (text: string) => void;
   onShowToast: (message: string, type: "success" | "error") => void;
   importMode: ImportMode;
-  onImportModeChange: (mode: ImportMode) => void;
   // New props for privacy settings
   isPrivacyMode: boolean;
   isGhostMode: boolean;
@@ -49,17 +47,13 @@ export const CreateChatModal = ({
   isCreating,
   chatTitle,
   onTitleChange,
-  chatMessages,
   onMessagesChange,
-  newMessageSender,
   onNewMessageSenderChange,
-  newMessageContent,
   onNewMessageContentChange,
   whatsappImportText,
   onWhatsappImportTextChange,
   onShowToast,
   importMode,
-  onImportModeChange,
   isPrivacyMode,
   isGhostMode,
   onTogglePrivacyMode,
@@ -67,24 +61,6 @@ export const CreateChatModal = ({
 }: CreateChatModalProps) => {
   const credits = useCreditStore((s) => s.credits);
   const totalCredits = credits.reduce((sum, credit) => sum + credit.amount, 0);
-
-  const addMessage = () => {
-    if (!newMessageSender.trim() || !newMessageContent.trim()) return;
-    
-    const newMessage: Message = {
-      sender: newMessageSender.trim(),
-      content: newMessageContent.trim(),
-      timestamp: new Date()
-    };
-    
-    onMessagesChange([...chatMessages, newMessage]);
-    onNewMessageSenderChange("");
-    onNewMessageContentChange("");
-  };
-
-  const removeMessage = (index: number) => {
-    onMessagesChange(chatMessages.filter((_, i) => i !== index));
-  };
 
   const handleWhatsAppImport = () => {
     if (!whatsappImportText.trim()) {

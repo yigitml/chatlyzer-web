@@ -2,9 +2,6 @@
 
 import { LoginForm } from "@/frontend/components/login-form"
 import useAuth from "@/frontend/hooks/useAuth";
-import posthog from "posthog-js";
-import Image from "next/image";
-import Link from "next/link";
 
 export default function LoginPage() {
   const { signIn, isLoggingIn } = useAuth();
@@ -25,10 +22,7 @@ export default function LoginPage() {
 
         <LoginForm 
           compact
-          onSignIn={() => {
-            signIn();
-            posthog.capture("sign_in", { property: "value" });
-          }} 
+          onSignIn={signIn} 
           isLoading={isLoggingIn}
           buttonText="Continue with Google"
         />

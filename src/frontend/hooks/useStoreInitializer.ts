@@ -20,7 +20,7 @@ export function useStoreInitializer(initializeFunction: () => void | Promise<voi
         initializationAttempted.current = true;
         await Promise.resolve(initializeFunction());
         setInitialized(true);
-      } catch (error) {
+      } catch {
         setInitialized(true);
       }
     };

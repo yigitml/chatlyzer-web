@@ -20,7 +20,7 @@ module.exports = {
   changefreq: "daily",
   priority: 0.7,
 
-  additionalPaths: async (config) => {
+  additionalPaths: async () => {
     // TODO: add the correct dynamic paths
     const dynamicPaths = ["/", "/auth/signin", "/features"];
 

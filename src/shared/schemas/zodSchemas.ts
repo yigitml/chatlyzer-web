@@ -231,3 +231,12 @@ export const ChatlyzerSchemas = {
 } as const;
 
 export type ChatlyzerSchemaType = typeof ChatlyzerSchemas[keyof typeof ChatlyzerSchemas];
+export type AnalysisResult =
+  | z.infer<typeof ChatStatsSchema>
+  | z.infer<typeof RedFlagAnalysisSchema>
+  | z.infer<typeof GreenFlagAnalysisSchema>
+  | z.infer<typeof VibeCheckAnalysisSchema>
+  | z.infer<typeof SimpOMeterAnalysisSchema>
+  | z.infer<typeof GhostRiskAnalysisSchema>
+  | z.infer<typeof MainCharacterEnergyAnalysisSchema>
+  | z.infer<typeof EmotionalDepthAnalysisSchema>;
