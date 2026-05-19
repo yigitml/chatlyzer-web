@@ -52,9 +52,10 @@ export const DELETE = withProtectedRoute(async (request: NextRequest) => {
     }
 
     const deletedSubscription = await prisma.subscription.update({
-      where: { id, userId: authenticatedUserId },
+      where: { id, userId: authenticatedUserId, deletedAt: null },
       data: {
         deletedAt: new Date(),
+        isActive: false,
       },
     });
 

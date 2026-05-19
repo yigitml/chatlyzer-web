@@ -126,84 +126,87 @@ export default function ContactPage() {
   };
 
   return (
-    <div className="min-h-screen text-white bg-background">
+    <div className="min-h-screen text-foreground bg-background relative overflow-hidden flex flex-col selection:bg-primary selection:text-primary-foreground">
       {/* Navigation */}
-      <header className="container mx-auto px-4 py-6 flex items-center justify-between">
-        <Link href="/" className="flex items-center gap-2">
-          <Image src="/iconsvg.svg" alt="Chatlyzer" width={32} height={32} className="w-8 h-8" />
-          <span className="font-bold text-xl text-white relative after:content-[''] after:block after:h-0.5 after:w-full after:mt-1 after:rounded-full">Chatlyzer</span>
+      <header className="border-b-4 border-primary bg-background py-4 px-4 md:px-8 flex items-center justify-between sticky top-0 z-50">
+        <Link href="/" className="flex items-center gap-3">
+          <Image src="/iconsvg.svg" alt="Chatlyzer" width={32} height={32} className="w-8 h-8 rounded-none border-2 border-primary shadow-[4px_4px_0px_0px_hsl(var(--primary))] bg-card p-0.5" />
+          <span className="font-display font-black text-xl sm:text-2xl tracking-widest uppercase">Chatlyzer</span>
         </Link>
 
         <Button
           variant="outline"
           onClick={() => router.push("/")}
-          className="bg-white/10 hover:bg-white/20 border-gray-400/30 text-white backdrop-blur-sm"
+          className="px-3 sm:px-4"
         >
           <ArrowLeft className="h-4 w-4 mr-2" />
-          Back Home
+          <span className="hidden sm:inline">Back Home</span>
+          <span className="sm:hidden">Back</span>
         </Button>
       </header>
 
-      <div className="container mx-auto px-4 py-8">
-        <div className="max-w-2xl mx-auto">
+      <main className="flex-1 container mx-auto px-4 py-12 md:py-16">
+        <div className="max-w-5xl mx-auto">
           {/* Hero Section */}
-          <div className="text-center mb-12">
-            <div className="inline-flex items-center gap-2 text-gray-400 bg-white/10 rounded-full px-4 py-2 mb-6 backdrop-blur-sm">
+          <div className="text-center mb-12 md:mb-16">
+            <div className="inline-flex items-center gap-2 border-2 border-primary bg-card text-card-foreground px-4 py-3 mb-10 shadow-[4px_4px_0px_0px_hsl(var(--primary))] font-mono uppercase text-sm font-bold rotate-[1deg]">
               <Sparkles className="w-4 h-4" />
-              <span>Hit us up bestie ✨</span>
+              <span>// Contact Channel Open</span>
             </div>
             
-            <h1 className="text-4xl md:text-6xl font-bold mb-6">
-              Got questions?
-              <br />
-              <span className="text-white relative after:content-[''] after:block after:h-1 after:w-full after:bg-gradient-to-r from-gray-400/20 to-gray-500/30 after:mt-1 after:rounded-full">We got answers</span> 💬
+            <h1 className="text-5xl md:text-7xl font-display font-black uppercase tracking-tighter mb-8 leading-[0.9] text-balance">
+              Got Questions?
+              <br className="hidden sm:block" />
+              <span className="relative inline-block mt-3 bg-primary text-primary-foreground px-4 sm:px-6 py-2 border-4 border-primary shadow-[10px_10px_0px_0px_hsl(var(--foreground))] rotate-[-1deg]">
+                Ping Support
+              </span>
             </h1>
             
-            <p className="text-xl text-gray-400 max-w-2xl mx-auto mb-8">
-              Drop us a line and we'll get back to you faster than your crush leaves you on read 💀
+            <p className="text-base md:text-lg font-mono text-muted-foreground uppercase max-w-3xl mx-auto tracking-widest leading-loose bg-card border-2 border-primary p-5 shadow-[6px_6px_0px_0px_hsl(var(--primary))]">
+              Drop a note about bugs, billing, analysis results, or account questions. We will route it to the right place.
             </p>
           </div>
           
-          <div className="space-y-6">
+          <div className="grid grid-cols-1 lg:grid-cols-[1fr_0.8fr] gap-8 items-start">
             {/* Contact Form */}
-            <Card className="bg-black border-white/20 text-white">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-white">
-                  <MessageSquare className="h-5 w-5 text-gray-400" />
-                  Spill the tea ☕
+            <Card className="border-4 shadow-[10px_10px_0px_0px_hsl(var(--primary))]">
+              <CardHeader className="border-b-4 border-primary pb-6">
+                <CardTitle className="flex items-center gap-3 font-display font-black uppercase tracking-wide text-2xl">
+                  <MessageSquare className="h-6 w-6" strokeWidth={3} />
+                  Send Message
                 </CardTitle>
-                <CardDescription className="text-white/60">
-                  Whether you're confused, stuck, or just want to say hi - we're here for it 💯
+                <CardDescription className="font-mono uppercase tracking-widest font-bold">
+                  Include enough context so we can respond without a long back-and-forth.
                 </CardDescription>
               </CardHeader>
-              <CardContent>
-                <form onSubmit={handleSubmit} className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <CardContent className="pt-2">
+                <form onSubmit={handleSubmit} className="space-y-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                     <div className="space-y-2">
-                      <Label htmlFor="name" className="flex items-center justify-between text-white">
-                        <span>Your name bestie *</span>
-                        <span className={`text-xs ${getCharacterCount('name').isNearLimit ? 'text-gray-500' : 'text-gray-400'}`}>{getCharacterCount('name').current}/{limits.name}</span>
+                      <Label htmlFor="name" className="flex items-center justify-between font-mono uppercase text-xs font-black tracking-widest">
+                        <span>Name *</span>
+                        <span className={getCharacterCount('name').isNearLimit ? 'text-destructive' : 'text-muted-foreground'}>{getCharacterCount('name').current}/{limits.name}</span>
                       </Label>
                       <Input
                         id="name"
                         name="name"
-                        placeholder="What should we call you?"
+                        placeholder="Your name"
                         value={formData.name}
                         onChange={handleInputChange}
-                        className={`bg-white/10 border-gray-400/30 text-white placeholder:text-gray-400 ${errors.name ? "border-gray-500" : ""}`}
+                        aria-invalid={!!errors.name}
                         required
                       />
                       {errors.name && (
-                        <p className="text-xs text-red-400 flex items-center gap-1">
+                        <p className="text-xs text-destructive flex items-center gap-1 font-mono uppercase font-bold">
                           <AlertCircle className="h-3 w-3" />
                           {errors.name}
                         </p>
                       )}
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="email" className="flex items-center justify-between text-white">
+                      <Label htmlFor="email" className="flex items-center justify-between font-mono uppercase text-xs font-black tracking-widest">
                         <span>Email *</span>
-                        <span className={`text-xs ${getCharacterCount('email').isNearLimit ? 'text-gray-500' : 'text-gray-400'}`}>{getCharacterCount('email').current}/{limits.email}</span>
+                        <span className={getCharacterCount('email').isNearLimit ? 'text-destructive' : 'text-muted-foreground'}>{getCharacterCount('email').current}/{limits.email}</span>
                       </Label>
                       <Input
                         id="email"
@@ -212,11 +215,11 @@ export default function ContactPage() {
                         placeholder="your.email@example.com"
                         value={formData.email}
                         onChange={handleInputChange}
-                        className={`bg-white/10 border-gray-400/30 text-white placeholder:text-gray-400 ${errors.email ? "border-gray-500" : ""}`}
+                        aria-invalid={!!errors.email}
                         required
                       />
                       {errors.email && (
-                        <p className="text-xs text-red-400 flex items-center gap-1">
+                        <p className="text-xs text-destructive flex items-center gap-1 font-mono uppercase font-bold">
                           <AlertCircle className="h-3 w-3" />
                           {errors.email}
                         </p>
@@ -225,21 +228,21 @@ export default function ContactPage() {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="subject" className="flex items-center justify-between text-white">
-                      <span>What's this about? *</span>
-                      <span className={`text-xs ${getCharacterCount('subject').isNearLimit ? 'text-gray-500' : 'text-gray-400'}`}>{getCharacterCount('subject').current}/{limits.subject}</span>
+                    <Label htmlFor="subject" className="flex items-center justify-between font-mono uppercase text-xs font-black tracking-widest">
+                      <span>Subject *</span>
+                      <span className={getCharacterCount('subject').isNearLimit ? 'text-destructive' : 'text-muted-foreground'}>{getCharacterCount('subject').current}/{limits.subject}</span>
                     </Label>
                     <Input
                       id="subject"
                       name="subject"
-                      placeholder="Give us the topic bestie"
+                      placeholder="What should we look at?"
                       value={formData.subject}
                       onChange={handleInputChange}
-                      className={`bg-white/10 border-gray-400/30 text-white placeholder:text-gray-400 ${errors.subject ? "border-gray-500" : ""}`}
+                      aria-invalid={!!errors.subject}
                       required
                     />
                     {errors.subject && (
-                      <p className="text-xs text-red-400 flex items-center gap-1">
+                      <p className="text-xs text-destructive flex items-center gap-1 font-mono uppercase font-bold">
                         <AlertCircle className="h-3 w-3" />
                         {errors.subject}
                       </p>
@@ -247,22 +250,22 @@ export default function ContactPage() {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="message" className="flex items-center justify-between text-white">
-                      <span>Your message *</span>
-                      <span className={`text-xs ${getCharacterCount('message').isNearLimit ? 'text-gray-500' : 'text-gray-400'}`}>{getCharacterCount('message').current}/{limits.message}</span>
+                    <Label htmlFor="message" className="flex items-center justify-between font-mono uppercase text-xs font-black tracking-widest">
+                      <span>Message *</span>
+                      <span className={getCharacterCount('message').isNearLimit ? 'text-destructive' : 'text-muted-foreground'}>{getCharacterCount('message').current}/{limits.message}</span>
                     </Label>
                     <Textarea
                       id="message"
                       name="message"
-                      placeholder="Spill everything... we're listening 👂"
+                      placeholder="Tell us what happened, what you expected, and any account or order details that help."
                       rows={6}
                       value={formData.message}
                       onChange={handleInputChange}
-                      className={`bg-white/10 border-gray-400/30 text-white placeholder:text-gray-400 ${errors.message ? "border-gray-500" : ""}`}
+                      aria-invalid={!!errors.message}
                       required
                     />
                     {errors.message && (
-                      <p className="text-xs text-red-400 flex items-center gap-1">
+                      <p className="text-xs text-destructive flex items-center gap-1 font-mono uppercase font-bold">
                         <AlertCircle className="h-3 w-3" />
                         {errors.message}
                       </p>
@@ -272,13 +275,13 @@ export default function ContactPage() {
                   <div className="pt-2">
                     <Button
                       type="submit"
-                      className="w-full bg-white/10 border-white/20 text-white font-medium transition-all duration-200 hover:scale-105 opacity-50 cursor-not-allowed"
+                      className="w-full h-12 text-base"
                       disabled
                     >
-                      Send that energy ✨
+                      Send Message [Soon]
                     </Button>
-                    <p className="text-xs text-gray-400 mt-2 text-center">
-                      This form is currently disabled - implementation pending (but we're working on it fr fr) 💀
+                    <p className="text-xs text-muted-foreground mt-3 text-center font-mono uppercase font-bold tracking-widest">
+                      Form delivery is not wired yet. Use the email below for now.
                     </p>
                   </div>
                 </form>
@@ -286,42 +289,41 @@ export default function ContactPage() {
             </Card>
 
             {/* Contact Information */}
-            <Card className="bg-black border-white/20 text-white">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-white">
-                  <Phone className="h-5 w-5 text-gray-400" />
-                  Other ways to vibe with us 📱
+            <Card className="border-4 shadow-[10px_10px_0px_0px_hsl(var(--primary))] lg:rotate-[1deg]">
+              <CardHeader className="border-b-4 border-primary pb-6">
+                <CardTitle className="flex items-center gap-3 font-display font-black uppercase tracking-wide text-2xl">
+                  <Phone className="h-6 w-6" strokeWidth={3} />
+                  Contact Intel
                 </CardTitle>
-                <CardDescription className="text-white/60">
-                  Multiple ways to reach us because we're accommodating like that ✨
+                <CardDescription className="font-mono uppercase tracking-widest font-bold">
+                  Fastest path while the form endpoint is pending.
                 </CardDescription>
               </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <div className="p-4 rounded-lg bg-gradient-to-r from-gray-500/10 to-gray-500/10 border border-gray-400/20">
+              <CardContent className="pt-2">
+                <div className="space-y-6">
+                  <div className="p-5 bg-background border-4 border-primary shadow-[6px_6px_0px_0px_hsl(var(--primary))]">
                     <div className="flex items-center gap-3">
-                      <Mail className="h-5 w-5 text-gray-400" />
+                      <Mail className="h-6 w-6 shrink-0" strokeWidth={3} />
                       <div>
-                        <h3 className="font-semibold text-white">Direct line to us</h3>
-                        <p className="text-gray-400">info@chatlyzerai.com</p>
-                        <p className="text-sm text-gray-400">We actually check this one 💯</p>
+                        <h3 className="font-display font-black uppercase tracking-wide text-lg">Direct Email</h3>
+                        <p className="text-muted-foreground font-mono font-bold break-all">info@chatlyzerai.com</p>
+                        <p className="text-sm text-muted-foreground font-mono uppercase mt-1">Checked manually.</p>
                       </div>
                     </div>
                   </div>
 
-                  <div className="p-4 rounded-lg bg-gradient-to-r from-gray-500/10 to-gray-500/10 border border-gray-400/20">
-                    <h3 className="font-semibold text-white mb-3">
-                      Quick answers to common Qs 🤔
+                  <div className="p-5 bg-primary/5 border-4 border-primary">
+                    <h3 className="font-display font-black uppercase tracking-wide text-xl mb-4">
+                      Quick Answers_
                     </h3>
-                    <ul className="text-sm text-gray-300 space-y-2">
-                      <li>• How do I upload and analyze my chats? → Super easy, just drag & drop or paste</li>
-                      <li>• What chat platforms work? → WhatsApp, Telegram, Discord, or any copy-paste</li>
-                      <li>• Is my data safe? → We analyze, you get insights, nobody else sees your business</li>
-                      <li>• What are the different vibes? → Red flags, green flags, simp meter, ghost risk & more</li>
-                      <li>• How do credits work? → Each analysis costs credits, get more in your dashboard</li>
+                    <ul className="text-sm text-muted-foreground space-y-3 font-mono uppercase leading-relaxed font-bold">
+                      <li><span className="text-foreground">// Uploads:</span> paste text or import supported chat exports.</li>
+                      <li><span className="text-foreground">// Platforms:</span> WhatsApp, Telegram, Discord, or raw text.</li>
+                      <li><span className="text-foreground">// Privacy:</span> analysis stays tied to your account.</li>
+                      <li><span className="text-foreground">// Credits:</span> each analysis consumes credits from your dashboard.</li>
                     </ul>
-                    <p className="text-sm text-gray-400 mt-3">
-                      Still confused? Hit us up - no judgment zone here 🫶
+                    <p className="text-sm text-muted-foreground mt-5 font-mono uppercase font-bold tracking-widest">
+                      For account or billing issues, include the email on your account.
                     </p>
                   </div>
                 </div>
@@ -329,7 +331,7 @@ export default function ContactPage() {
             </Card>
           </div>
         </div>
-      </div>
+      </main>
     </div>
   );
 }

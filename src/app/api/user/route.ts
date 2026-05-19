@@ -2,7 +2,7 @@ import { NextRequest } from "next/server";
 import prisma, { rawPrisma } from "@/backend/lib/prisma";
 import { ApiResponse } from "@/shared/types/api/apiResponse";
 import { withProtectedRoute } from "@/backend/middleware/jwtAuth";
-import type { UserPutRequest, UserPostRequest } from "@/shared/types/api/apiRequest";
+import type { UserPutRequest } from "@/shared/types/api/apiRequest";
 
 export const GET = withProtectedRoute(async (request: NextRequest) => {
   try {
@@ -29,22 +29,17 @@ export const PUT = withProtectedRoute(async (request: NextRequest) => {
     const body: UserPutRequest = await request.json();
 
     if (
-      !body.name &&
-      !body.image &&
-      !body.isOnboarded &&
-      !body.isTourCompleted &&
-      !body.isFirstModelCreated
+      body.name === undefined &&
+      body.image === undefined &&
+      body.isOnboarded === undefined
     ) {
       return ApiResponse.error("No fields to update", 400).toResponse();
     }
 
-    const updateData: Partial<UserPutRequest> = {};
-    if (body.name) updateData.name = body.name;
-    if (body.image) updateData.image = body.image;
-    if (body.isOnboarded) updateData.isOnboarded = body.isOnboarded;
-    if (body.isTourCompleted) updateData.isTourCompleted = body.isTourCompleted;
-    if (body.isFirstModelCreated)
-      updateData.isFirstModelCreated = body.isFirstModelCreated;
+    const updateData: { name?: string; image?: string | null; isOnboarded?: boolean } = {};
+    if (body.name !== undefined) updateData.name = body.name;
+    if (body.image !== undefined) updateData.image = body.image;
+    if (body.isOnboarded !== undefined) updateData.isOnboarded = body.isOnboarded;
 
     const updatedUser = await prisma.user.update({
       where: { id: authenticatedUserId },
@@ -68,21 +63,13 @@ export const DELETE = withProtectedRoute(async (request: NextRequest) => {
 
     await rawPrisma.$transaction(async (tx) => {
       await Promise.all([
-        tx.userSession.updateMany({
+        tx.analysis.updateMany({
           where: { userId: authenticatedUserId, deletedAt: null },
-          data: { deletedAt },
+          data: { deletedAt, result: {}, error: null },
         }),
-        tx.userDevice.updateMany({
+        tx.message.updateMany({
           where: { userId: authenticatedUserId, deletedAt: null },
-          data: { deletedAt },
-        }),
-        tx.subscription.updateMany({
-          where: { userId: authenticatedUserId, deletedAt: null },
-          data: { deletedAt, isActive: false },
-        }),
-        tx.userCredit.updateMany({
-          where: { userId: authenticatedUserId, deletedAt: null },
-          data: { deletedAt, amount: 0, minimumBalance: 0 },
+          data: { deletedAt, content: "" },
         }),
         tx.file.updateMany({
           where: { userId: authenticatedUserId, deletedAt: null },
@@ -92,17 +79,29 @@ export const DELETE = withProtectedRoute(async (request: NextRequest) => {
           where: { userId: authenticatedUserId, deletedAt: null },
           data: { deletedAt },
         }),
-        tx.message.updateMany({
+        tx.userCredit.updateMany({
           where: { userId: authenticatedUserId, deletedAt: null },
-          data: { deletedAt, content: "" },
+          data: { deletedAt, amount: 0, minimumBalance: 0 },
         }),
-        tx.analysis.updateMany({
+        tx.subscription.updateMany({
           where: { userId: authenticatedUserId, deletedAt: null },
-          data: { deletedAt, result: null as any, error: null },
+          data: { deletedAt, isActive: false },
+        }),
+        tx.order.updateMany({
+          where: { userId: authenticatedUserId, deletedAt: null },
+          data: { deletedAt },
+        }),
+        tx.userSession.updateMany({
+          where: { userId: authenticatedUserId, deletedAt: null },
+          data: { deletedAt },
+        }),
+        tx.userDevice.updateMany({
+          where: { userId: authenticatedUserId, deletedAt: null },
+          data: { deletedAt },
         }),
         tx.revenueCatPurchase.updateMany({
           where: { userId: authenticatedUserId, deletedAt: null },
-          data: { deletedAt, rawPayload: null as any },
+          data: { deletedAt, rawPayload: {} },
         }),
       ]);
 

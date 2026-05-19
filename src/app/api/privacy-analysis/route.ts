@@ -28,13 +28,15 @@ export const POST = withProtectedRoute(async (request: NextRequest) => {
       return ApiResponse.error("Title and messages are required", 400).toResponse();
     }
 
-    const existingChat = await prisma.chat.findFirst({
-      where: {
-        title: data.title,
-        userId: authenticatedUserId,
-        deletedAt: null,
-      }
-    });
+    const existingChat = data.isGhostMode
+      ? null
+      : await prisma.chat.findFirst({
+          where: {
+            title: data.title,
+            userId: authenticatedUserId,
+            deletedAt: null,
+          }
+        });
 
     if (existingChat) {
       return ApiResponse.error("Chat already exists", 400).toResponse();
@@ -100,6 +102,9 @@ export const POST = withProtectedRoute(async (request: NextRequest) => {
     }
 
     const smallMessages = smartChatSampler(m);
+    if (smallMessages.length === 0) {
+      return ApiResponse.error("At least one valid message is required", 400).toResponse();
+    }
 
     // Perform comprehensive analysis using messages from request
     const comprehensiveAnalysisData = await analyzeAllChatTypesPrivate(

@@ -1,18 +1,30 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 import jwt from "jsonwebtoken";
 import prisma from "@/backend/lib/prisma";
 import { ApiResponse } from "@/shared/types/api/apiResponse";
+import { getRequiredServerEnv } from "@/shared/config/env";
+import { logger } from "@/backend/lib/logger";
 
 export async function POST(request: NextRequest) {
   try {
-    const refreshToken = request.cookies.get("refreshToken")?.value;
+    let bodyRefreshToken: string | undefined;
+    try {
+      const body = await request.json();
+      bodyRefreshToken =
+        typeof body?.refreshToken === "string" ? body.refreshToken : undefined;
+    } catch {
+      bodyRefreshToken = undefined;
+    }
+
+    const refreshToken =
+      bodyRefreshToken || request.cookies.get("refreshToken")?.value;
     if (!refreshToken) {
       return ApiResponse.error("No refresh token provided", 401).toResponse();
     }
 
     let decoded: any;
     try {
-      decoded = jwt.verify(refreshToken, process.env.REFRESH_TOKEN_SECRET!, {
+      decoded = jwt.verify(refreshToken, getRequiredServerEnv("REFRESH_TOKEN_SECRET"), {
         algorithms: ["HS256"],
       });
     } catch {
@@ -24,7 +36,7 @@ export async function POST(request: NextRequest) {
       include: { devices: true },
     });
 
-    if (!user) {
+    if (!user || user.deletedAt || !user.isActive) {
       return ApiResponse.error("User not found", 401).toResponse();
     }
 
@@ -67,7 +79,7 @@ export async function POST(request: NextRequest) {
         tokenVersion: user.tokenVersion,
         iat: Math.floor(Date.now() / 1000),
       },
-      process.env.JWT_SECRET!,
+      getRequiredServerEnv("JWT_SECRET"),
       { expiresIn: "30d" },
     );
 
@@ -76,7 +88,7 @@ export async function POST(request: NextRequest) {
       expiresAt: Math.floor(Date.now() / 1000) + 30 * 24 * 60 * 60,
     }).toResponse();
   } catch (error: unknown) {
-    console.error("Refresh token error:", error);
+    logger.error("Refresh token error", error);
     return ApiResponse.error("Token refresh failed", 500).toResponse();
   }
 }

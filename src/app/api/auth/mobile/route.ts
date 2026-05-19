@@ -6,6 +6,8 @@ import { ApiResponse } from "@/shared/types/api/apiResponse";
 import type { AuthMobilePostRequest } from "@/shared/types/api/apiRequest";
 import { verifyGoogleIdToken } from "@/backend/lib/verifyGoogleIdToken";
 import { withAuthRateLimiter } from "@/backend/middleware/rateLimiter";
+import { getRequiredServerEnv } from "@/shared/config/env";
+import { logger } from "@/backend/lib/logger";
 
 export const POST = withAuthRateLimiter(async (request: NextRequest) => {
   try {
@@ -29,6 +31,10 @@ export const POST = withAuthRateLimiter(async (request: NextRequest) => {
     let user = await prisma.user.findUnique({
       where: { email: payload.email },
     });
+
+    if (user?.deletedAt || user?.isActive === false) {
+      return ApiResponse.error("Account has been deleted", 403).toResponse();
+    }
 
     if (!user) {
       user = await prisma.user.create({
@@ -99,7 +105,7 @@ export const POST = withAuthRateLimiter(async (request: NextRequest) => {
         tokenVersion: user.tokenVersion,
         iat: Math.floor(Date.now() / 1000),
       },
-      process.env.JWT_SECRET!,
+      getRequiredServerEnv("JWT_SECRET"),
       { expiresIn: "30d" },
     );
 
@@ -109,19 +115,20 @@ export const POST = withAuthRateLimiter(async (request: NextRequest) => {
         deviceId: deviceId,
         tokenVersion: user.tokenVersion,
       },
-      process.env.REFRESH_TOKEN_SECRET!,
+      getRequiredServerEnv("REFRESH_TOKEN_SECRET"),
       { expiresIn: "30d" },
     );
 
     return ApiResponse.success({
       token: jwtToken,
+      refreshToken,
       expiresAt: Math.floor(Date.now() / 1000) + 30 * 24 * 60 * 60,
       user: user,
     }).toResponse({
       "Set-Cookie": `refreshToken=${refreshToken}; HttpOnly; Path=/api/auth/mobile/refresh; Secure; SameSite=Strict`,
     });
-  } catch (error: any) {
-    console.error("Mobile auth error:", error);
+  } catch (error: unknown) {
+    logger.error("Mobile auth error", error);
     return ApiResponse.error("Authentication failed", 500).toResponse();
   }
 });

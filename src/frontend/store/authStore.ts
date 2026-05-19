@@ -66,7 +66,7 @@ export const useAuthStore = create<AuthState>((set, get) => {
           isAuthenticated: true,
           networkService: sharedNetworkService,
         });
-      } catch (error) {
+      } catch {
         // No valid session cookie — user is not authenticated
         console.debug('AUTH STORE: No valid session, user not authenticated');
       }

@@ -1,9 +1,8 @@
 import { Button } from "@/frontend/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/frontend/components/ui/card";
 import { SkeletonCard, SkeletonAnalysisGrid } from "@/frontend/components/common/skeleton";
 import { AnalysisResultCard } from "@/frontend/components/analysis/analysis-result-card";
 import { BuyCreditsButton } from "@/frontend/components/common/buy-credits-button";
-import { Plus, Sparkles, Trash2, BarChart3, MessageCircle } from "lucide-react";
+import { Plus, Sparkles, Trash2, BarChart3 } from "lucide-react";
 import { AnalysisType } from "@/shared/types/api/apiRequest";
 import { ANALYSIS_CONFIG } from "@/shared/types/analysis";
 import { Chat } from "../../../generated/client";

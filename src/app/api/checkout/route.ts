@@ -3,6 +3,7 @@ import { getPolarConfig } from "@/backend/lib/polarConfig";
 import { AuthenticatedRequest } from "@/backend/middleware/combinedMiddleware";
 import { withProtectedRoute } from "@/backend/middleware/jwtAuth";
 import { ApiResponse } from "@/shared/types/api/apiResponse";
+import { logger } from "@/backend/lib/logger";
 
 /**
  * Checkout route that creates a Polar checkout session directly via the API.
@@ -31,6 +32,17 @@ function createErrorResponse(
   return NextResponse.redirect(url);
 }
 
+function isAllowedMobileRedirect(value: string | null): value is string {
+  if (!value) return false;
+
+  try {
+    const url = new URL(value);
+    return url.protocol === "chatlyzer:";
+  } catch {
+    return false;
+  }
+}
+
 export const GET = withProtectedRoute(async (request: AuthenticatedRequest) => {
   const { searchParams, origin } = new URL(request.url);
   const returnJson = searchParams.get("json") === "true";
@@ -41,7 +53,10 @@ export const GET = withProtectedRoute(async (request: AuthenticatedRequest) => {
     const polarConfig = await getPolarConfig();
 
     const productId = searchParams.get("products") || polarConfig.productId;
-    const mobileRedirect = searchParams.get("mobileRedirect");
+    const requestedMobileRedirect = searchParams.get("mobileRedirect");
+    const mobileRedirect = isAllowedMobileRedirect(requestedMobileRedirect)
+      ? requestedMobileRedirect
+      : null;
 
     // Use authenticated user's data instead of user-supplied params
     const metadata = {
@@ -50,7 +65,7 @@ export const GET = withProtectedRoute(async (request: AuthenticatedRequest) => {
       polarVariant: polarConfig.variant,
     };
 
-    console.info("[Checkout] Creating Polar checkout", {
+    logger.info("[Checkout] Creating Polar checkout", {
       polarMode: polarConfig.mode,
       polarVariant: polarConfig.variant,
       productId,
@@ -82,7 +97,7 @@ export const GET = withProtectedRoute(async (request: AuthenticatedRequest) => {
 
     if (!response.ok) {
       const errorData = await response.text();
-      console.error("[Checkout] Polar API error:", response.status, errorData);
+      logger.error("[Checkout] Polar API error", { status: response.status, errorData });
 
       return createErrorResponse(
         request,
@@ -102,7 +117,7 @@ export const GET = withProtectedRoute(async (request: AuthenticatedRequest) => {
       return NextResponse.redirect(checkout.url);
     }
 
-    console.error("[Checkout] No URL in checkout response:", checkout);
+    logger.error("[Checkout] No URL in checkout response", checkout);
     return createErrorResponse(
       request,
       returnJson,
@@ -110,7 +125,7 @@ export const GET = withProtectedRoute(async (request: AuthenticatedRequest) => {
       500,
     );
   } catch (error) {
-    console.error("[Checkout] Error creating checkout:", error);
+    logger.error("[Checkout] Error creating checkout", error);
 
     // In Next.js, redirect() literally throws an error. We MUST rethrow it
     // or Next.js will catch it here and return a 500/502 instead of redirecting.

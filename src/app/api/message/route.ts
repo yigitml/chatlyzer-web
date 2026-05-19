@@ -15,8 +15,10 @@ export const GET = withProtectedRoute(async (request: NextRequest) => {
       const message = await prisma.message.findFirst({
         where: { 
           id: id,
+          deletedAt: null,
           chat: {
-            userId: authenticatedUserId
+            userId: authenticatedUserId,
+            deletedAt: null,
           }
         }
       });
@@ -63,7 +65,8 @@ export const POST = withProtectedRoute(async (request: NextRequest) => {
     const chat = await prisma.chat.findFirst({
       where: {
         id: data.chatId,
-        userId: authenticatedUserId
+        userId: authenticatedUserId,
+        deletedAt: null,
       }
     });
 
@@ -104,7 +107,7 @@ export const PUT = withProtectedRoute(async (request: NextRequest) => {
     }
 
     const message = await prisma.message.findFirst({
-      where: { id },
+      where: { id, deletedAt: null },
       include: { chat: true }
     });
 
@@ -112,7 +115,7 @@ export const PUT = withProtectedRoute(async (request: NextRequest) => {
       return ApiResponse.error("Message not found", 404).toResponse();
     }
 
-    if (message.chat.userId !== authenticatedUserId) {
+    if (message.chat.userId !== authenticatedUserId || message.chat.deletedAt) {
       return ApiResponse.error("Unauthorized to modify this message", 403).toResponse();
     }
 
@@ -149,7 +152,7 @@ export const DELETE = withProtectedRoute(async (request: NextRequest) => {
     }
 
     const message = await prisma.message.findFirst({
-      where: { id },
+      where: { id, deletedAt: null },
       include: { chat: true }
     });
 
@@ -157,7 +160,7 @@ export const DELETE = withProtectedRoute(async (request: NextRequest) => {
       return ApiResponse.error("Message not found", 404).toResponse();
     }
 
-    if (message.chat.userId !== authenticatedUserId) {
+    if (message.chat.userId !== authenticatedUserId || message.chat.deletedAt) {
       return ApiResponse.error("Unauthorized to delete this message", 403).toResponse();
     }
 

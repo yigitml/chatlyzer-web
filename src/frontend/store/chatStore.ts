@@ -15,7 +15,7 @@ interface ChatState {
   setSelectedChat: (chat: Chat | null) => void;
 }
 
-export const useChatStore = create<ChatState>((set, get) => ({
+export const useChatStore = create<ChatState>((set) => ({
   chats: [],
   selectedChat: null,
   isLoading: false,

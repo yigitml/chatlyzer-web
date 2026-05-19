@@ -6,16 +6,16 @@ import type {
   AnalysisPostRequest,
   AnalysisPutRequest,
   AnalysisDeleteRequest,
-  AnalysisType,
 } from "@/shared/types/api/apiRequest";
 import { analyzeAllChatTypes } from "@/backend/lib/openai";
 import { consumeUserCredits, refundUserCredits } from "@/backend/lib/consumeUserCredits";
-import { CreditType, AnalysisStatus, Prisma } from "../../../generated/client/client";
+import { CreditType, AnalysisStatus } from "../../../generated/client/client";
 import { 
   getAllAnalysisTypes, 
   analysisTypeToSchemaKey, 
   analysisTypeToTypeLiteral 
 } from "@/shared/types/analysis";
+import { logger } from "@/backend/lib/logger";
 
 export const GET = withProtectedRoute(async (request: NextRequest) => {
   try {
@@ -76,7 +76,7 @@ export const GET = withProtectedRoute(async (request: NextRequest) => {
       return ApiResponse.success(analyzes).toResponse();
     }
   } catch (error) {
-   console.error(error);
+   logger.error("Error processing GET /api/analysis", error);
    return ApiResponse.error("Internal server error").toResponse();
   }
 });
@@ -157,7 +157,7 @@ export const POST = withProtectedRoute(async (request: NextRequest) => {
 
       // Create placeholder analysis records with PROCESSING status
       const createdAnalyses = [];
-      for (const analysisType of analysisTypes) {
+      for (let index = 0; index < analysisTypes.length; index += 1) {
         const analysis = await tx.analysis.create({
           data: {
             chatId: data.chatId,
@@ -199,7 +199,7 @@ export const POST = withProtectedRoute(async (request: NextRequest) => {
        const schemaKey = analysisTypeToSchemaKey(analysisType);
        const analysisResult = comprehensiveAnalysisData.analyses[schemaKey as keyof typeof comprehensiveAnalysisData.analyses];
        
-       console.log(`Processing ${analysisType} (${schemaKey}):`, !!analysisResult);
+       logger.info("Processing analysis result", { analysisType, schemaKey, hasResult: Boolean(analysisResult) });
        
        if (!analysisResult) {
          throw new Error(`Analysis result for ${analysisType} is missing or undefined`);
@@ -242,14 +242,14 @@ export const POST = withProtectedRoute(async (request: NextRequest) => {
      });
 
       // Refund credits since analysis failed
-      console.log(`Refunding 8 credits to user ${authenticatedUserId} due to analysis failure`);
+      logger.info("Refunding credits due to analysis failure", { userId: authenticatedUserId, amount: 8 });
       await refundUserCredits(authenticatedUserId, CreditType.ANALYSIS, 8);
 
       throw analysisError;
     }
 
   } catch (error: any) {
-    console.error("Error processing POST /api/analysis", error);
+    logger.error("Error processing POST /api/analysis", error);
     
     if (error.code === 'P2034') {
       return ApiResponse.error("Analysis already in progress (concurrency conflict)", 409).toResponse();
@@ -279,6 +279,7 @@ export const PUT = withProtectedRoute(async (request: NextRequest) => {
       where: {
         id,
         userId: authenticatedUserId,
+        deletedAt: null,
       },
       data: {
         result: result,
@@ -295,7 +296,7 @@ export const PUT = withProtectedRoute(async (request: NextRequest) => {
       200
     ).toResponse();
   } catch (error) {
-    console.error("Error processing PUT /api/analysis");
+    logger.error("Error processing PUT /api/analysis", error);
     return ApiResponse.error(`Failed to process request`, 500).toResponse();
   }
 });
@@ -314,6 +315,7 @@ export const DELETE = withProtectedRoute(async (request: NextRequest) => {
         where: {
           id,
           userId: authenticatedUserId,
+          deletedAt: null,
         },
         data: {
           deletedAt: new Date(),
@@ -330,7 +332,7 @@ export const DELETE = withProtectedRoute(async (request: NextRequest) => {
         200
       ).toResponse();
   } catch (error) {
-    console.error("Error processing DELETE /api/analysis");
+    logger.error("Error processing DELETE /api/analysis", error);
     return ApiResponse.error(`Failed to process request`, 500).toResponse();
   }
 });

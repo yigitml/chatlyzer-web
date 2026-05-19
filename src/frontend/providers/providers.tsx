@@ -4,7 +4,6 @@ import { ErrorBoundary, FallbackProps } from "react-error-boundary";
 import { ThemeProvider as NextThemesProvider } from "next-themes";
 import { GoogleOAuthProvider } from "@react-oauth/google";
 import { useRouter } from "next/navigation";
-import { useState, useEffect } from "react"; 
 import { StoreProvider } from "@/frontend/providers/StoreProvider";
 import { PostHogProvider } from "./PostHogProvider";
 
@@ -13,7 +12,6 @@ interface ProvidersProps {
 }
 
 function RootErrorFallback({
-  error,
   resetErrorBoundary,
 }: FallbackProps) {
   const router = useRouter();
@@ -65,7 +63,7 @@ export default function Providers({ children }: ProvidersProps) {
   const googleClientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID!;
 
   return (
-    //<PostHogProvider>
+    <PostHogProvider>
       <ErrorBoundary FallbackComponent={RootErrorFallback}>
         <GoogleOAuthProvider clientId={googleClientId}>
             <NextThemesProvider
@@ -80,6 +78,6 @@ export default function Providers({ children }: ProvidersProps) {
             </NextThemesProvider>
         </GoogleOAuthProvider>
       </ErrorBoundary>
-    //</PostHogProvider>
+    </PostHogProvider>
   );
 }

@@ -23,7 +23,7 @@ export const POST = withAuthRateLimiter(async (request: NextRequest) => {
       include: { sessions: true },
     });
 
-    if (!user) {
+    if (!user || user.deletedAt || !user.isActive) {
       return ApiResponse.error("User not found", 401).toResponse();
     }
 
@@ -32,7 +32,7 @@ export const POST = withAuthRateLimiter(async (request: NextRequest) => {
     }
 
     const session = user.sessions.find(
-      (s: any) => s.sessionId === decoded.sessionId,
+      (s: any) => s.sessionId === decoded.sessionId && s.deletedAt === null,
     );
     if (!session) {
       return ApiResponse.error("Session not found", 401).toResponse();

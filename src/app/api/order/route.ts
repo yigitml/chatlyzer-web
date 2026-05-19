@@ -14,6 +14,7 @@ export const GET = withProtectedRoute(async (request: NextRequest) => {
         where: {
           id,
           userId: authenticatedUserId,
+          deletedAt: null,
         },
       });
 
@@ -27,6 +28,7 @@ export const GET = withProtectedRoute(async (request: NextRequest) => {
     const orders = await rawPrisma.order.findMany({
       where: {
         userId: authenticatedUserId,
+        deletedAt: null,
       },
       orderBy: {
         createdAt: "desc",

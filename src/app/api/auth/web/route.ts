@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 import jwt from "jsonwebtoken";
 import prisma from "@/backend/lib/prisma";
 import { ApiResponse } from "@/shared/types/api/apiResponse";
@@ -43,6 +43,10 @@ export const POST = withAuthRateLimiter(async (request: NextRequest) => {
     user = await prisma.user.findUnique({
       where: { email: payload.email },
     });
+
+    if (user?.deletedAt || user?.isActive === false) {
+      return ApiResponse.error("Account has been deleted", 403).toResponse();
+    }
 
     if (!user) {
       user = await prisma.user.create({
@@ -116,6 +120,7 @@ export const POST = withAuthRateLimiter(async (request: NextRequest) => {
     const refreshToken = jwt.sign(
       {
         userId: user.id,
+        sessionId: sessionId,
         tokenVersion: user.tokenVersion,
       },
       process.env.REFRESH_TOKEN_SECRET!,

@@ -4,17 +4,30 @@ import posthog from "posthog-js";
 import { PostHogProvider as PHProvider, usePostHog } from "posthog-js/react";
 import { Suspense, useEffect } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
+import { getPublicEnv } from "@/shared/config/env";
 
 export function PostHogProvider({ children }: { children: React.ReactNode }) {
+  const publicEnv = getPublicEnv();
+
   useEffect(() => {
-    posthog.init(process.env.NEXT_PUBLIC_POSTHOG_KEY!, {
+    const posthogKey = publicEnv.NEXT_PUBLIC_POSTHOG_KEY;
+
+    if (!posthogKey) {
+      return;
+    }
+
+    posthog.init(posthogKey, {
       api_host: "/ingest",
-      ui_host: "https://us.posthog.com",
+      ui_host: publicEnv.NEXT_PUBLIC_POSTHOG_HOST || "https://us.posthog.com",
       capture_pageview: false,
       capture_pageleave: true,
       debug: process.env.NODE_ENV === "development",
     });
-  }, []);
+  }, [publicEnv.NEXT_PUBLIC_POSTHOG_HOST, publicEnv.NEXT_PUBLIC_POSTHOG_KEY]);
+
+  if (!publicEnv.NEXT_PUBLIC_POSTHOG_KEY) {
+    return <>{children}</>;
+  }
 
   return (
     <PHProvider client={posthog}>

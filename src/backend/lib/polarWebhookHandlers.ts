@@ -27,7 +27,7 @@ async function resolveUser(
     const user = await prisma.user.findUnique({
       where: { id: metadata.userId },
     });
-    if (user) return user;
+    if (user && !user.deletedAt && user.isActive) return user;
   }
 
   // Fallback: find by customer email
@@ -35,7 +35,7 @@ async function resolveUser(
     const user = await prisma.user.findUnique({
       where: { email: customerEmail },
     });
-    if (user) return user;
+    if (user && !user.deletedAt && user.isActive) return user;
   }
 
   return null;

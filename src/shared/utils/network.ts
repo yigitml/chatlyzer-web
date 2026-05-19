@@ -145,6 +145,11 @@ export class NetworkService {
     return response.data;
   }
 
+  async fetchAnalysis(id: string): Promise<Analysis | null> {
+    const response = await this.api.get(API_ENDPOINTS.ANALYSIS, { id });
+    return response.data ?? null;
+  }
+
   async createAnalysis(data: AnalysisPostRequest): Promise<Analysis[]> {
     const response = await this.api.post(API_ENDPOINTS.ANALYSIS, data);
     return response.data;
@@ -207,4 +212,3 @@ export const createNetworkService = (
 ): NetworkService => {
   return NetworkService.getInstance(getToken);
 }
-
