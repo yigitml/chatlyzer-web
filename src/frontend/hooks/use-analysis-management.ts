@@ -23,7 +23,7 @@ export const useAnalysisManagement = () => {
   const [selectedAnalysisType, setSelectedAnalysisType] = useState<AnalysisType | null>(null);
   const [isPrivacyMode, setIsPrivacyMode] = useState(false);
   const [isGhostMode, setIsGhostMode] = useState(false);
-  const [pollingChatId, setPollingChatId] = useState<string | null>(null);
+  const [, setPollingChatId] = useState<string | null>(null);
   const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   // Ghost results modal state
@@ -31,7 +31,7 @@ export const useAnalysisManagement = () => {
   const [isGhostResultsOpen, setIsGhostResultsOpen] = useState(false);
 
   // Optimistic credit update
-  const updateCreditsOptimistically = async (creditsUsed: number) => {
+  const updateCreditsOptimistically = async () => {
     setTimeout(async () => {
       try {
         await fetchCredits();
@@ -55,7 +55,7 @@ export const useAnalysisManagement = () => {
     }
     
     try {
-      updateCreditsOptimistically(8);
+      updateCreditsOptimistically();
       await createAnalysis({ chatId });
       
       // Start polling for analysis completion
@@ -80,7 +80,7 @@ export const useAnalysisManagement = () => {
     }
     
     try {
-      updateCreditsOptimistically(8);
+      updateCreditsOptimistically();
       const result = await createPrivacyAnalysis(data);
       
       if (data.isGhostMode) {

@@ -1,5 +1,5 @@
 import { AnalysisType } from "@/shared/types/api/apiRequest";
-import { ANALYSIS_CONFIG, normalizeAnalysisType } from "@/shared/types/analysis";
+import { ANALYSIS_CONFIG } from "@/shared/types/analysis";
 
 interface AnalysisPreviewCardProps {
   analysisType: AnalysisType;

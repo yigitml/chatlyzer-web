@@ -1,6 +1,7 @@
 import { PrismaClient } from "../../generated/client";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { Pool } from "pg";
+import { getRequiredServerEnv } from "@/shared/config/env";
 
 const softDeleteModels = new Set<string>([
   "User",
@@ -17,7 +18,7 @@ const softDeleteModels = new Set<string>([
 ]);
 
 const prismaClientSingleton = () => {
-  const connectionString = process.env.DATABASE_URL;
+  const connectionString = getRequiredServerEnv("DATABASE_URL");
   const pool = new Pool({ connectionString });
   const adapter = new PrismaPg(pool as any);
 

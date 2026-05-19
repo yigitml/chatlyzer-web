@@ -1,10 +1,10 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 import prisma from "@/backend/lib/prisma";
 import { withProtectedRoute } from "@/backend/middleware/jwtAuth";
 import { ApiResponse } from "@/shared/types/api/apiResponse";
 import { ChatPostRequest, ChatPutRequest, ChatDeleteRequest } from "@/shared/types/api/apiRequest";
 import { Prisma } from "../../../generated/client/client";
-import { smallChatBuilder, smartChatSampler } from "@/backend/lib/openai";
+import { smartChatSampler } from "@/backend/lib/openai";
 
 export const GET = withProtectedRoute(async (request: NextRequest) => {
     try {

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { verify } from "jsonwebtoken";
 import { ApiResponse } from "@/shared/types/api/apiResponse";
 import prisma from "@/backend/lib/prisma";
+import { getRequiredServerEnv } from "@/shared/config/env";
 import {
   AuthenticatedRequest,
   combineMiddleware,
@@ -29,7 +30,7 @@ export function jwtAuth(): MiddlewareHandler {
 
     let decoded: any;
     try {
-      decoded = verify(token, process.env.JWT_SECRET!, { algorithms: ['HS256'] });
+      decoded = verify(token, getRequiredServerEnv("JWT_SECRET"), { algorithms: ['HS256'] });
     } catch {
       return ApiResponse.error("Invalid token", 401).toResponse();
     }
