@@ -15,6 +15,7 @@ export const GET = withProtectedRoute(async (request: NextRequest) => {
         where: {
           id,
           userId: authenticatedUserId,
+          deletedAt: null,
         },
       });
 

@@ -24,6 +24,18 @@ type RevenueCatSubscriberResponse = {
   };
 };
 
+export type RevenueCatWebhookEvent = {
+  id?: string;
+  type?: string;
+  app_user_id?: string;
+  original_app_user_id?: string;
+  aliases?: string[];
+};
+
+export type RevenueCatWebhookPayload = {
+  event?: RevenueCatWebhookEvent;
+};
+
 export type RevenueCatSyncResult = {
   creditsGranted: number;
   processedTransactions: number;
@@ -160,4 +172,17 @@ export async function syncRevenueCatCreditsForUser(
     creditsGranted,
     processedTransactions,
   };
+}
+
+export function getRevenueCatWebhookUserIds(
+  payload: RevenueCatWebhookPayload,
+): string[] {
+  const event = payload.event;
+  const ids = [
+    event?.app_user_id,
+    event?.original_app_user_id,
+    ...(event?.aliases ?? []),
+  ];
+
+  return [...new Set(ids.filter((id): id is string => Boolean(id)))];
 }

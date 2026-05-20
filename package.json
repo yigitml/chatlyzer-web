@@ -12,7 +12,8 @@
     "format": "prettier --write .",
     "postinstall": "prisma generate",
     "test": "vitest run",
-    "check:contracts": "node scripts/check-api-contract-drift.mjs"
+    "check:contracts": "node scripts/check-api-contract-drift.mjs",
+    "check:env:production": "node --import tsx scripts/validate-production-env.mjs"
   },
   "dependencies": {
     "@polar-sh/nextjs": "0.9.1",
