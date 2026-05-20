@@ -14,7 +14,7 @@ export const serverEnvSchema = z.object({
   POLAR_PRODUCT_ID: z.string().optional(),
   POLAR_WEBHOOK_SECRET: z.string().optional(),
   POLAR_ORGANIZATION_ID: z.string().optional(),
-  REVENUECAT_API_KEY: z.string().optional(),
+  REVENUECAT_SECRET_API_KEY: z.string().optional(),
   REVENUECAT_WEBHOOK_SECRET: z.string().optional(),
 });
 
