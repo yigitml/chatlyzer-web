@@ -1,35 +1,94 @@
 import { NextRequest, NextResponse } from "next/server";
-import { RateLimiterMemory } from "rate-limiter-flexible";
+import { Pool } from "pg";
+import {
+  RateLimiterMemory,
+  RateLimiterPostgres,
+} from "rate-limiter-flexible";
 import { ApiResponse } from "@/shared/types/api/apiResponse";
+import { getRequiredServerEnv } from "@/shared/config/env";
 
 type ApiHandler = (request: NextRequest) => Promise<NextResponse>;
+type RateLimiter = {
+  consume: (key: string) => Promise<unknown>;
+};
 
 /**
  * Pre-configured rate limiters for different endpoint categories.
- *
- * NOTE: RateLimiterMemory resets on server restart and does not
- * share state across multiple instances. For production at scale,
- * replace with RateLimiterRedis or RateLimiterPostgres.
  */
 
-// Auth endpoints — strict limits to prevent credential stuffing / brute force
-const authRateLimiter = new RateLimiterMemory({
-  points: 10,         // 10 attempts
-  duration: 15 * 60,  // per 15-minute window
-  blockDuration: 60,  // block for 60s after exceeding
-});
+type RateLimiterConfig = {
+  keyPrefix: string;
+  points: number;
+  duration: number;
+  blockDuration?: number;
+};
 
-// API endpoints — moderate limits for general usage
-const apiRateLimiter = new RateLimiterMemory({
-  points: 60,          // 60 requests
-  duration: 60,        // per minute
-});
+const globalForRateLimit = globalThis as unknown as {
+  rateLimitPool?: Pool;
+};
 
-// Analysis endpoints — tight limits (expensive OpenAI calls)
-const analysisRateLimiter = new RateLimiterMemory({
-  points: 5,           // 5 analyses
-  duration: 60,        // per minute
-});
+function getRateLimitPool() {
+  if (!globalForRateLimit.rateLimitPool) {
+    globalForRateLimit.rateLimitPool = new Pool({
+      connectionString: getRequiredServerEnv("DATABASE_URL"),
+    });
+  }
+
+  return globalForRateLimit.rateLimitPool;
+}
+
+function createRateLimiter(config: RateLimiterConfig): RateLimiter {
+  const options = {
+    keyPrefix: config.keyPrefix,
+    points: config.points,
+    duration: config.duration,
+    blockDuration: config.blockDuration,
+  };
+
+  if (process.env.NODE_ENV !== "production") {
+    return new RateLimiterMemory(options);
+  }
+
+  return new RateLimiterPostgres({
+    ...options,
+    storeClient: getRateLimitPool(),
+    storeType: "pool",
+    tableName: "rate_limits",
+    clearExpiredByTimeout: true,
+  });
+}
+
+let authRateLimiter: RateLimiter | undefined;
+let apiRateLimiter: RateLimiter | undefined;
+let analysisRateLimiter: RateLimiter | undefined;
+
+function getAuthRateLimiter() {
+  authRateLimiter ??= createRateLimiter({
+    keyPrefix: "auth",
+    points: 10,
+    duration: 15 * 60,
+    blockDuration: 60,
+  });
+  return authRateLimiter;
+}
+
+function getApiRateLimiter() {
+  apiRateLimiter ??= createRateLimiter({
+    keyPrefix: "api",
+    points: 60,
+    duration: 60,
+  });
+  return apiRateLimiter;
+}
+
+function getAnalysisRateLimiter() {
+  analysisRateLimiter ??= createRateLimiter({
+    keyPrefix: "analysis",
+    points: 5,
+    duration: 60,
+  });
+  return analysisRateLimiter;
+}
 
 /**
  * Extract client IP from request headers.
@@ -52,7 +111,7 @@ export function withAuthRateLimiter(handler: ApiHandler): ApiHandler {
   return async (req: NextRequest): Promise<NextResponse> => {
     const ip = getClientIp(req);
     try {
-      await authRateLimiter.consume(ip);
+      await getAuthRateLimiter().consume(ip);
       return handler(req);
     } catch {
       return ApiResponse.error(
@@ -71,7 +130,7 @@ export function withRateLimiter(handler: ApiHandler): ApiHandler {
   return async (req: NextRequest): Promise<NextResponse> => {
     const ip = getClientIp(req);
     try {
-      await apiRateLimiter.consume(ip);
+      await getApiRateLimiter().consume(ip);
       return handler(req);
     } catch {
       return ApiResponse.error(
@@ -90,7 +149,7 @@ export function withAnalysisRateLimiter(handler: ApiHandler): ApiHandler {
   return async (req: NextRequest): Promise<NextResponse> => {
     const ip = getClientIp(req);
     try {
-      await analysisRateLimiter.consume(ip);
+      await getAnalysisRateLimiter().consume(ip);
       return handler(req);
     } catch {
       return ApiResponse.error(
