@@ -5,6 +5,15 @@ import { getPolarConfigForMode, type PolarMode } from "@/backend/lib/polarConfig
 
 const CREDITS_PER_PURCHASE = 24;
 
+function isUniqueConstraintError(error: unknown): boolean {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    "code" in error &&
+    (error as { code?: unknown }).code === "P2002"
+  );
+}
+
 function isAdminEmail(email: string | undefined): boolean {
   if (!email) return false;
   const adminEmails = (process.env.ADMIN_EMAILS || "")
@@ -73,23 +82,6 @@ export async function handleOrderPaid(payload: any, polarMode: PolarMode) {
     return;
   }
 
-// Check for duplicate order processing (idempotency)
-  const existingOrder = await (rawPrisma as any).order.findUnique({
-    where: {
-      polarOrderId_polarMode: {
-        polarOrderId: data.id,
-        polarMode,
-      },
-    },
-  });
-  if (existingOrder) {
-    console.log("[Polar Webhook] Order already processed:", {
-      orderId: data.id,
-      polarMode,
-    });
-    return;
-  }
-
   let creditsToGrant = CREDITS_PER_PURCHASE;
 
   // Sandbox logic: Only grant actual credits if the user is an admin
@@ -98,24 +90,38 @@ export async function handleOrderPaid(payload: any, polarMode: PolarMode) {
     creditsToGrant = 0;
   }
 
-  // Grant credits if applicable
-  if (creditsToGrant > 0) {
-    await grantUserCredits(user.id, CreditType.ANALYSIS, creditsToGrant);
-  }
+  try {
+    await rawPrisma.$transaction(async (tx) => {
+      // Create the unique order record before granting credits. Concurrent
+      // duplicate webhook deliveries fail here and never reach the grant step.
+      await (tx as any).order.create({
+        data: {
+          polarOrderId: data.id,
+          polarMode,
+          userId: user.id,
+          productId: data.product?.id || "unknown",
+          amount: data.amount || 0,
+          currency: data.currency || "usd",
+          creditsGranted: creditsToGrant,
+          status: "paid",
+        },
+      });
 
-  // Create order record for audit trail
-  await (rawPrisma as any).order.create({
-    data: {
-      polarOrderId: data.id,
-      polarMode,
-      userId: user.id,
-      productId: data.product?.id || "unknown",
-      amount: data.amount || 0,
-      currency: data.currency || "usd",
-      creditsGranted: creditsToGrant,
-      status: "paid",
-    },
-  });
+      if (creditsToGrant > 0) {
+        await grantUserCredits(user.id, CreditType.ANALYSIS, creditsToGrant, tx);
+      }
+    });
+  } catch (error) {
+    if (isUniqueConstraintError(error)) {
+      console.log("[Polar Webhook] Order already processed:", {
+        orderId: data.id,
+        polarMode,
+      });
+      return;
+    }
+
+    throw error;
+  }
 
   console.log(
     `[Polar Webhook] Granted ${creditsToGrant} ANALYSIS credits to user ${user.id}`,
