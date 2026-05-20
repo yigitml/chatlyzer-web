@@ -75,7 +75,6 @@ export const POST = withAuthRateLimiter(async (request: NextRequest) => {
     const securePart = isProduction ? "; Secure" : "";
 
     return ApiResponse.success({
-      token: newJwtToken,
       expiresAt: Math.floor(Date.now() / 1000) + accessTokenMaxAge,
     }).toResponse({
       "Set-Cookie": `accessToken=${newJwtToken}; HttpOnly; Path=/; Max-Age=${accessTokenMaxAge}${securePart}; SameSite=Strict`,

@@ -50,7 +50,7 @@ export class NetworkService {
 
   async login(
     data: AuthWebPostRequest,
-  ): Promise<{ user: User; token: string; expiresAt: string }> {
+  ): Promise<{ user: User; expiresAt: string }> {
     const response = await this.api.post(API_ENDPOINTS.TOKEN, data);
     return response.data;
   }
@@ -59,7 +59,7 @@ export class NetworkService {
     await this.api.post(API_ENDPOINTS.LOGOUT);
   }
 
-  async refreshToken(): Promise<{ token: string; expiresAt: string }> {
+  async refreshToken(): Promise<{ expiresAt: string }> {
     const response = await this.api.post(API_ENDPOINTS.REFRESH);
     return response.data;
   }

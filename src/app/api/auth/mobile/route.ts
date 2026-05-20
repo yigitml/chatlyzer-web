@@ -70,7 +70,7 @@ export const POST = withAuthRateLimiter(async (request: NextRequest) => {
       });
     }
 
-    await prisma.userDevice.upsert({
+    const device = await prisma.userDevice.upsert({
       where: {
         userId_deviceId: {
           userId: user.id,
@@ -80,12 +80,14 @@ export const POST = withAuthRateLimiter(async (request: NextRequest) => {
       update: {
         lastLoginAt: new Date(),
         deletedAt: null,
+        refreshTokenVersion: { increment: 1 },
       },
       create: {
         userId: user.id,
         deviceId: deviceId,
         lastLoginAt: new Date(),
         deletedAt: null,
+        refreshTokenVersion: 0,
       },
     });
 
@@ -106,7 +108,7 @@ export const POST = withAuthRateLimiter(async (request: NextRequest) => {
         iat: Math.floor(Date.now() / 1000),
       },
       getRequiredServerEnv("JWT_SECRET"),
-      { expiresIn: "30d" },
+      { expiresIn: "15m" },
     );
 
     const refreshToken = jwt.sign(
@@ -114,6 +116,7 @@ export const POST = withAuthRateLimiter(async (request: NextRequest) => {
         userId: user.id,
         deviceId: deviceId,
         tokenVersion: user.tokenVersion,
+        refreshTokenVersion: device.refreshTokenVersion,
       },
       getRequiredServerEnv("REFRESH_TOKEN_SECRET"),
       { expiresIn: "30d" },
@@ -122,7 +125,7 @@ export const POST = withAuthRateLimiter(async (request: NextRequest) => {
     return ApiResponse.success({
       token: jwtToken,
       refreshToken,
-      expiresAt: Math.floor(Date.now() / 1000) + 30 * 24 * 60 * 60,
+      expiresAt: new Date(Date.now() + 15 * 60 * 1000).toISOString(),
       user: user,
     }).toResponse({
       "Set-Cookie": `refreshToken=${refreshToken}; HttpOnly; Path=/api/auth/mobile/refresh; Secure; SameSite=Strict`,

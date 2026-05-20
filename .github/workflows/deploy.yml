@@ -48,6 +48,7 @@ jobs:
           grep -q '^DATABASE_URL=' .env
           grep -q '^JWT_SECRET=' .env
           grep -q '^NEXT_PUBLIC_GOOGLE_CLIENT_ID=' .env
+          grep -q '^REVENUECAT_WEBHOOK_SECRET=' .env
 
       - name: Install dependencies
         run: npm ci
@@ -97,6 +98,7 @@ jobs:
             cd /home/prod/chatlyzer-web-update
             test -s .env
             grep -q '^DATABASE_URL=' .env
+            grep -q '^REVENUECAT_WEBHOOK_SECRET=' .env
 
             echo "Installing full dependencies so Prisma CLI is available..."
             npm ci --include=dev
