@@ -9,6 +9,20 @@ export async function consumeUserCredits(
 ): Promise<boolean> {
   const client = tx || prisma;
 
+  const updatedRows = await client.$executeRaw`
+    UPDATE "UserCredit"
+    SET "amount" = "amount" - ${desiredAmount},
+        "updatedAt" = NOW()
+    WHERE "userId" = ${userId}
+      AND "type" = ${creditType}::"CreditType"
+      AND "deletedAt" IS NULL
+      AND "amount" - "minimumBalance" >= ${desiredAmount}
+  `;
+
+  if (updatedRows > 0) {
+    return true;
+  }
+
   const userCredit = await client.userCredit.findUnique({
     where: {
       userId_type: {
@@ -22,25 +36,7 @@ export async function consumeUserCredits(
     throw new Error("User credit data not found");
   }
 
-  const availableCredits = userCredit.amount - userCredit.minimumBalance;
-
-  if (availableCredits < desiredAmount) {
-    return false;
-  }
-
-  await client.userCredit.update({
-    where: {
-      userId_type: {
-        userId,
-        type: creditType,
-      },
-    },
-    data: {
-      amount: userCredit.amount - desiredAmount,
-    },
-  });
-
-  return true;
+  return false;
 }
 
 export async function refundUserCredits(
