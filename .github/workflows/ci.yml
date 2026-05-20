@@ -35,13 +35,18 @@ jobs:
           REFRESH_TOKEN_SECRET="ci-refresh-token-secret"
           OPENAI_API_KEY="ci-openai-key"
           GOOGLE_OAUTH2_URL="https://www.googleapis.com/oauth2/v3"
+          REVENUECAT_WEBHOOK_SECRET="ci-revenuecat-webhook-secret"
           NEXT_PUBLIC_GOOGLE_CLIENT_ID="ci-google-client-id.apps.googleusercontent.com"
           NEXT_PUBLIC_POSTHOG_KEY=""
           NEXT_PUBLIC_POSTHOG_HOST="https://us.i.posthog.com"
           EOF
           fi
+          if ! grep -q '^REVENUECAT_WEBHOOK_SECRET=' .env; then
+            echo 'REVENUECAT_WEBHOOK_SECRET="ci-revenuecat-webhook-secret"' >> .env
+          fi
           test -s .env
           grep -q '^DATABASE_URL=' .env
+          grep -q '^REVENUECAT_WEBHOOK_SECRET=' .env
 
       - name: Install dependencies
         run: npm ci

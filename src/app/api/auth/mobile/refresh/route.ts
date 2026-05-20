@@ -52,6 +52,12 @@ export const POST = withAuthRateLimiter(async (request: NextRequest) => {
       return ApiResponse.error("Device session revoked", 401).toResponse();
     }
 
+    if (device.refreshTokenVersion !== decoded.refreshTokenVersion) {
+      return ApiResponse.error("Refresh token has been rotated", 401).toResponse();
+    }
+
+    const nextRefreshTokenVersion = device.refreshTokenVersion + 1;
+
     await prisma.userDevice.update({
       where: {
         userId_deviceId: {
@@ -61,6 +67,7 @@ export const POST = withAuthRateLimiter(async (request: NextRequest) => {
       },
       data: {
         lastLoginAt: new Date(),
+        refreshTokenVersion: nextRefreshTokenVersion,
       },
     });
 
@@ -81,12 +88,24 @@ export const POST = withAuthRateLimiter(async (request: NextRequest) => {
         iat: Math.floor(Date.now() / 1000),
       },
       getRequiredServerEnv("JWT_SECRET"),
+      { expiresIn: "15m" },
+    );
+
+    const newRefreshToken = jwt.sign(
+      {
+        userId: user.id,
+        deviceId: decoded.deviceId,
+        tokenVersion: user.tokenVersion,
+        refreshTokenVersion: nextRefreshTokenVersion,
+      },
+      getRequiredServerEnv("REFRESH_TOKEN_SECRET"),
       { expiresIn: "30d" },
     );
 
     return ApiResponse.success({
       token: newJwtToken,
-      expiresAt: Math.floor(Date.now() / 1000) + 30 * 24 * 60 * 60,
+      refreshToken: newRefreshToken,
+      expiresAt: new Date(Date.now() + 15 * 60 * 1000).toISOString(),
     }).toResponse();
   } catch (error: unknown) {
     logger.error("Refresh token error", error);

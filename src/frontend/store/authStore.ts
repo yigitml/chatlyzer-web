@@ -40,11 +40,10 @@ export const useAuthStore = create<AuthState>((set, get) => {
       try {
         const response = await sharedNetworkService.login(data);
         
-        // Token is now set as an HttpOnly cookie by the server.
-        // Keep in-memory copy for Bearer header backward compat.
+        // Web auth relies on HttpOnly cookies; do not keep JWTs in JavaScript.
         set({
           user: response.user,
-          accessToken: response.token,
+          accessToken: null,
           isAuthenticated: true
         });
 

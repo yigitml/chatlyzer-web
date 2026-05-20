@@ -132,7 +132,6 @@ export const POST = withAuthRateLimiter(async (request: NextRequest) => {
     const securePart = isProduction ? "; Secure" : "";
 
     const response = ApiResponse.success({
-      token: jwtToken,
       expiresAt: Math.floor(Date.now() / 1000) + accessTokenMaxAge,
       user: user,
     }).toResponse();

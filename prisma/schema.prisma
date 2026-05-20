@@ -47,6 +47,7 @@ model UserSession {
 model UserDevice {
   id          String    @id @default(cuid())
   deviceId    String
+  refreshTokenVersion Int @default(0)
   lastLoginAt DateTime
   userId      String
   user        User      @relation(fields: [userId], references: [id])
