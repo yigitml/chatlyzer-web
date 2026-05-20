@@ -35,7 +35,7 @@ export const POST = withAuthRateLimiter(async (request: NextRequest) => {
 
     const payload = await userInfoResponse.json();
 
-    if (!payload.email || !payload.name) {
+    if (!payload.email || !payload.name || payload.email_verified !== true) {
       return ApiResponse.error("Invalid user info", 401).toResponse();
     }
 
