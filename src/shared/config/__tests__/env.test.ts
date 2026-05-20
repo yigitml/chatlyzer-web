@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { getPublicEnv, getRequiredServerEnv } from "../env";
+import {
+  getPublicEnv,
+  getRequiredServerEnv,
+  validateProductionServerEnv,
+} from "../env";
 
 describe("web env", () => {
   it("allows optional public analytics env to be absent", () => {
@@ -10,5 +14,17 @@ describe("web env", () => {
     expect(() => getRequiredServerEnv("DATABASE_URL", {})).toThrow(
       "DATABASE_URL is required",
     );
+  });
+
+  it("requires payment and webhook settings in production", () => {
+    expect(() =>
+      validateProductionServerEnv({
+        NODE_ENV: "production",
+        DATABASE_URL: "postgresql://example",
+        JWT_SECRET: "jwt",
+        REFRESH_TOKEN_SECRET: "refresh",
+        OPENAI_API_KEY: "openai",
+      }),
+    ).toThrow("POLAR_ACCESS_TOKEN is required");
   });
 });

@@ -143,7 +143,7 @@ export const POST = withAuthRateLimiter(async (request: NextRequest) => {
     );
     response.headers.append(
       "Set-Cookie",
-      `refreshToken=${refreshToken}; HttpOnly; Path=/api/auth/web/refresh${securePart}; SameSite=Strict`
+      `refreshToken=${refreshToken}; HttpOnly; Path=/api/auth/web/refresh; Max-Age=${30 * 24 * 60 * 60}${securePart}; SameSite=Strict`
     );
 
     return response;

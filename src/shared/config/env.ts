@@ -14,8 +14,17 @@ export const serverEnvSchema = z.object({
   POLAR_PRODUCT_ID: z.string().optional(),
   POLAR_WEBHOOK_SECRET: z.string().optional(),
   POLAR_ORGANIZATION_ID: z.string().optional(),
+  POLAR_PROJ_ID: z.string().optional(),
+  WEBHOOK_DELIVERY_URL: optionalUrl,
+  POLAR_SANDBOX_ACCESS_TOKEN: z.string().optional(),
+  POLAR_SANDBOX_PRODUCT_ID: z.string().optional(),
+  POLAR_SANDBOX_WEBHOOK_SECRET: z.string().optional(),
+  POLAR_SANDBOX_PROJ_ID: z.string().optional(),
+  POLAR_SANDBOX_WEBHOOK_DELIVERY_URL: optionalUrl,
   REVENUECAT_SECRET_API_KEY: z.string().optional(),
   REVENUECAT_WEBHOOK_SECRET: z.string().optional(),
+  REVENUECAT_CREDITS_PRODUCT_ID: z.string().optional(),
+  REVENUECAT_CREDITS_PER_PURCHASE: z.string().optional(),
 });
 
 export const publicEnvSchema = z.object({
@@ -34,6 +43,34 @@ export function getServerEnv(source: EnvSource = process.env) {
     throw new Error(`Invalid server environment: ${formatEnvError(parsed.error)}`);
   }
   return parsed.data;
+}
+
+const productionRequiredServerKeys = [
+  "POLAR_ACCESS_TOKEN",
+  "POLAR_PRODUCT_ID",
+  "POLAR_WEBHOOK_SECRET",
+  "POLAR_PROJ_ID",
+  "WEBHOOK_DELIVERY_URL",
+  "REVENUECAT_SECRET_API_KEY",
+  "REVENUECAT_WEBHOOK_SECRET",
+] as const;
+
+export function validateProductionServerEnv(source: EnvSource = process.env) {
+  const env = getServerEnv(source);
+  if (source.NODE_ENV !== "production") {
+    return env;
+  }
+
+  const missing = productionRequiredServerKeys.filter((key) => !source[key]);
+  if (missing.length > 0) {
+    throw new Error(
+      `Invalid production server environment: ${missing
+        .map((key) => `${key} is required`)
+        .join("; ")}`,
+    );
+  }
+
+  return env;
 }
 
 export function getPublicEnv(source: EnvSource = process.env) {
