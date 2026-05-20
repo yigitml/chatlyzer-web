@@ -52,7 +52,17 @@ export const GET = withProtectedRoute(async (request: AuthenticatedRequest) => {
     const authenticatedEmail = request.user!.email;
     const polarConfig = await getPolarConfig();
 
-    const productId = searchParams.get("products") || polarConfig.productId;
+    const requestedProductId = searchParams.get("products");
+    if (requestedProductId && requestedProductId !== polarConfig.productId) {
+      logger.warn("[Checkout] Rejected unexpected Polar product", {
+        requestedProductId,
+        configuredProductId: polarConfig.productId,
+        userId: authenticatedUserId,
+      });
+      return createErrorResponse(request, returnJson, "invalid_product", 400);
+    }
+
+    const productId = polarConfig.productId;
     const requestedMobileRedirect = searchParams.get("mobileRedirect");
     const mobileRedirect = isAllowedMobileRedirect(requestedMobileRedirect)
       ? requestedMobileRedirect

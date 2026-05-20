@@ -1,7 +1,7 @@
 import prisma, { rawPrisma } from "@/backend/lib/prisma";
 import { grantUserCredits } from "@/backend/lib/consumeUserCredits";
 import { CreditType } from "../../generated/client/client";
-import type { PolarMode } from "@/backend/lib/polarConfig";
+import { getPolarConfigForMode, type PolarMode } from "@/backend/lib/polarConfig";
 
 const CREDITS_PER_PURCHASE = 24;
 
@@ -57,6 +57,19 @@ export async function handleOrderPaid(payload: any, polarMode: PolarMode) {
   const user = await resolveUser(metadata, customerEmail);
   if (!user) {
     console.error("[Polar Webhook] Could not resolve user for order:", data.id);
+    return;
+  }
+
+  const expectedProductId = getPolarConfigForMode(polarMode).productId;
+  const receivedProductId = data.product?.id;
+  if (receivedProductId !== expectedProductId) {
+    console.error("[Polar Webhook] Product mismatch; refusing to grant credits:", {
+      orderId: data.id,
+      polarMode,
+      expectedProductId,
+      receivedProductId,
+      userId: user.id,
+    });
     return;
   }
 

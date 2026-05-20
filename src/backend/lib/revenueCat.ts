@@ -1,6 +1,7 @@
 import prisma from "@/backend/lib/prisma";
 import { grantUserCredits } from "@/backend/lib/consumeUserCredits";
 import { CreditType } from "../../generated/client/client";
+import { getRequiredServerEnv } from "@/shared/config/env";
 
 const REVENUECAT_API_BASE_URL = "https://api.revenuecat.com/v1";
 const DEFAULT_CREDITS_PRODUCT_ID = "credits_24";
@@ -29,11 +30,7 @@ export type RevenueCatSyncResult = {
 };
 
 function getRevenueCatSecretKey(): string {
-  const secretKey = process.env.REVENUECAT_SECRET_API_KEY;
-  if (!secretKey) {
-    throw new Error("REVENUECAT_SECRET_API_KEY is not configured");
-  }
-  return secretKey;
+  return getRequiredServerEnv("REVENUECAT_SECRET_API_KEY");
 }
 
 function getCreditsProductId(): string {

@@ -1,5 +1,6 @@
 import { NextRequest } from "next/server";
 import { withProtectedRoute } from "@/backend/middleware/jwtAuth";
+import { withAnalysisRateLimiter } from "@/backend/middleware/rateLimiter";
 import { ApiResponse } from "@/shared/types/api/apiResponse";
 import prisma from "@/backend/lib/prisma";
 import type {
@@ -14,7 +15,7 @@ import {
   analysisTypeToTypeLiteral 
 } from "@/shared/types/analysis";
 
-export const POST = withProtectedRoute(async (request: NextRequest) => {
+export const POST = withAnalysisRateLimiter(withProtectedRoute(async (request: NextRequest) => {
   let creditsConsumed = false;
   let authenticatedUserId = "";
 
@@ -77,22 +78,6 @@ export const POST = withProtectedRoute(async (request: NextRequest) => {
       }
     }
 
-    // Consume 8 credits for comprehensive analysis — use advisory lock 
-    // to prevent race conditions from concurrent requests
-    const creditResult = await prisma.$transaction(async (tx) => {
-      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${authenticatedUserId}))`;
-      const consumed = await consumeUserCredits(authenticatedUserId, CreditType.ANALYSIS, 8, tx);
-      return consumed;
-    });
-
-    if (creditResult) {
-      creditsConsumed = true;
-    } else {
-      return ApiResponse.error("Insufficient credits", 402).toResponse();
-    }
-
-
-
     const m = [];
 
     for (const message of data.messages) {
@@ -104,6 +89,20 @@ export const POST = withProtectedRoute(async (request: NextRequest) => {
     const smallMessages = smartChatSampler(m);
     if (smallMessages.length === 0) {
       return ApiResponse.error("At least one valid message is required", 400).toResponse();
+    }
+
+    // Consume 8 credits for comprehensive analysis — use advisory lock
+    // to prevent race conditions from concurrent requests.
+    const creditResult = await prisma.$transaction(async (tx) => {
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${authenticatedUserId}))`;
+      const consumed = await consumeUserCredits(authenticatedUserId, CreditType.ANALYSIS, 8, tx);
+      return consumed;
+    });
+
+    if (creditResult) {
+      creditsConsumed = true;
+    } else {
+      return ApiResponse.error("Insufficient credits", 402).toResponse();
     }
 
     // Perform comprehensive analysis using messages from request
@@ -228,4 +227,4 @@ export const POST = withProtectedRoute(async (request: NextRequest) => {
 
     return ApiResponse.error("Internal server error", 500).toResponse();
   }
-});
+}));

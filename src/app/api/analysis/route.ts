@@ -1,5 +1,6 @@
 import { NextRequest } from "next/server";
 import { withProtectedRoute } from "@/backend/middleware/jwtAuth";
+import { withAnalysisRateLimiter } from "@/backend/middleware/rateLimiter";
 import { ApiResponse } from "@/shared/types/api/apiResponse";
 import prisma from "@/backend/lib/prisma";
 import type {
@@ -81,7 +82,7 @@ export const GET = withProtectedRoute(async (request: NextRequest) => {
   }
 });
 
-export const POST = withProtectedRoute(async (request: NextRequest) => {
+export const POST = withAnalysisRateLimiter(withProtectedRoute(async (request: NextRequest) => {
   try {
    const authenticatedUserId = request.user!.id;
    const data: AnalysisPostRequest = await request.json();
@@ -263,7 +264,7 @@ export const POST = withProtectedRoute(async (request: NextRequest) => {
     }
     return ApiResponse.error("Internal server error", 500).toResponse();
   }
-});
+}));
 
 export const PUT = withProtectedRoute(async (request: NextRequest) => {
   try {
