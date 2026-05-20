@@ -12,6 +12,7 @@ const allowedOrigins = [
 export function proxy(request: NextRequest) {
   const origin = request.headers.get("origin") ?? "";
   const isApiRoute = request.nextUrl.pathname.startsWith("/api/");
+  const nonce = crypto.randomUUID().replace(/-/g, "");
 
   // =======================================================================
   // 1. CORS PREFLIGHT HANDLER (Only for /api/* routes)
@@ -32,7 +33,13 @@ export function proxy(request: NextRequest) {
   // =======================================================================
   // 2. STANDARD REQUEST HANDLER
   // =======================================================================
-  const response = NextResponse.next();
+  const requestHeaders = new Headers(request.headers);
+  requestHeaders.set("x-nonce", nonce);
+  const response = NextResponse.next({
+    request: {
+      headers: requestHeaders,
+    },
+  });
 
   // Apply CORS dynamically if it's an API route
   if (isApiRoute) {
@@ -58,7 +65,7 @@ export function proxy(request: NextRequest) {
   // Content Security Policy
   const csp = [
     "default-src 'self'",
-    `script-src 'self' 'unsafe-inline' https://accounts.google.com https://apis.google.com${process.env.NODE_ENV === "development" ? " 'unsafe-eval'" : ""}`,
+    `script-src 'self' 'nonce-${nonce}' https://accounts.google.com https://apis.google.com${process.env.NODE_ENV === "development" ? " 'unsafe-eval'" : ""}`,
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://accounts.google.com",
     "font-src 'self' https://fonts.gstatic.com",
     "img-src 'self' https://lh3.googleusercontent.com data: blob:",
