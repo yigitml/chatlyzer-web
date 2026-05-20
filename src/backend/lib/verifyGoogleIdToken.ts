@@ -17,8 +17,8 @@ export async function verifyGoogleIdToken(idToken: string) {
     const email = payload.email;
     const name = payload.name;
 
-    if (!email || !name) {
-      throw new Error("Missing required user information (email or name)");
+    if (!email || !name || payload.email_verified !== true) {
+      throw new Error("Missing or unverified required user information");
     }
 
     const userInfo = {
