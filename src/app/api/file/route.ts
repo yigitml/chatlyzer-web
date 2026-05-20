@@ -55,9 +55,7 @@ export const GET = withProtectedRoute(async (request: NextRequest) => {
 
 export const POST = withProtectedRoute(async (request: NextRequest) => {
   try {
-    const authenticatedUserId = request.user!.id;
     const contentType = request.headers.get("content-type");
-
     if (!contentType?.includes("multipart/form-data")) {
       return ApiResponse.error(
         `Invalid content type: ${contentType}. Must be multipart/form-data`,
@@ -65,44 +63,9 @@ export const POST = withProtectedRoute(async (request: NextRequest) => {
       ).toResponse();
     }
 
-    const formData = await request.formData();
-    const file = formData.get("file") as File;
-    const chatId = formData.get("chatId") as string || null;
-
-    if (!file) {
-      return ApiResponse.error("File is required", 400).toResponse();
-    }
-
-    if (chatId) {
-      const chat = await prisma.chat.findFirst({
-        where: {
-          id: chatId,
-          userId: authenticatedUserId,
-          deletedAt: null,
-        }
-      });
-
-      if (!chat) {
-        return ApiResponse.error("Chat not found or unauthorized", 404).toResponse();
-      }
-    }
-
-    // TODO
-    // const url = await uploadFile(file);
-    const url = "https://example.com/file.pdf";
-    const newFile = await prisma.file.create({
-      data: {
-        url: url,
-        size: file.size,
-        userId: authenticatedUserId,
-        chatId: chatId
-      },
-    });
-
-    return ApiResponse.success(
-      newFile,
-      "File uploaded successfully",
-      201,
+    return ApiResponse.error(
+      "File uploads are not available in this release",
+      501,
     ).toResponse();
   } catch (error) {
     console.error("Error uploading file:", error);

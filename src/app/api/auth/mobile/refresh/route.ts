@@ -4,14 +4,15 @@ import prisma from "@/backend/lib/prisma";
 import { ApiResponse } from "@/shared/types/api/apiResponse";
 import { getRequiredServerEnv } from "@/shared/config/env";
 import { logger } from "@/backend/lib/logger";
+import { withAuthRateLimiter } from "@/backend/middleware/rateLimiter";
+import { authRefreshSchema } from "@/shared/types/api/requestSchemas";
 
-export async function POST(request: NextRequest) {
+export const POST = withAuthRateLimiter(async (request: NextRequest) => {
   try {
     let bodyRefreshToken: string | undefined;
     try {
-      const body = await request.json();
-      bodyRefreshToken =
-        typeof body?.refreshToken === "string" ? body.refreshToken : undefined;
+      const body = authRefreshSchema.parse(await request.json());
+      bodyRefreshToken = body.refreshToken;
     } catch {
       bodyRefreshToken = undefined;
     }
@@ -91,4 +92,4 @@ export async function POST(request: NextRequest) {
     logger.error("Refresh token error", error);
     return ApiResponse.error("Token refresh failed", 500).toResponse();
   }
-}
+});

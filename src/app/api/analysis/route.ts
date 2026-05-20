@@ -17,6 +17,12 @@ import {
   analysisTypeToTypeLiteral 
 } from "@/shared/types/analysis";
 import { logger } from "@/backend/lib/logger";
+import {
+  analysisPostSchema,
+  analysisPutSchema,
+  getValidationMessage,
+  idBodySchema,
+} from "@/shared/types/api/requestSchemas";
 
 export const GET = withProtectedRoute(async (request: NextRequest) => {
   try {
@@ -85,7 +91,11 @@ export const GET = withProtectedRoute(async (request: NextRequest) => {
 export const POST = withAnalysisRateLimiter(withProtectedRoute(async (request: NextRequest) => {
   try {
    const authenticatedUserId = request.user!.id;
-   const data: AnalysisPostRequest = await request.json();
+   const parsed = analysisPostSchema.safeParse(await request.json());
+   if (!parsed.success) {
+     return ApiResponse.error(getValidationMessage(parsed.error), 400).toResponse();
+   }
+   const data: AnalysisPostRequest = parsed.data;
    const requestKey = data.requestKey?.trim() || null;
 
     // Verify the authenticated user owns this chat (prevents IDOR)
@@ -269,12 +279,12 @@ export const POST = withAnalysisRateLimiter(withProtectedRoute(async (request: N
 export const PUT = withProtectedRoute(async (request: NextRequest) => {
   try {
     const authenticatedUserId = request.user!.id;
-    const data: AnalysisPutRequest = await request.json();
-    const { id, result } = data;
-
-    if (!id) {
-      return ApiResponse.error("analysis ID is required").toResponse();
+    const parsed = analysisPutSchema.safeParse(await request.json());
+    if (!parsed.success) {
+      return ApiResponse.error(getValidationMessage(parsed.error), 400).toResponse();
     }
+    const data: AnalysisPutRequest = parsed.data as AnalysisPutRequest;
+    const { id, result } = data;
 
     const updatedanalysis = await prisma.analysis.update({
       where: {
@@ -305,12 +315,11 @@ export const PUT = withProtectedRoute(async (request: NextRequest) => {
 export const DELETE = withProtectedRoute(async (request: NextRequest) => {
     try {
       const authenticatedUserId = request.user!.id;
-      const data: AnalysisDeleteRequest = await request.json();
-      const { id } = data;
-
-      if (!id) {
-        return ApiResponse.error("analysis ID is required").toResponse();
+      const parsed = idBodySchema.safeParse(await request.json());
+      if (!parsed.success) {
+        return ApiResponse.error(getValidationMessage(parsed.error), 400).toResponse();
       }
+      const { id } = parsed.data as AnalysisDeleteRequest;
 
       const deletedanalysis = await prisma.analysis.update({
         where: {
