@@ -3,6 +3,12 @@ import prisma from "@/backend/lib/prisma";
 import { withProtectedRoute } from "@/backend/middleware/jwtAuth";
 import { ApiResponse } from "@/shared/types/api/apiResponse";
 import { MessagePostRequest, MessagePutRequest } from "@/shared/types/api/apiRequest";
+import {
+  getValidationMessage,
+  idBodySchema,
+  messagePostSchema,
+  messagePutSchema,
+} from "@/shared/types/api/requestSchemas";
 
 export const GET = withProtectedRoute(async (request: NextRequest) => {
   try {
@@ -60,7 +66,11 @@ export const GET = withProtectedRoute(async (request: NextRequest) => {
 export const POST = withProtectedRoute(async (request: NextRequest) => {
   try {
     const authenticatedUserId = request.user!.id;
-    const data: MessagePostRequest = await request.json();
+    const parsed = messagePostSchema.safeParse(await request.json());
+    if (!parsed.success) {
+      return ApiResponse.error(getValidationMessage(parsed.error), 400).toResponse();
+    }
+    const data: MessagePostRequest = parsed.data;
     
     const chat = await prisma.chat.findFirst({
       where: {
@@ -72,10 +82,6 @@ export const POST = withProtectedRoute(async (request: NextRequest) => {
 
     if (!chat) {
       return ApiResponse.error("Chat not found or unauthorized", 404).toResponse();
-    }
-
-    if (data.content.length > 500) {
-      return ApiResponse.error("Message content is too long", 400).toResponse();
     }
 
     const message = await prisma.message.create({
@@ -99,12 +105,12 @@ export const POST = withProtectedRoute(async (request: NextRequest) => {
 export const PUT = withProtectedRoute(async (request: NextRequest) => {
   try {
     const authenticatedUserId = request.user!.id;
-    const data: MessagePutRequest = await request.json();
-    const { id, content, metadata } = data;
-    
-    if (!id) {
-      return ApiResponse.error("Message ID is required", 400).toResponse();
+    const parsed = messagePutSchema.safeParse(await request.json());
+    if (!parsed.success) {
+      return ApiResponse.error(getValidationMessage(parsed.error), 400).toResponse();
     }
+    const data: MessagePutRequest = parsed.data;
+    const { id, content, metadata } = data;
 
     const message = await prisma.message.findFirst({
       where: { id, deletedAt: null },
@@ -119,18 +125,10 @@ export const PUT = withProtectedRoute(async (request: NextRequest) => {
       return ApiResponse.error("Unauthorized to modify this message", 403).toResponse();
     }
 
-    if (!content) {
-      return ApiResponse.error("Message content is required", 400).toResponse();
-    }
-
-    if (content.length > 500) {
-      return ApiResponse.error("Message content is too long", 400).toResponse();
-    }
-
     const updatedMessage = await prisma.message.update({
       where: { id },
       data: {
-        content,
+        ...(content !== undefined ? { content } : {}),
         metadata: metadata || message.metadata,
       }
     });
@@ -145,11 +143,11 @@ export const PUT = withProtectedRoute(async (request: NextRequest) => {
 export const DELETE = withProtectedRoute(async (request: NextRequest) => {
   try {
     const authenticatedUserId = request.user!.id;
-    const { id } = await request.json();
-
-    if (!id) {
-      return ApiResponse.error("Message ID is required", 400).toResponse();
+    const parsed = idBodySchema.safeParse(await request.json());
+    if (!parsed.success) {
+      return ApiResponse.error(getValidationMessage(parsed.error), 400).toResponse();
     }
+    const { id } = parsed.data;
 
     const message = await prisma.message.findFirst({
       where: { id, deletedAt: null },

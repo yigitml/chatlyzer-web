@@ -14,6 +14,10 @@ import {
   analysisTypeToSchemaKey, 
   analysisTypeToTypeLiteral 
 } from "@/shared/types/analysis";
+import {
+  getValidationMessage,
+  privacyAnalysisPostSchema,
+} from "@/shared/types/api/requestSchemas";
 
 export const POST = withAnalysisRateLimiter(withProtectedRoute(async (request: NextRequest) => {
   let creditsConsumed = false;
@@ -21,13 +25,12 @@ export const POST = withAnalysisRateLimiter(withProtectedRoute(async (request: N
 
   try {
     authenticatedUserId = request.user!.id;
-    const data: PrivacyAnalysisPostRequest = await request.json();
-    const requestKey = data.requestKey?.trim() || null;
-
-    // Validate required fields
-    if (!data.title || !data.messages || !Array.isArray(data.messages)) {
-      return ApiResponse.error("Title and messages are required", 400).toResponse();
+    const parsed = privacyAnalysisPostSchema.safeParse(await request.json());
+    if (!parsed.success) {
+      return ApiResponse.error(getValidationMessage(parsed.error), 400).toResponse();
     }
+    const data: PrivacyAnalysisPostRequest = parsed.data;
+    const requestKey = data.requestKey?.trim() || null;
 
     const existingChat = data.isGhostMode
       ? null
@@ -41,10 +44,6 @@ export const POST = withAnalysisRateLimiter(withProtectedRoute(async (request: N
 
     if (existingChat) {
       return ApiResponse.error("Chat already exists", 400).toResponse();
-    }
-
-    if (data.messages.length === 0) {
-      return ApiResponse.error("At least one message is required", 400).toResponse();
     }
 
     if (requestKey && !data.isGhostMode) {

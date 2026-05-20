@@ -2,7 +2,7 @@ import { NextRequest } from "next/server";
 import prisma, { rawPrisma } from "@/backend/lib/prisma";
 import { ApiResponse } from "@/shared/types/api/apiResponse";
 import { withProtectedRoute } from "@/backend/middleware/jwtAuth";
-import type { UserPutRequest } from "@/shared/types/api/apiRequest";
+import { getValidationMessage, userPutSchema } from "@/shared/types/api/requestSchemas";
 
 export const GET = withProtectedRoute(async (request: NextRequest) => {
   try {
@@ -26,15 +26,11 @@ export const GET = withProtectedRoute(async (request: NextRequest) => {
 export const PUT = withProtectedRoute(async (request: NextRequest) => {
   try {
     const authenticatedUserId = request.user!.id;
-    const body: UserPutRequest = await request.json();
-
-    if (
-      body.name === undefined &&
-      body.image === undefined &&
-      body.isOnboarded === undefined
-    ) {
-      return ApiResponse.error("No fields to update", 400).toResponse();
+    const parsed = userPutSchema.safeParse(await request.json());
+    if (!parsed.success) {
+      return ApiResponse.error(getValidationMessage(parsed.error), 400).toResponse();
     }
+    const body = parsed.data;
 
     const updateData: { name?: string; image?: string | null; isOnboarded?: boolean } = {};
     if (body.name !== undefined) updateData.name = body.name;

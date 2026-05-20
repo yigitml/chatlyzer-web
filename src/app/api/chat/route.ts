@@ -2,9 +2,15 @@ import { NextRequest } from "next/server";
 import prisma from "@/backend/lib/prisma";
 import { withProtectedRoute } from "@/backend/middleware/jwtAuth";
 import { ApiResponse } from "@/shared/types/api/apiResponse";
-import { ChatPostRequest, ChatPutRequest, ChatDeleteRequest } from "@/shared/types/api/apiRequest";
+import { ChatPutRequest, ChatDeleteRequest } from "@/shared/types/api/apiRequest";
 import { Prisma } from "../../../generated/client/client";
 import { smartChatSampler } from "@/backend/lib/openai";
+import {
+  chatPostSchema,
+  chatPutSchema,
+  getValidationMessage,
+  idBodySchema,
+} from "@/shared/types/api/requestSchemas";
 
 export const GET = withProtectedRoute(async (request: NextRequest) => {
     try {
@@ -24,13 +30,6 @@ export const GET = withProtectedRoute(async (request: NextRequest) => {
           const chats = await prisma.chat.findMany({
             where: { userId: authenticatedUserId, deletedAt: null },
             orderBy: { createdAt: "desc" },
-            include: {
-              messages: {
-                orderBy: {
-                  timestamp: "asc",
-                },
-              },
-            }
           });
           return ApiResponse.success(chats).toResponse();
         }
@@ -43,11 +42,11 @@ export const GET = withProtectedRoute(async (request: NextRequest) => {
 export const POST = withProtectedRoute(async (request: NextRequest) => {
   try {
     const authenticatedUserId = request.user!.id;
-    const data: ChatPostRequest = await request.json();
-    
-    if (!data.title || data.title.trim() === "") {
-      return ApiResponse.error("Chat title is required", 400).toResponse();
+    const parsed = chatPostSchema.safeParse(await request.json());
+    if (!parsed.success) {
+      return ApiResponse.error(getValidationMessage(parsed.error), 400).toResponse();
     }
+    const data = parsed.data;
 
     const existingChat = await prisma.chat.findFirst({
       where: {
@@ -61,32 +60,16 @@ export const POST = withProtectedRoute(async (request: NextRequest) => {
       return ApiResponse.error("Chat already exists", 400).toResponse();
     }
 
-    const messages = data.messages;
-
-    if (!messages || !Array.isArray(messages) || messages.length === 0) {
-      return ApiResponse.error("Messages are required", 400).toResponse();
-    }
-
-    const validMessages = messages.filter(
-      (msg) =>
-        msg.content &&
-        msg.content.trim().length > 0 &&
-        msg.content.length < 500 &&
-        msg.sender &&
-        String(msg.sender).trim().length > 0,
-    );
-    if (validMessages.length === 0) {
-      return ApiResponse.error("Chat must contain at least one valid message", 400).toResponse();
-    }
+    const validMessages = data.messages;
 
     let sampledMessages = [];
 
-    if (messages.length > 0) {
+    if (validMessages.length > 0) {
       // Use smartChatSampler to ensure we don't store excessively large chats
       // We use a slightly higher limit for storage (200k tokens) to preserve more history than analysis
       sampledMessages = smartChatSampler(validMessages, 200000);
     } else {
-      sampledMessages = messages;
+      sampledMessages = validMessages;
     }
     
     const participants = sampledMessages ? [...new Set(sampledMessages.map(message => message.sender))] : [];
@@ -129,11 +112,11 @@ export const POST = withProtectedRoute(async (request: NextRequest) => {
 export const PUT = withProtectedRoute(async (request: NextRequest) => {
   try {
     const authenticatedUserId = request.user!.id;
-    const data: ChatPutRequest = await request.json();
-    
-    if (!data.id) {
-      return ApiResponse.error("Chat ID is required", 400).toResponse();
+    const parsed = chatPutSchema.safeParse(await request.json());
+    if (!parsed.success) {
+      return ApiResponse.error(getValidationMessage(parsed.error), 400).toResponse();
     }
+    const data: ChatPutRequest = parsed.data;
 
     const updatedModel = await prisma.chat.update({
       where: { id: data.id, userId: authenticatedUserId, deletedAt: null },
@@ -156,11 +139,11 @@ export const PUT = withProtectedRoute(async (request: NextRequest) => {
 export const DELETE = withProtectedRoute(async (request: NextRequest) => {
   try {
     const authenticatedUserId = request.user!.id;
-    const { id } : ChatDeleteRequest = await request.json();
-
-    if (!id) {
-      return ApiResponse.error("Chat ID is required", 400).toResponse();
+    const parsed = idBodySchema.safeParse(await request.json());
+    if (!parsed.success) {
+      return ApiResponse.error(getValidationMessage(parsed.error), 400).toResponse();
     }
+    const { id }: ChatDeleteRequest = parsed.data;
 
     // Use a transaction to ensure both chat and analyses are deleted together
     const result = await prisma.$transaction(async (tx) => {
