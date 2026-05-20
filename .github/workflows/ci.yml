@@ -41,6 +41,9 @@ jobs:
           NEXT_PUBLIC_POSTHOG_HOST="https://us.i.posthog.com"
           EOF
           fi
+          if ! grep -q '^REVENUECAT_WEBHOOK_SECRET=' .env; then
+            echo 'REVENUECAT_WEBHOOK_SECRET="ci-revenuecat-webhook-secret"' >> .env
+          fi
           test -s .env
           grep -q '^DATABASE_URL=' .env
           grep -q '^REVENUECAT_WEBHOOK_SECRET=' .env
