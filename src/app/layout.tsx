@@ -2,6 +2,7 @@ import "./globals.css";
 import { Metadata } from "next";
 import Providers from "@/frontend/providers/providers";
 import { Space_Mono, Syne } from "next/font/google";
+import { headers } from "next/headers";
 
 const spaceMono = Space_Mono({
   subsets: ["latin"],
@@ -23,11 +24,17 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RootLayout({
+// Nonce-based CSP requires request-time rendering so Next.js can attach the
+// per-request nonce from proxy headers to framework inline scripts.
+export const dynamic = "force-dynamic";
+
+export default async function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const nonce = (await headers()).get("x-nonce") ?? undefined;
+
   return (
     <html lang="en">
       <head>
@@ -44,7 +51,7 @@ export default function RootLayout({
         />
         {/* Main Content Scroll Layer */}
         <div id="main-content" className="relative z-0 min-h-screen flex flex-col">
-          <Providers>{children}</Providers>
+          <Providers nonce={nonce}>{children}</Providers>
         </div>
       </body>
     </html>

@@ -14,6 +14,7 @@ export function proxy(request: NextRequest) {
   const isApiRoute = request.nextUrl.pathname.startsWith("/api/");
   const nonce = crypto.randomUUID().replace(/-/g, "");
   const requestId = request.headers.get("x-request-id") || crypto.randomUUID();
+  const csp = buildContentSecurityPolicy(nonce);
 
   // =======================================================================
   // 1. CORS PREFLIGHT HANDLER (Only for /api/* routes)
@@ -37,6 +38,7 @@ export function proxy(request: NextRequest) {
   const requestHeaders = new Headers(request.headers);
   requestHeaders.set("x-nonce", nonce);
   requestHeaders.set("x-request-id", requestId);
+  requestHeaders.set("Content-Security-Policy", csp);
   const response = NextResponse.next({
     request: {
       headers: requestHeaders,
@@ -65,8 +67,13 @@ export function proxy(request: NextRequest) {
     "camera=(), microphone=(), geolocation=()"
   );
 
-  // Content Security Policy
-  const csp = [
+  response.headers.set("Content-Security-Policy", csp);
+
+  return response;
+}
+
+function buildContentSecurityPolicy(nonce: string) {
+  return [
     "default-src 'self'",
     `script-src 'self' 'nonce-${nonce}' https://accounts.google.com https://apis.google.com${process.env.NODE_ENV === "development" ? " 'unsafe-eval'" : ""}`,
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://accounts.google.com",
@@ -78,10 +85,6 @@ export function proxy(request: NextRequest) {
     "base-uri 'self'",
     "form-action 'self'",
   ].join("; ");
-
-  response.headers.set("Content-Security-Policy", csp);
-
-  return response;
 }
 
 /**
