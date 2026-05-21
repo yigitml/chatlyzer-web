@@ -10,7 +10,6 @@ export const API_ENDPOINTS = {
   FILE: "/file",
   SUBSCRIPTION: "/subscription",
   CREDIT: "/credit",
-  CHECKOUT: "/checkout",
   REVENUECAT_SYNC: "/purchase/revenuecat/sync",
   ORDER: "/order",
 } as const;

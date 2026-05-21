@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { UserCredit, Subscription } from "../../generated/client";
-import { createNetworkService, getCheckoutUrl } from "@/shared/utils/network";
+import { createNetworkService } from "@/shared/utils/network";
 import { useAuthStore } from "./authStore";
 
 interface CreditState {
@@ -77,14 +77,9 @@ export const useCreditStore = create<CreditStore>((set) => {
     },
 
     purchaseCredits: () => {
-      const authState = useAuthStore.getState();
-      const user = authState.user;
-      if (!user) {
-        console.error("User not authenticated");
-        return;
-      }
-      const url = getCheckoutUrl();
-      window.location.href = url;
+      set({
+        error: new Error("Credit purchases are now available only in the mobile app."),
+      });
     },
   };
 });

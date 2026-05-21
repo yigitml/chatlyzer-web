@@ -48,7 +48,7 @@ Restore drill:
 
 1. Restore the latest backup into a non-production database.
 2. Run `npx prisma migrate status` against the restored database.
-3. Run a smoke test for login, chat listing, analysis listing, credits, and orders.
+3. Run a smoke test for login, chat listing, analysis listing, credits, and RevenueCat purchase sync.
 4. Document restore time and any manual steps.
 
 ## Incident Response

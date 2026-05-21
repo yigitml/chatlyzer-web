@@ -16,7 +16,7 @@ describe("web env", () => {
     );
   });
 
-  it("requires payment and webhook settings in production", () => {
+  it("requires RevenueCat payment and webhook settings in production", () => {
     expect(() =>
       validateProductionServerEnv({
         NODE_ENV: "production",
@@ -25,6 +25,6 @@ describe("web env", () => {
         REFRESH_TOKEN_SECRET: "refresh",
         OPENAI_API_KEY: "openai",
       }),
-    ).toThrow("POLAR_ACCESS_TOKEN is required");
+    ).toThrow("REVENUECAT_SECRET_API_KEY is required");
   });
 });

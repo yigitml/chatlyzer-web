@@ -146,7 +146,3 @@ export interface PrivacyAnalysisPostRequest {
     metadata?: any;
   }[];
 }
-
-export interface OrderGetRequest {
-  id?: string;
-}

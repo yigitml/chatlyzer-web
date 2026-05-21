@@ -73,8 +73,8 @@ const prisma = prismaPair.extendedClient;
 
 /**
  * Raw Prisma client without extensions.
- * Use this for new models/fields that the $extends wrapper can't resolve
- * (e.g. Order, polarCustomerId).
+ * Use this for models/fields that the $extends wrapper can't resolve,
+ * including retained legacy payment-history fields.
  * Cast to PrismaClient to restore full type access since the adapter
  * constructor produces PrismaClient<never, ...>.
  */

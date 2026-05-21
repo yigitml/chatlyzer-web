@@ -18,7 +18,6 @@ import {
   AnalysisDeleteRequest,
   SubscriptionDeleteRequest,
   PrivacyAnalysisPostRequest,
-  OrderGetRequest,
 } from "@/shared/types/api/apiRequest";
 import { API_ENDPOINTS } from "@/shared/types/api/apiEndpoints";
 import {
@@ -182,29 +181,12 @@ export class NetworkService {
     await this.api.delete(API_ENDPOINTS.SUBSCRIPTION, data);
   } 
 
-  // ===== Order API =====
-
-  async fetchOrders(params?: OrderGetRequest): Promise<any[]> {
-    const response = await this.api.get(API_ENDPOINTS.ORDER, params);
-    return response.data;
-  }
-
   // ===== Privacy Analysis API =====
 
   async createPrivacyAnalysis(data: PrivacyAnalysisPostRequest): Promise<{ chat: Chat; analyses: Analysis[] }> {
     const response = await this.api.post(API_ENDPOINTS.PRIVACY_ANALYSIS, data);
     return response.data;
   }
-}
-
-/**
- * Build the checkout URL for purchasing credits.
- * Redirects the user to the Polar checkout via our API route.
- * The server uses the authenticated user's session to determine
- * the customer email and userId — no query params needed.
- */
-export function getCheckoutUrl(): string {
-  return `/api/checkout`;
 }
 
 export const createNetworkService = (
