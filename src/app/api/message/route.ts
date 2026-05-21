@@ -10,6 +10,7 @@ import {
   messagePostSchema,
   messagePutSchema,
 } from "@/shared/types/api/requestSchemas";
+import { getPagination, paginateResults, paginationHeaders } from "@/shared/utils/pagination";
 
 export const GET = withRateLimiter(withProtectedRoute(async (request: NextRequest) => {
   try {
@@ -46,15 +47,19 @@ export const GET = withRateLimiter(withProtectedRoute(async (request: NextReques
         return ApiResponse.error("Chat not found or unauthorized", 404).toResponse();
       }
 
+      const pagination = getPagination(searchParams);
       const messages = await prisma.message.findMany({
         where: { 
           chatId,
           deletedAt: null
         },
-        orderBy: { timestamp: "asc" }
+        orderBy: { timestamp: "asc" },
+        take: pagination.take,
+        ...(pagination.cursor ? { cursor: { id: pagination.cursor }, skip: 1 } : {}),
       });
       
-      return ApiResponse.success(messages).toResponse();
+      const page = paginateResults(messages, pagination.limit);
+      return ApiResponse.success(page.items).toResponse(paginationHeaders(page.pageInfo));
     } else {
       return ApiResponse.error("Either message ID or chat ID is required", 400).toResponse();
     }

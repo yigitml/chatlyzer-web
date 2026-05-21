@@ -4,6 +4,7 @@ import { withRateLimiter } from "@/backend/middleware/rateLimiter";
 import { ApiResponse } from "@/shared/types/api/apiResponse";
 import prisma from "@/backend/lib/prisma";
 import type { SubscriptionDeleteRequest } from "@/shared/types/api/apiRequest";
+import { getPagination, paginateResults, paginationHeaders } from "@/shared/utils/pagination";
 
 export const GET = withRateLimiter(withProtectedRoute(async (request: NextRequest) => {
   try {
@@ -27,6 +28,7 @@ export const GET = withRateLimiter(withProtectedRoute(async (request: NextReques
       return ApiResponse.success(subscription).toResponse();
     }
 
+    const pagination = getPagination(searchParams);
     const subscriptions = await prisma.subscription.findMany({
       where: {
         userId: authenticatedUserId,
@@ -34,9 +36,12 @@ export const GET = withRateLimiter(withProtectedRoute(async (request: NextReques
       orderBy: {
         createdAt: "desc",
       },
+      take: pagination.take,
+      ...(pagination.cursor ? { cursor: { id: pagination.cursor }, skip: 1 } : {}),
     });
 
-    return ApiResponse.success(subscriptions).toResponse();
+    const page = paginateResults(subscriptions, pagination.limit);
+    return ApiResponse.success(page.items).toResponse(paginationHeaders(page.pageInfo));
   } catch (error) {
     console.error("Error fetching subscriptions:", error);
     return ApiResponse.error("Failed to fetch subscriptions", 500).toResponse();

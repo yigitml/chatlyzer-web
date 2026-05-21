@@ -4,6 +4,7 @@ import prisma from "@/backend/lib/prisma";
 import { ApiResponse } from "@/shared/types/api/apiResponse";
 import type { AuthWebPostRequest } from "@/shared/types/api/apiRequest";
 import { withAuthRateLimiter } from "@/backend/middleware/rateLimiter";
+import { toPublicUser } from "@/shared/types/api/publicDtos";
 
 export const POST = withAuthRateLimiter(async (request: NextRequest) => {
   try {
@@ -133,7 +134,7 @@ export const POST = withAuthRateLimiter(async (request: NextRequest) => {
 
     const response = ApiResponse.success({
       expiresAt: Math.floor(Date.now() / 1000) + accessTokenMaxAge,
-      user: user,
+      user: toPublicUser(user),
     }).toResponse();
 
     response.headers.append(

@@ -13,6 +13,7 @@ export function proxy(request: NextRequest) {
   const origin = request.headers.get("origin") ?? "";
   const isApiRoute = request.nextUrl.pathname.startsWith("/api/");
   const nonce = crypto.randomUUID().replace(/-/g, "");
+  const requestId = request.headers.get("x-request-id") || crypto.randomUUID();
 
   // =======================================================================
   // 1. CORS PREFLIGHT HANDLER (Only for /api/* routes)
@@ -35,11 +36,13 @@ export function proxy(request: NextRequest) {
   // =======================================================================
   const requestHeaders = new Headers(request.headers);
   requestHeaders.set("x-nonce", nonce);
+  requestHeaders.set("x-request-id", requestId);
   const response = NextResponse.next({
     request: {
       headers: requestHeaders,
     },
   });
+  response.headers.set("X-Request-Id", requestId);
 
   // Apply CORS dynamically if it's an API route
   if (isApiRoute) {

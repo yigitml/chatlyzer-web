@@ -22,9 +22,10 @@ export class ApiResponse<T> {
   }
 
   toResponse(headers?: Record<string, string>): NextResponse {
+    const responseHeaders = headers ? { ...headers } : undefined;
     return NextResponse.json(
       { success: this.success, error: this.error, data: this.data, message: this.message },
-      { status: this.statusCode, headers: headers },
+      { status: this.statusCode, headers: responseHeaders },
     );
   }
 }
