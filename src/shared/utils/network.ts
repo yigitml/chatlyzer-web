@@ -170,6 +170,14 @@ export class NetworkService {
     return response.data;
   }
 
+  async syncRevenueCatPurchases(): Promise<{
+    creditsGranted: number;
+    processedTransactions: number;
+  }> {
+    const response = await this.api.post(API_ENDPOINTS.REVENUECAT_SYNC);
+    return response.data;
+  }
+
   // ===== Subscription API =====
 
   async fetchSubscription(): Promise<Subscription> {

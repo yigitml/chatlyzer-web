@@ -18,6 +18,8 @@ export const publicEnvSchema = z.object({
   NEXT_PUBLIC_GOOGLE_CLIENT_ID: z.string().optional(),
   NEXT_PUBLIC_POSTHOG_KEY: z.string().optional(),
   NEXT_PUBLIC_POSTHOG_HOST: z.string().url().optional().or(z.literal("")),
+  NEXT_PUBLIC_REVENUECAT_WEB_API_KEY: z.string().optional(),
+  NEXT_PUBLIC_REVENUECAT_CREDITS_PRODUCT_ID: z.string().optional(),
 });
 
 function formatEnvError(error: z.ZodError) {
