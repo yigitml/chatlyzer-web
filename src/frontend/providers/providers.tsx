@@ -9,6 +9,7 @@ import { PostHogProvider } from "./PostHogProvider";
 
 interface ProvidersProps {
   children: React.ReactNode;
+  nonce?: string;
 }
 
 function RootErrorFallback({
@@ -59,7 +60,7 @@ function RootErrorFallback({
   );
 }
 
-export default function Providers({ children }: ProvidersProps) {
+export default function Providers({ children, nonce }: ProvidersProps) {
   const googleClientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID!;
 
   return (
@@ -71,6 +72,7 @@ export default function Providers({ children }: ProvidersProps) {
               defaultTheme="dark"
               enableSystem={true}
               enableColorScheme
+              nonce={nonce}
             >
               <StoreProvider>
                 {children}
