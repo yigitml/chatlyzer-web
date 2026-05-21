@@ -4,8 +4,8 @@ import {
   RateLimiterMemory,
   RateLimiterPostgres,
 } from "rate-limiter-flexible";
-import { ApiResponse } from "@/shared/types/api/apiResponse";
-import { getRequiredServerEnv } from "@/shared/config/env";
+import { getRequiredServerEnv } from "../../shared/config/env";
+import { ApiResponse } from "../../shared/types/api/apiResponse";
 
 type ApiHandler = (request: NextRequest) => Promise<NextResponse>;
 type RateLimiter = {
@@ -64,8 +64,8 @@ let analysisRateLimiter: RateLimiter | undefined;
 
 function getAuthRateLimiter() {
   authRateLimiter ??= createRateLimiter({
-    keyPrefix: "auth",
-    points: 10,
+    keyPrefix: "auth_v2",
+    points: 30,
     duration: 15 * 60,
     blockDuration: 60,
   });
@@ -92,15 +92,36 @@ function getAnalysisRateLimiter() {
 
 /**
  * Extract client IP from request headers.
- * Takes the first IP from x-forwarded-for to handle proxies.
+ * Prefer CDN-provided client IP headers before generic proxy headers. If the
+ * deployment proxy does not forward these, rate limits can collapse all users
+ * into a shared server/proxy IP bucket.
  */
-function getClientIp(req: NextRequest): string {
+export function getClientIp(req: NextRequest): string {
+  const cloudflareIp = normalizeIp(req.headers.get("cf-connecting-ip"));
+  if (cloudflareIp) return cloudflareIp;
+
+  const trueClientIp = normalizeIp(req.headers.get("true-client-ip"));
+  if (trueClientIp) return trueClientIp;
+
   const forwarded = req.headers.get("x-forwarded-for");
   if (forwarded) {
-    // Take only the first (client) IP, ignore proxy chain
-    return forwarded.split(",")[0].trim();
+    const firstForwardedIp = normalizeIp(forwarded.split(",")[0]);
+    if (firstForwardedIp) return firstForwardedIp;
   }
-  return req.headers.get("x-real-ip") || "unknown";
+
+  return normalizeIp(req.headers.get("x-real-ip")) || "unknown";
+}
+
+function normalizeIp(value: string | null): string | null {
+  const trimmed = value?.trim();
+  if (!trimmed) return null;
+
+  if (trimmed.startsWith("[") && trimmed.includes("]")) {
+    return trimmed.slice(1, trimmed.indexOf("]"));
+  }
+
+  const withoutPort = trimmed.match(/^(\d{1,3}(?:\.\d{1,3}){3})(?::\d+)?$/);
+  return withoutPort?.[1] ?? trimmed;
 }
 
 /**
@@ -110,8 +131,9 @@ function getClientIp(req: NextRequest): string {
 export function withAuthRateLimiter(handler: ApiHandler): ApiHandler {
   return async (req: NextRequest): Promise<NextResponse> => {
     const ip = getClientIp(req);
+    const key = `${req.nextUrl.pathname}:${ip}`;
     try {
-      await getAuthRateLimiter().consume(ip);
+      await getAuthRateLimiter().consume(key);
       return handler(req);
     } catch {
       return ApiResponse.error(
