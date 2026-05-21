@@ -4,6 +4,7 @@ import { ApiResponse } from "@/shared/types/api/apiResponse";
 import { withProtectedRoute } from "@/backend/middleware/jwtAuth";
 import { withRateLimiter } from "@/backend/middleware/rateLimiter";
 import { getValidationMessage, userPutSchema } from "@/shared/types/api/requestSchemas";
+import { publicUserSelect, toPublicUser } from "@/shared/types/api/publicDtos";
 
 export const GET = withRateLimiter(withProtectedRoute(async (request: NextRequest) => {
   try {
@@ -11,13 +12,14 @@ export const GET = withRateLimiter(withProtectedRoute(async (request: NextReques
 
     const user = await prisma.user.findUnique({
       where: { id: authenticatedUserId },
+      select: publicUserSelect,
     });
 
     if (!user) {
       return ApiResponse.error("User not found", 404).toResponse();
     }
 
-    return ApiResponse.success(user).toResponse();
+    return ApiResponse.success(toPublicUser(user)).toResponse();
   } catch (error) {
     console.error("Error fetching user:", error);
     return ApiResponse.error("Failed to fetch user", 500).toResponse();
@@ -41,10 +43,11 @@ export const PUT = withRateLimiter(withProtectedRoute(async (request: NextReques
     const updatedUser = await prisma.user.update({
       where: { id: authenticatedUserId },
       data: updateData,
+      select: publicUserSelect,
     });
 
     return ApiResponse.success(
-      updatedUser,
+      toPublicUser(updatedUser),
       "User updated successfully",
     ).toResponse();
   } catch (error) {

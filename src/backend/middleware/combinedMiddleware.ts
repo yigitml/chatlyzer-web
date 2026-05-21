@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
 export interface AuthenticatedRequest extends NextRequest {
+  requestId?: string;
   user?: {
     id: string;
     email: string;

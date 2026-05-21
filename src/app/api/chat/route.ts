@@ -12,6 +12,7 @@ import {
   getValidationMessage,
   idBodySchema,
 } from "@/shared/types/api/requestSchemas";
+import { getPagination, paginateResults, paginationHeaders } from "@/shared/utils/pagination";
 
 export const GET = withRateLimiter(withProtectedRoute(async (request: NextRequest) => {
     try {
@@ -28,11 +29,15 @@ export const GET = withRateLimiter(withProtectedRoute(async (request: NextReques
           }
           return ApiResponse.error("Chat not found", 404).toResponse();
         } else {
+          const pagination = getPagination(searchParams);
           const chats = await prisma.chat.findMany({
             where: { userId: authenticatedUserId, deletedAt: null },
             orderBy: { createdAt: "desc" },
+            take: pagination.take,
+            ...(pagination.cursor ? { cursor: { id: pagination.cursor }, skip: 1 } : {}),
           });
-          return ApiResponse.success(chats).toResponse();
+          const page = paginateResults(chats, pagination.limit);
+          return ApiResponse.success(page.items).toResponse(paginationHeaders(page.pageInfo));
         }
     } catch (error) {
       console.error("Error fetching chats:", error);

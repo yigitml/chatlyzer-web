@@ -3,6 +3,7 @@ import { withProtectedRoute } from "@/backend/middleware/jwtAuth";
 import { withRateLimiter } from "@/backend/middleware/rateLimiter";
 import { ApiResponse } from "@/shared/types/api/apiResponse";
 import { rawPrisma } from "@/backend/lib/prisma";
+import { getPagination, paginateResults, paginationHeaders } from "@/shared/utils/pagination";
 
 export const GET = withRateLimiter(withProtectedRoute(async (request: NextRequest) => {
   try {
@@ -26,6 +27,7 @@ export const GET = withRateLimiter(withProtectedRoute(async (request: NextReques
       return ApiResponse.success(order).toResponse();
     }
 
+    const pagination = getPagination(searchParams);
     const orders = await rawPrisma.order.findMany({
       where: {
         userId: authenticatedUserId,
@@ -34,9 +36,12 @@ export const GET = withRateLimiter(withProtectedRoute(async (request: NextReques
       orderBy: {
         createdAt: "desc",
       },
+      take: pagination.take,
+      ...(pagination.cursor ? { cursor: { id: pagination.cursor }, skip: 1 } : {}),
     });
 
-    return ApiResponse.success(orders).toResponse();
+    const page = paginateResults(orders, pagination.limit);
+    return ApiResponse.success(page.items).toResponse(paginationHeaders(page.pageInfo));
   } catch (error) {
     console.error("Error fetching orders:", error);
     return ApiResponse.error("Failed to fetch orders", 500).toResponse();

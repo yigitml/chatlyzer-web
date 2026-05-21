@@ -23,6 +23,7 @@ import {
   getValidationMessage,
   idBodySchema,
 } from "@/shared/types/api/requestSchemas";
+import { getPagination, paginateResults, paginationHeaders } from "@/shared/utils/pagination";
 
 export const GET = withProtectedRoute(async (request: NextRequest) => {
   try {
@@ -64,6 +65,7 @@ export const GET = withProtectedRoute(async (request: NextRequest) => {
       return ApiResponse.error("analysis not found").toResponse();
     } else if (chatId) {
       const includeInProgress = searchParams.get("includeInProgress") === "true";
+      const pagination = getPagination(searchParams);
       const analyzes = await prisma.analysis.findMany({
         where: {
           userId: authenticatedUserId,
@@ -71,16 +73,25 @@ export const GET = withProtectedRoute(async (request: NextRequest) => {
           deletedAt: null,
           ...(includeInProgress ? {} : { status: AnalysisStatus.COMPLETED })
         },
+        orderBy: { createdAt: "desc" },
+        take: pagination.take,
+        ...(pagination.cursor ? { cursor: { id: pagination.cursor }, skip: 1 } : {}),
       });
-      return ApiResponse.success(analyzes).toResponse();
+      const page = paginateResults(analyzes, pagination.limit);
+      return ApiResponse.success(page.items).toResponse(paginationHeaders(page.pageInfo));
     } else {
+      const pagination = getPagination(searchParams);
       const analyzes = await prisma.analysis.findMany({
         where: {
           userId: authenticatedUserId,
           deletedAt: null,
         },
+        orderBy: { createdAt: "desc" },
+        take: pagination.take,
+        ...(pagination.cursor ? { cursor: { id: pagination.cursor }, skip: 1 } : {}),
       });
-      return ApiResponse.success(analyzes).toResponse();
+      const page = paginateResults(analyzes, pagination.limit);
+      return ApiResponse.success(page.items).toResponse(paginationHeaders(page.pageInfo));
     }
   } catch (error) {
    logger.error("Error processing GET /api/analysis", error);

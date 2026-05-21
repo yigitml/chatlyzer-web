@@ -8,6 +8,7 @@ import { verifyGoogleIdToken } from "@/backend/lib/verifyGoogleIdToken";
 import { withAuthRateLimiter } from "@/backend/middleware/rateLimiter";
 import { getRequiredServerEnv } from "@/shared/config/env";
 import { logger } from "@/backend/lib/logger";
+import { toPublicUser } from "@/shared/types/api/publicDtos";
 
 export const POST = withAuthRateLimiter(async (request: NextRequest) => {
   try {
@@ -126,7 +127,7 @@ export const POST = withAuthRateLimiter(async (request: NextRequest) => {
       token: jwtToken,
       refreshToken,
       expiresAt: new Date(Date.now() + 15 * 60 * 1000).toISOString(),
-      user: user,
+      user: toPublicUser(user),
     }).toResponse({
       "Set-Cookie": `refreshToken=${refreshToken}; HttpOnly; Path=/api/auth/mobile/refresh; Secure; SameSite=Strict`,
     });

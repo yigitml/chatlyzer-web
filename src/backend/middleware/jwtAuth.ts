@@ -8,6 +8,7 @@ import {
   combineMiddleware,
   MiddlewareHandler,
 } from "./combinedMiddleware";
+import { requestContext } from "./requestContext";
 
 export function jwtAuth(): MiddlewareHandler {
   return async (req: AuthenticatedRequest): Promise<NextResponse> => {
@@ -80,4 +81,4 @@ export function jwtAuth(): MiddlewareHandler {
 }
 
 export const withProtectedRoute = (handler: (request: AuthenticatedRequest) => Promise<NextResponse>) =>
-  combineMiddleware(jwtAuth())(handler);
+  combineMiddleware(requestContext(), jwtAuth())(handler);
