@@ -12,7 +12,7 @@ Add or maintain coverage for these cases before major releases.
 ## Authorization
 
 - User A cannot read, update, or delete User B's chats.
-- User A cannot read messages, analyses, files, credits, orders, or subscriptions belonging to User B.
+- User A cannot read messages, analyses, files, credits, legacy order history, or subscriptions belonging to User B.
 - Admin-only endpoints reject non-admin users server-side.
 
 ## Abuse Controls
@@ -23,8 +23,7 @@ Add or maintain coverage for these cases before major releases.
 
 ## Webhooks And Payments
 
-- Polar webhook requests with bad signatures return `403`.
-- Duplicate Polar order webhooks do not grant duplicate credits.
+- Duplicate RevenueCat transactions do not grant duplicate credits.
 - RevenueCat webhooks with missing or wrong authorization return `401`.
 - Duplicate RevenueCat transactions do not grant duplicate credits.
 

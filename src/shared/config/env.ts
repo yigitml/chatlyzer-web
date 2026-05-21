@@ -2,25 +2,12 @@ import { z } from "zod";
 
 type EnvSource = Record<string, string | undefined>;
 
-const optionalUrl = z.string().url().optional().or(z.literal(""));
-
 export const serverEnvSchema = z.object({
   DATABASE_URL: z.string().min(1, "DATABASE_URL is required"),
   JWT_SECRET: z.string().min(1, "JWT_SECRET is required"),
   REFRESH_TOKEN_SECRET: z.string().min(1, "REFRESH_TOKEN_SECRET is required"),
   OPENAI_API_KEY: z.string().min(1, "OPENAI_API_KEY is required"),
-  GOOGLE_OAUTH2_URL: optionalUrl,
-  POLAR_ACCESS_TOKEN: z.string().optional(),
-  POLAR_PRODUCT_ID: z.string().optional(),
-  POLAR_WEBHOOK_SECRET: z.string().optional(),
-  POLAR_ORGANIZATION_ID: z.string().optional(),
-  POLAR_PROJ_ID: z.string().optional(),
-  WEBHOOK_DELIVERY_URL: optionalUrl,
-  POLAR_SANDBOX_ACCESS_TOKEN: z.string().optional(),
-  POLAR_SANDBOX_PRODUCT_ID: z.string().optional(),
-  POLAR_SANDBOX_WEBHOOK_SECRET: z.string().optional(),
-  POLAR_SANDBOX_PROJ_ID: z.string().optional(),
-  POLAR_SANDBOX_WEBHOOK_DELIVERY_URL: optionalUrl,
+  GOOGLE_OAUTH2_URL: z.string().url().optional().or(z.literal("")),
   REVENUECAT_SECRET_API_KEY: z.string().optional(),
   REVENUECAT_WEBHOOK_SECRET: z.string().optional(),
   REVENUECAT_CREDITS_PRODUCT_ID: z.string().optional(),
@@ -46,11 +33,6 @@ export function getServerEnv(source: EnvSource = process.env) {
 }
 
 const productionRequiredServerKeys = [
-  "POLAR_ACCESS_TOKEN",
-  "POLAR_PRODUCT_ID",
-  "POLAR_WEBHOOK_SECRET",
-  "POLAR_PROJ_ID",
-  "WEBHOOK_DELIVERY_URL",
   "REVENUECAT_SECRET_API_KEY",
   "REVENUECAT_WEBHOOK_SECRET",
 ] as const;
