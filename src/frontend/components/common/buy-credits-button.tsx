@@ -1,6 +1,6 @@
 "use client";
 
-import { Smartphone, Zap } from "lucide-react";
+import { Loader2, Zap } from "lucide-react";
 import { Button } from "@/frontend/components/ui/button";
 import { useCreditStore } from "@/frontend/store/creditStore";
 
@@ -11,27 +11,45 @@ interface BuyCreditsButtonProps {
 
 export const BuyCreditsButton = ({ className = "", variant = "default" }: BuyCreditsButtonProps) => {
   const purchaseCredits = useCreditStore((s) => s.purchaseCredits);
+  const isPurchasing = useCreditStore((s) => s.isPurchasing);
+  const handlePurchase = () => {
+    void purchaseCredits().catch((error) => {
+      window.alert(
+        error instanceof Error ? error.message : "Unable to start checkout.",
+      );
+    });
+  };
 
   if (variant === "icon") {
     return (
       <Button 
-        onClick={() => purchaseCredits()}
+        onClick={handlePurchase}
+        disabled={isPurchasing}
         size="icon"
         className={`bg-gradient-to-br from-blue-600 to-cyan-500 hover:from-blue-500 hover:to-cyan-400 text-white shadow-[0_0_10px_rgba(6,182,212,0.5)] border border-cyan-400/50 transition-all duration-300 hover:scale-105 ${className}`}
-        title="Buy credits in the mobile app"
+        title="Buy credits"
       >
-        <Smartphone className="w-4 h-4" />
+        {isPurchasing ? (
+          <Loader2 className="w-4 h-4 animate-spin" />
+        ) : (
+          <Zap className="w-4 h-4" />
+        )}
       </Button>
     );
   }
 
   return (
     <Button 
-      onClick={() => purchaseCredits()}
+      onClick={handlePurchase}
+      disabled={isPurchasing}
       className={`bg-gradient-to-r from-blue-600 to-cyan-500 hover:from-blue-500 hover:to-cyan-400 text-white font-bold shadow-[0_0_15px_rgba(6,182,212,0.5)] border border-cyan-400/50 transition-all duration-300 hover:scale-105 ${className}`}
     >
-      <Zap className="w-4 h-4 mr-2" />
-      Buy in App
+      {isPurchasing ? (
+        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+      ) : (
+        <Zap className="w-4 h-4 mr-2" />
+      )}
+      {isPurchasing ? "Processing..." : "Buy 24 Credits"}
     </Button>
   );
 };

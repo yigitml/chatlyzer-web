@@ -75,12 +75,12 @@ export function proxy(request: NextRequest) {
 function buildContentSecurityPolicy(nonce: string) {
   return [
     "default-src 'self'",
-    `script-src 'self' 'nonce-${nonce}' https://accounts.google.com https://apis.google.com${process.env.NODE_ENV === "development" ? " 'unsafe-eval'" : ""}`,
+    `script-src 'self' 'nonce-${nonce}' https://accounts.google.com https://apis.google.com https://js.stripe.com${process.env.NODE_ENV === "development" ? " 'unsafe-eval'" : ""}`,
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://accounts.google.com",
     "font-src 'self' https://fonts.gstatic.com",
     "img-src 'self' https://lh3.googleusercontent.com data: blob:",
-    "connect-src 'self' https://us.i.posthog.com https://us-assets.i.posthog.com https://accounts.google.com https://oauth2.googleapis.com https://www.googleapis.com",
-    "frame-src https://accounts.google.com",
+    "connect-src 'self' https://us.i.posthog.com https://us-assets.i.posthog.com https://accounts.google.com https://oauth2.googleapis.com https://www.googleapis.com https://api.revenuecat.com https://e.revenue.cat https://api.stripe.com https://r.stripe.com",
+    "frame-src https://accounts.google.com https://js.stripe.com https://hooks.stripe.com",
     "frame-ancestors 'none'",
     "base-uri 'self'",
     "form-action 'self'",
