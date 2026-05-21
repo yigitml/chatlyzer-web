@@ -45,6 +45,9 @@ jobs:
           if ! grep -q '^REVENUECAT_WEBHOOK_SECRET=' .env; then
             echo 'REVENUECAT_WEBHOOK_SECRET="ci-revenuecat-webhook-secret"' >> .env
           fi
+          if ! grep -q '^NEXT_PUBLIC_REVENUECAT_WEB_API_KEY=' .env; then
+            echo 'NEXT_PUBLIC_REVENUECAT_WEB_API_KEY="ci-revenuecat-web-api-key"' >> .env
+          fi
           test -s .env
           grep -q '^DATABASE_URL=' .env
           grep -q '^REVENUECAT_WEBHOOK_SECRET=' .env
