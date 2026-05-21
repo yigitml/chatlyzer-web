@@ -2,9 +2,10 @@ import { NextRequest } from "next/server";
 import prisma, { rawPrisma } from "@/backend/lib/prisma";
 import { ApiResponse } from "@/shared/types/api/apiResponse";
 import { withProtectedRoute } from "@/backend/middleware/jwtAuth";
+import { withRateLimiter } from "@/backend/middleware/rateLimiter";
 import { getValidationMessage, userPutSchema } from "@/shared/types/api/requestSchemas";
 
-export const GET = withProtectedRoute(async (request: NextRequest) => {
+export const GET = withRateLimiter(withProtectedRoute(async (request: NextRequest) => {
   try {
     const authenticatedUserId = request.user!.id;
 
@@ -21,9 +22,9 @@ export const GET = withProtectedRoute(async (request: NextRequest) => {
     console.error("Error fetching user:", error);
     return ApiResponse.error("Failed to fetch user", 500).toResponse();
   }
-});
+}));
 
-export const PUT = withProtectedRoute(async (request: NextRequest) => {
+export const PUT = withRateLimiter(withProtectedRoute(async (request: NextRequest) => {
   try {
     const authenticatedUserId = request.user!.id;
     const parsed = userPutSchema.safeParse(await request.json());
@@ -50,9 +51,9 @@ export const PUT = withProtectedRoute(async (request: NextRequest) => {
     console.error("Error updating user:", error);
     return ApiResponse.error("Failed to update user", 500).toResponse();
   }
-});
+}));
 
-export const DELETE = withProtectedRoute(async (request: NextRequest) => {
+export const DELETE = withRateLimiter(withProtectedRoute(async (request: NextRequest) => {
   try {
     const authenticatedUserId = request.user!.id;
     const deletedAt = new Date();
@@ -123,4 +124,4 @@ export const DELETE = withProtectedRoute(async (request: NextRequest) => {
     console.error("Error deleting user:", error);
     return ApiResponse.error("Failed to delete user", 500).toResponse();
   }
-});
+}));

@@ -1,6 +1,7 @@
 import { NextRequest } from "next/server";
 import prisma from "@/backend/lib/prisma";
 import { withProtectedRoute } from "@/backend/middleware/jwtAuth";
+import { withRateLimiter } from "@/backend/middleware/rateLimiter";
 import { ApiResponse } from "@/shared/types/api/apiResponse";
 import { MessagePostRequest, MessagePutRequest } from "@/shared/types/api/apiRequest";
 import {
@@ -10,7 +11,7 @@ import {
   messagePutSchema,
 } from "@/shared/types/api/requestSchemas";
 
-export const GET = withProtectedRoute(async (request: NextRequest) => {
+export const GET = withRateLimiter(withProtectedRoute(async (request: NextRequest) => {
   try {
     const { searchParams } = new URL(request.url);
     const id = searchParams.get("id");
@@ -61,9 +62,9 @@ export const GET = withProtectedRoute(async (request: NextRequest) => {
     console.error("Error fetching messages:", error);
     return ApiResponse.error("Internal server error", 500).toResponse();
   }
-});
+}));
 
-export const POST = withProtectedRoute(async (request: NextRequest) => {
+export const POST = withRateLimiter(withProtectedRoute(async (request: NextRequest) => {
   try {
     const authenticatedUserId = request.user!.id;
     const parsed = messagePostSchema.safeParse(await request.json());
@@ -100,9 +101,9 @@ export const POST = withProtectedRoute(async (request: NextRequest) => {
     console.error("Error creating message:", error);
     return ApiResponse.error("Internal server error", 500).toResponse();
   }
-});
+}));
 
-export const PUT = withProtectedRoute(async (request: NextRequest) => {
+export const PUT = withRateLimiter(withProtectedRoute(async (request: NextRequest) => {
   try {
     const authenticatedUserId = request.user!.id;
     const parsed = messagePutSchema.safeParse(await request.json());
@@ -138,9 +139,9 @@ export const PUT = withProtectedRoute(async (request: NextRequest) => {
     console.error("Error updating message:", error);
     return ApiResponse.error("Internal server error", 500).toResponse();
   }
-});
+}));
 
-export const DELETE = withProtectedRoute(async (request: NextRequest) => {
+export const DELETE = withRateLimiter(withProtectedRoute(async (request: NextRequest) => {
   try {
     const authenticatedUserId = request.user!.id;
     const parsed = idBodySchema.safeParse(await request.json());
@@ -174,4 +175,4 @@ export const DELETE = withProtectedRoute(async (request: NextRequest) => {
     console.error("Error deleting message:", error);
     return ApiResponse.error("Internal server error", 500).toResponse();
   }
-});
+}));

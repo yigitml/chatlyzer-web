@@ -1,10 +1,11 @@
 import { NextRequest } from "next/server";
 import { withProtectedRoute } from "@/backend/middleware/jwtAuth";
+import { withRateLimiter } from "@/backend/middleware/rateLimiter";
 import { ApiResponse } from "@/shared/types/api/apiResponse";
 //import { uploadFile } from "@/lib/fal";
 import prisma from "@/backend/lib/prisma";
 
-export const GET = withProtectedRoute(async (request: NextRequest) => {
+export const GET = withRateLimiter(withProtectedRoute(async (request: NextRequest) => {
   try {
     const authenticatedUserId = request.user!.id;
     const { searchParams } = new URL(request.url);
@@ -51,9 +52,9 @@ export const GET = withProtectedRoute(async (request: NextRequest) => {
     console.error("Error fetching files:", error);
     return ApiResponse.error("Failed to fetch files", 500).toResponse();
   }
-});
+}));
 
-export const POST = withProtectedRoute(async (request: NextRequest) => {
+export const POST = withRateLimiter(withProtectedRoute(async (request: NextRequest) => {
   try {
     const contentType = request.headers.get("content-type");
     if (!contentType?.includes("multipart/form-data")) {
@@ -71,9 +72,9 @@ export const POST = withProtectedRoute(async (request: NextRequest) => {
     console.error("Error uploading file:", error);
     return ApiResponse.error("Failed to upload file", 500).toResponse();
   }
-});
+}));
 
-export const DELETE = withProtectedRoute(async (request: NextRequest) => {
+export const DELETE = withRateLimiter(withProtectedRoute(async (request: NextRequest) => {
   try {
     const authenticatedUserId = request.user!.id;
     const { id } = await request.json();
@@ -112,4 +113,4 @@ export const DELETE = withProtectedRoute(async (request: NextRequest) => {
     console.error("Error deleting file:", error);
     return ApiResponse.error("Failed to delete file", 500).toResponse();
   }
-});
+}));

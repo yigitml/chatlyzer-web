@@ -20,17 +20,17 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
         with:
           node-version: "22"
           cache: "npm"
           cache-dependency-path: package-lock.json
 
       - name: Restore Next.js build cache
-        uses: actions/cache@v4
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830
         with:
           path: .next/cache
           key: ${{ runner.os }}-nextjs-${{ hashFiles('package-lock.json') }}-${{ hashFiles('**/*.[jt]s', '**/*.[jt]sx') }}
@@ -63,7 +63,7 @@ jobs:
         run: npm run build
 
       - name: Prepare staging directory on server
-        uses: appleboy/ssh-action@master
+        uses: appleboy/ssh-action@1530429296e979861824d74fb800013190b5dee0
         with:
           host: ${{ secrets.SERVER_HOST }}
           username: ${{ secrets.SERVER_USER }}
@@ -75,17 +75,17 @@ jobs:
             mkdir -p /home/prod/chatlyzer-web-update
 
       - name: Copy build artifacts to server staging directory
-        uses: appleboy/scp-action@master
+        uses: appleboy/scp-action@a6e43c3aaf4e8e6b0b15bf34e19d71118f6b1ca7
         with:
           host: ${{ secrets.SERVER_HOST }}
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           port: 2222
-          source: ".next/,public/,package.json,package-lock.json,prisma/,prisma.config.ts,src/generated/,.env"
+          source: ".next/,public/,package.json,package-lock.json,prisma/,prisma.config.ts,src/generated/"
           target: "/home/prod/chatlyzer-web-update"
 
       - name: Install production app, run migrations, and restart
-        uses: appleboy/ssh-action@master
+        uses: appleboy/ssh-action@1530429296e979861824d74fb800013190b5dee0
         with:
           host: ${{ secrets.SERVER_HOST }}
           username: ${{ secrets.SERVER_USER }}
@@ -96,6 +96,10 @@ jobs:
 
             echo "Preparing staged release..."
             cd /home/prod/chatlyzer-web-update
+            cat > .env <<'EOF'
+            ${{ secrets.PROD_ENV_FILE }}
+            EOF
+            chmod 600 .env
             test -s .env
             grep -q '^DATABASE_URL=' .env
             grep -q '^REVENUECAT_WEBHOOK_SECRET=' .env

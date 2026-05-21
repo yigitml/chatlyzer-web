@@ -1,10 +1,11 @@
 import { NextRequest } from "next/server";
 import { withProtectedRoute } from "@/backend/middleware/jwtAuth";
+import { withRateLimiter } from "@/backend/middleware/rateLimiter";
 import { ApiResponse } from "@/shared/types/api/apiResponse";
 import prisma from "@/backend/lib/prisma";
 import type { SubscriptionDeleteRequest } from "@/shared/types/api/apiRequest";
 
-export const GET = withProtectedRoute(async (request: NextRequest) => {
+export const GET = withRateLimiter(withProtectedRoute(async (request: NextRequest) => {
   try {
     const { searchParams } = new URL(request.url);
     const id = searchParams.get("id");
@@ -40,9 +41,9 @@ export const GET = withProtectedRoute(async (request: NextRequest) => {
     console.error("Error fetching subscriptions:", error);
     return ApiResponse.error("Failed to fetch subscriptions", 500).toResponse();
   }
-});
+}));
 
-export const DELETE = withProtectedRoute(async (request: NextRequest) => {
+export const DELETE = withRateLimiter(withProtectedRoute(async (request: NextRequest) => {
   try {
     const body: SubscriptionDeleteRequest = await request.json();
     const { id } = body;
@@ -72,4 +73,4 @@ export const DELETE = withProtectedRoute(async (request: NextRequest) => {
     console.error("Error deleting subscription:", error);
     return ApiResponse.error("Failed to delete subscription", 500).toResponse();
   }
-});
+}));

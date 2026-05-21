@@ -183,6 +183,10 @@ export const CreateChatModal = ({
               Ghost Mode
             </Button>
           </div>
+          <p className="text-xs leading-relaxed text-white/60">
+            Chat content is sent to our AI provider for analysis. Privacy Mode avoids storing raw messages;
+            Ghost Mode avoids saving the chat and analysis results after the response.
+          </p>
             <div className={importMode === ImportMode.WHATSAPP ? 'block' : 'hidden'}>
               <Label>WhatsApp Export</Label>
               <Textarea

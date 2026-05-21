@@ -1,9 +1,10 @@
 import { NextRequest } from "next/server";
 import { withProtectedRoute } from "@/backend/middleware/jwtAuth";
+import { withRateLimiter } from "@/backend/middleware/rateLimiter";
 import { ApiResponse } from "@/shared/types/api/apiResponse";
 import prisma from "@/backend/lib/prisma";
 
-export const GET = withProtectedRoute(async (request: NextRequest) => {
+export const GET = withRateLimiter(withProtectedRoute(async (request: NextRequest) => {
   try {
     const credits = await prisma.userCredit.findMany({
       where: {
@@ -19,4 +20,4 @@ export const GET = withProtectedRoute(async (request: NextRequest) => {
     console.error("Error fetching user credits:", error);
     return ApiResponse.error("Failed to fetch user credits", 500).toResponse();
   }
-});
+}));
