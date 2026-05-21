@@ -1,9 +1,10 @@
 import { NextRequest } from "next/server";
 import { withProtectedRoute } from "@/backend/middleware/jwtAuth";
+import { withRateLimiter } from "@/backend/middleware/rateLimiter";
 import { ApiResponse } from "@/shared/types/api/apiResponse";
 import { rawPrisma } from "@/backend/lib/prisma";
 
-export const GET = withProtectedRoute(async (request: NextRequest) => {
+export const GET = withRateLimiter(withProtectedRoute(async (request: NextRequest) => {
   try {
     const { searchParams } = new URL(request.url);
     const id = searchParams.get("id");
@@ -40,4 +41,4 @@ export const GET = withProtectedRoute(async (request: NextRequest) => {
     console.error("Error fetching orders:", error);
     return ApiResponse.error("Failed to fetch orders", 500).toResponse();
   }
-});
+}));

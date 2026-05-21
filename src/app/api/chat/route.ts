@@ -1,6 +1,7 @@
 import { NextRequest } from "next/server";
 import prisma from "@/backend/lib/prisma";
 import { withProtectedRoute } from "@/backend/middleware/jwtAuth";
+import { withRateLimiter } from "@/backend/middleware/rateLimiter";
 import { ApiResponse } from "@/shared/types/api/apiResponse";
 import { ChatPutRequest, ChatDeleteRequest } from "@/shared/types/api/apiRequest";
 import { Prisma } from "../../../generated/client/client";
@@ -12,7 +13,7 @@ import {
   idBodySchema,
 } from "@/shared/types/api/requestSchemas";
 
-export const GET = withProtectedRoute(async (request: NextRequest) => {
+export const GET = withRateLimiter(withProtectedRoute(async (request: NextRequest) => {
     try {
         const { searchParams } = new URL(request.url);
         const id = searchParams.get("id");
@@ -37,9 +38,9 @@ export const GET = withProtectedRoute(async (request: NextRequest) => {
       console.error("Error fetching chats:", error);
       return ApiResponse.error("Internal server error", 500).toResponse();
     }
-});
+}));
 
-export const POST = withProtectedRoute(async (request: NextRequest) => {
+export const POST = withRateLimiter(withProtectedRoute(async (request: NextRequest) => {
   try {
     const authenticatedUserId = request.user!.id;
     const parsed = chatPostSchema.safeParse(await request.json());
@@ -107,9 +108,9 @@ export const POST = withProtectedRoute(async (request: NextRequest) => {
     console.error("Error creating chat:", error);
     return ApiResponse.error("Internal server error", 500).toResponse();
   }
-});
+}));
 
-export const PUT = withProtectedRoute(async (request: NextRequest) => {
+export const PUT = withRateLimiter(withProtectedRoute(async (request: NextRequest) => {
   try {
     const authenticatedUserId = request.user!.id;
     const parsed = chatPutSchema.safeParse(await request.json());
@@ -134,9 +135,9 @@ export const PUT = withProtectedRoute(async (request: NextRequest) => {
     console.error("Error updating chat:", error);
     return ApiResponse.error("Internal server error", 500).toResponse();
   }
-});
+}));
 
-export const DELETE = withProtectedRoute(async (request: NextRequest) => {
+export const DELETE = withRateLimiter(withProtectedRoute(async (request: NextRequest) => {
   try {
     const authenticatedUserId = request.user!.id;
     const parsed = idBodySchema.safeParse(await request.json());
@@ -175,4 +176,4 @@ export const DELETE = withProtectedRoute(async (request: NextRequest) => {
     console.error("Error deleting chat:", error);
     return ApiResponse.error("Internal server error", 500).toResponse();
   }
-});
+}));

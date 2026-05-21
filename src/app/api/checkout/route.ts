@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getPolarConfig } from "@/backend/lib/polarConfig";
 import { AuthenticatedRequest } from "@/backend/middleware/combinedMiddleware";
 import { withProtectedRoute } from "@/backend/middleware/jwtAuth";
+import { withRateLimiter } from "@/backend/middleware/rateLimiter";
 import { ApiResponse } from "@/shared/types/api/apiResponse";
 import { logger } from "@/backend/lib/logger";
 
@@ -43,7 +44,7 @@ function isAllowedMobileRedirect(value: string | null): value is string {
   }
 }
 
-export const GET = withProtectedRoute(async (request: AuthenticatedRequest) => {
+export const GET = withRateLimiter(withProtectedRoute(async (request: AuthenticatedRequest) => {
   const { searchParams, origin } = new URL(request.url);
   const returnJson = searchParams.get("json") === "true";
 
@@ -145,4 +146,4 @@ export const GET = withProtectedRoute(async (request: AuthenticatedRequest) => {
 
     return createErrorResponse(request, returnJson, "checkout_failed", 500);
   }
-});
+}));
