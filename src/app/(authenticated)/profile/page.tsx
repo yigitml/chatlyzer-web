@@ -418,7 +418,7 @@ export default function ProfilePage() {
                 <p className="text-white/60 text-sm">Your account is {isAuthenticated ? "active" : "inactive"}</p>
               </div>
               <div className={`px-3 py-1 rounded-full text-sm ${
-                isAuthenticated 
+                isAuthenticated
                   ? "bg-green-500/20 text-green-300 border border-green-500/30"
                   : "bg-red-500/20 text-red-300 border border-red-500/30"
               }`}>
