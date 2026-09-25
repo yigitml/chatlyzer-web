@@ -32,20 +32,6 @@ export const POST = withAnalysisRateLimiter(withProtectedRoute(async (request: N
     const data: PrivacyAnalysisPostRequest = parsed.data;
     const requestKey = data.requestKey?.trim() || null;
 
-    const existingChat = data.isGhostMode
-      ? null
-      : await prisma.chat.findFirst({
-          where: {
-            title: data.title,
-            userId: authenticatedUserId,
-            deletedAt: null,
-          }
-        });
-
-    if (existingChat) {
-      return ApiResponse.error("Chat already exists", 400).toResponse();
-    }
-
     if (requestKey && !data.isGhostMode) {
       const existingAnalyses = await prisma.analysis.findMany({
         where: {
@@ -75,6 +61,20 @@ export const POST = withAnalysisRateLimiter(withProtectedRoute(async (request: N
           200,
         ).toResponse();
       }
+    }
+
+    const existingChat = data.isGhostMode
+      ? null
+      : await prisma.chat.findFirst({
+          where: {
+            title: data.title,
+            userId: authenticatedUserId,
+            deletedAt: null,
+          }
+        });
+
+    if (existingChat) {
+      return ApiResponse.error("Chat already exists", 400).toResponse();
     }
 
     const m = [];

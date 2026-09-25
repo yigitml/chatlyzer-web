@@ -1,16 +1,3 @@
-const getBaseUrl = () => {
-  const env = process.env.NODE_ENV;
-  if (env === 'production') {
-    return 'https://chatlyzerai.com/api';
-  } else if (env === 'development') {
-    return 'http://localhost:3000/api';
-  } else {
-    return 'http://chatlyzerai.com/api';
-  }
-};
-
-const BASE_URL = getBaseUrl();
-
 export const createApiClient = (getToken: () => string | null) => {
   const getDefaultHeaders = (isFileUpload = false) => {
     const headers: Record<string, string> = {};
@@ -65,7 +52,9 @@ export const createApiClient = (getToken: () => string | null) => {
   };
 
   const buildUrl = (endpoint: string, params?: Record<string, any>) => {
-    const url = new URL(`${BASE_URL}${endpoint}`);
+    // Keep cookies and API calls on the deployment's own origin, including
+    // provider URLs and previews. Resolve at call time, not during SSR.
+    const url = new URL(`/api${endpoint}`, "http://same-origin.invalid");
 
     if (params) {
       Object.entries(params).forEach(([key, value]) => {
@@ -81,7 +70,7 @@ export const createApiClient = (getToken: () => string | null) => {
       });
     }
 
-    return url.toString();
+    return `${url.pathname}${url.search}`;
   };
 
   return {

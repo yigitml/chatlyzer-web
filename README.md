@@ -4,7 +4,7 @@
 
 **A production full-stack application for importing conversations and turning them into structured AI-assisted analysis.**
 
-[Live application](https://chatlyzerai.com) · [Operations runbook](docs/operations.md) · [Security regression tests](docs/security-regression-tests.md)
+[Cloud deployment](docs/cloud-deployment.md) · [Operations runbook](docs/operations.md) · [Security regression tests](docs/security-regression-tests.md)
 
 `Next.js 16` &nbsp; `React 19` &nbsp; `TypeScript` &nbsp; `PostgreSQL` &nbsp; `Prisma` &nbsp; `OpenAI`
 
@@ -26,7 +26,7 @@ Users can import conversations, manage chats and messages, request multiple form
 - **Layered request security** — JWT authentication, ownership checks, rate limiting, request context, environment validation, and deliberately coarse health responses.
 - **Multi-client authentication** — separate web and mobile refresh flows, device/session records, token-version invalidation, and Google identity verification.
 - **Production commerce** — RevenueCat purchase synchronization and webhook handling with persisted transaction identifiers and credit grants.
-- **Operational readiness** — release validation, Prisma migrations, PM2 deployment, health checks, rollback instructions, and security regression documentation.
+- **Operational readiness** — release validation, Prisma migrations, managed cloud deployment, health checks, rollback instructions, and security regression documentation.
 
 ## Architecture
 
@@ -76,7 +76,7 @@ Route handlers stay focused on transport concerns while shared schemas validate 
 
 ### Requirements
 
-- Node.js 20 or newer
+- Node.js 22.12 or newer within the Node 22 LTS line
 - PostgreSQL
 - Google OAuth credentials
 - An OpenAI API key
@@ -131,7 +131,9 @@ The core model connects users to devices, sessions, chats, messages, analyses, c
 
 ## Deployment
 
-Production releases are validated in CI, staged on the target host, migrated with `prisma migrate deploy`, and swapped into place before PM2 is restarted. Health checks and rollback procedures are documented in the [operations runbook](docs/operations.md).
+Deploy the app and PostgreSQL together using the Render Blueprint in `render.yaml`. Render applies Prisma migrations before switching traffic, checks database health, and deploys after CI passes. No VPS, SSH, Nginx, or PM2 is required. See the [cloud deployment guide](docs/cloud-deployment.md) for account setup, credentials, and the live acceptance checklist.
+
+The migration has been tested locally with simulated external services. Live deployment requires configured Google OAuth, OpenAI API, and RevenueCat accounts; it is not yet verified online.
 
 ## License
 

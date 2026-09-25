@@ -5,71 +5,59 @@ on:
   push:
     branches: [main, master]
 
+permissions:
+  contents: read
+
 jobs:
   validate:
     runs-on: ubuntu-latest
-
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: chatlyzer
+          POSTGRES_PASSWORD: ci-password
+          POSTGRES_DB: chatlyzer_test
+        ports: [5432:5432]
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    # Test-only credentials. CI never receives production secrets.
+    env:
+      DATABASE_URL: postgresql://chatlyzer:ci-password@localhost:5432/chatlyzer_test
+      JWT_SECRET: ci-jwt-secret-never-use-in-production
+      REFRESH_TOKEN_SECRET: ci-refresh-secret-never-use-in-production
+      OPENAI_API_KEY: ci-mocked-openai
+      NEXT_PUBLIC_GOOGLE_CLIENT_ID: ci.apps.googleusercontent.com
+      REVENUECAT_SECRET_API_KEY: ci-mocked-revenuecat
+      REVENUECAT_WEBHOOK_SECRET: ci-webhook-authorization
+      NEXT_PUBLIC_REVENUECAT_WEB_API_KEY: ci-web-api-key
+      NEXT_TELEMETRY_DISABLED: "1"
     steps:
       - name: Checkout code
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
-
       - name: Setup Node.js
         uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
         with:
           node-version: "22"
-          cache: "npm"
-          cache-dependency-path: package-lock.json
-
-      - name: Create CI env file
-        shell: bash
+          cache: npm
+      - run: npm ci
+      - run: npx prisma validate
+      - run: npx prisma migrate deploy
+      - run: npm run check:env:production
+      - run: npm run typecheck
+      - run: npm run lint
+      - run: npm test
+      - run: npm run test:integration
+      - run: npm run build
+      - name: HTTP smoke test of production server
         run: |
-          set -e
-          if [ -n "${{ secrets.PROD_ENV_FILE }}" ]; then
-            cat > .env <<'EOF'
-          ${{ secrets.PROD_ENV_FILE }}
-          EOF
-          else
-            cat > .env <<'EOF'
-          DATABASE_URL="postgresql://ci:ci@localhost:5432/chatlyzer_ci"
-          JWT_SECRET="ci-jwt-secret"
-          REFRESH_TOKEN_SECRET="ci-refresh-token-secret"
-          OPENAI_API_KEY="ci-openai-key"
-          GOOGLE_OAUTH2_URL="https://www.googleapis.com/oauth2/v3"
-          REVENUECAT_WEBHOOK_SECRET="ci-revenuecat-webhook-secret"
-          NEXT_PUBLIC_GOOGLE_CLIENT_ID="ci-google-client-id.apps.googleusercontent.com"
-          NEXT_PUBLIC_REVENUECAT_WEB_API_KEY="ci-revenuecat-web-api-key"
-          NEXT_PUBLIC_POSTHOG_KEY=""
-          NEXT_PUBLIC_POSTHOG_HOST="https://us.i.posthog.com"
-          EOF
-          fi
-          if ! grep -q '^REVENUECAT_WEBHOOK_SECRET=' .env; then
-            echo 'REVENUECAT_WEBHOOK_SECRET="ci-revenuecat-webhook-secret"' >> .env
-          fi
-          if ! grep -q '^NEXT_PUBLIC_REVENUECAT_WEB_API_KEY=' .env; then
-            echo 'NEXT_PUBLIC_REVENUECAT_WEB_API_KEY="ci-revenuecat-web-api-key"' >> .env
-          fi
-          test -s .env
-          grep -q '^DATABASE_URL=' .env
-          grep -q '^REVENUECAT_WEBHOOK_SECRET=' .env
-          grep -q '^NEXT_PUBLIC_REVENUECAT_WEB_API_KEY=' .env
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Validate Prisma schema
-        run: npx prisma validate
-
-      - name: Generate Prisma client
-        run: npx prisma generate
-
-      - name: Typecheck
-        run: npm run typecheck
-
-      - name: Lint
-        run: npm run lint
-
-      - name: Test
-        run: npm test
-
-      - name: Build
-        run: npm run build
+          npm run start:cloud > /tmp/chatlyzer-server.log 2>&1 &
+          trap 'kill $! 2>/dev/null || true' EXIT
+          for attempt in $(seq 1 30); do
+            if curl --fail --silent http://localhost:3000/api/health; then break; fi
+            sleep 2
+          done
+          node scripts/smoke-test.mjs http://localhost:3000

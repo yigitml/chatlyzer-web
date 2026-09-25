@@ -8,31 +8,19 @@
 
 ## Deployment
 
-Production deploys run from GitHub Actions on published releases or manual dispatch.
+Render manages the Node service and PostgreSQL defined in `render.yaml`. See [cloud deployment](cloud-deployment.md) for first-time setup and required external credentials.
 
-1. Build and validate in CI.
-2. Copy build artifacts to `/home/prod/chatlyzer-web-update`.
-3. Write `.env` on the target host with mode `600`.
-4. Run `npx prisma migrate deploy`.
-5. Generate Prisma client and prune dev dependencies.
-6. Swap staged release into `/home/prod/chatlyzer-web`.
-7. Restart PM2 with updated environment.
+1. GitHub CI validates the change against a disposable database.
+2. Render builds the linked branch only after checks pass.
+3. `prisma migrate deploy` runs before the release takes traffic.
+4. The app starts on Render's `PORT` with production environment validation.
+5. Render gates the deployment on `GET /api/health`.
 
 ## Rollback
 
-Use rollback when a release causes user-facing errors, failed health checks, or migration-related incidents.
+Use Render's service dashboard to roll back to a previously successful deployment. Verify `/api/health`, sign-in, chat listing and credit balance after rollback. Do not use the former VPS directories or PM2 commands.
 
-1. SSH to the production host.
-2. Confirm `/home/prod/chatlyzer-web-backup` exists.
-3. Move the failed release aside:
-   `mv /home/prod/chatlyzer-web /home/prod/chatlyzer-web-failed-$(date +%Y%m%d%H%M%S)`.
-4. Restore the previous app:
-   `mv /home/prod/chatlyzer-web-backup /home/prod/chatlyzer-web`.
-5. Restart PM2:
-   `cd /home/prod/chatlyzer-web && pm2 restart 0 --update-env`.
-6. Verify `GET /api/health`.
-
-Database migrations are not automatically rolled back. If the failed release included a destructive or incompatible migration, stop and create a forward-fix migration after inspecting production state.
+Database migrations are forward-only; rolling back application code does not reverse database changes. For incompatible schema changes, inspect the production database and apply a forward fix. Ensure current backups exist before applying destructive migrations.
 
 ## Database Backup And Restore
 

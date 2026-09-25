@@ -64,12 +64,12 @@ export const DELETE = withRateLimiter(withProtectedRoute(async (request: NextReq
     await rawPrisma.$transaction(async (tx) => {
       await Promise.all([
         tx.analysis.updateMany({
-          where: { userId: authenticatedUserId, deletedAt: null },
+          where: { userId: authenticatedUserId },
           data: { deletedAt, result: {}, error: null },
         }),
         tx.message.updateMany({
-          where: { userId: authenticatedUserId, deletedAt: null },
-          data: { deletedAt, content: "" },
+          where: { userId: authenticatedUserId },
+          data: { deletedAt, content: "", metadata: {} },
         }),
         tx.file.updateMany({
           where: { userId: authenticatedUserId, deletedAt: null },

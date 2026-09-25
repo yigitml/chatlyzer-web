@@ -24,7 +24,7 @@ export const POST = withAuthRateLimiter(async (request: NextRequest) => {
     }
 
     const userInfoResponse = await fetch(
-      `${process.env.GOOGLE_OAUTH2_URL}/userinfo`,
+      `${process.env.GOOGLE_OAUTH2_URL || "https://www.googleapis.com/oauth2/v3"}/userinfo`,
       {
         headers: { Authorization: `Bearer ${accessToken}` },
       },
@@ -89,6 +89,7 @@ export const POST = withAuthRateLimiter(async (request: NextRequest) => {
         },
       },
       update: {
+        deletedAt: null,
         lastActivityAt: new Date(),
       },
       create: {

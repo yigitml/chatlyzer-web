@@ -259,7 +259,10 @@ export const smartChatSampler = (messages: any[], targetTokenLimit: number = 100
     // A safe buffer for JSON syntax overhead per message is ~20 tokens.
     const overhead = 20; 
     const contentTokens = enc.encode(msg.content || "").length;
-    const metadataTokens = enc.encode(msg.sender || "").length + enc.encode(msg.timestamp || "").length;
+    const timestamp = msg.timestamp instanceof Date
+      ? msg.timestamp.toISOString()
+      : String(msg.timestamp || "");
+    const metadataTokens = enc.encode(msg.sender || "").length + enc.encode(timestamp).length;
     
     return contentTokens + metadataTokens + overhead;
   };

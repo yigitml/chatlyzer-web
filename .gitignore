@@ -13,3 +13,6 @@ npm-debug.log
 src/generated/client
 .turbo
 tsconfig.tsbuildinfo
+.env.*
+!.env.example
+work/
