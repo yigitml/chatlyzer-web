@@ -8,17 +8,17 @@
 
 ## Deployment
 
-Render manages the Node service and PostgreSQL defined in `render.yaml`. See [cloud deployment](cloud-deployment.md) for first-time setup and required external credentials.
+Deno Deploy runs the standalone Next.js service; Neon stores PostgreSQL data. See [cloud deployment](cloud-deployment.md) for setup and free-plan limits.
 
-1. GitHub CI validates the change against a disposable database.
-2. Render builds the linked branch only after checks pass.
-3. `prisma migrate deploy` runs before the release takes traffic.
-4. The app starts on Render's `PORT` with production environment validation.
-5. Render gates the deployment on `GET /api/health`.
+1. Check GitHub CI against its disposable database before deploying.
+2. Deno builds the selected revision with the Next.js preset.
+3. The pre-deploy command validates configuration and runs `prisma migrate deploy`.
+4. Verify `/api/health`, sign-in and persistence on the deployed URL. The Deno preview warmup does not replace these production checks.
+5. Monitor both providers' free quotas and cold-start behavior. Never upgrade or attach a payment method automatically.
 
 ## Rollback
 
-Use Render's service dashboard to roll back to a previously successful deployment. Verify `/api/health`, sign-in, chat listing and credit balance after rollback. Do not use the former VPS directories or PM2 commands.
+Redeploy a previously verified revision through Deno Deploy. Verify health, sign-in, chat listing and credit balance. Keep production and development databases separate.
 
 Database migrations are forward-only; rolling back application code does not reverse database changes. For incompatible schema changes, inspect the production database and apply a forward fix. Ensure current backups exist before applying destructive migrations.
 

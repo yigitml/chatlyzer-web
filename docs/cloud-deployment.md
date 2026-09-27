@@ -1,38 +1,42 @@
-# Cloud deployment (Render)
+# Cloud deployment (Deno Deploy + Neon)
 
 ## Status
 
-The repository is prepared for Render, but **a live deployment and live provider verification are still pending**. No cloud account, original database backup, or Google/OpenAI/RevenueCat credentials were available during the migration. Tests use a fresh PostgreSQL database and simulated external responses; they do not establish that real provider accounts, billing, or OAuth are configured.
+The target is Deno Deploy Free and Neon Free PostgreSQL. The paid Render Blueprint has been removed. **Live deployment and real-provider verification are pending account setup.** Local builds and HTTP/database smoke tests passed under Deno 2.9.5; this does not prove the hosted environment or third-party accounts work.
 
-## Architecture
+Neon explicitly offers no-card signup. Deno advertises a $0 Free plan; confirm the account can create a Free app without card verification during signup. Do not select a paid plan or enter payment information. If signup requires a card, stop that provider setup and select another provider.
 
-`render.yaml` creates an always-on Node 22 web service and PostgreSQL 17 in Frankfurt. Database access is private to Render; no public database IPs are allowed. Prisma runs all migrations before traffic switches to the new release. `/api/health` checks the database. Render handles TLS, process supervision, logs, deploys and rollbacks, replacing SSH, Nginx and PM2.
+## Architecture and limits
 
-The app preserves PostgreSQL transactions/advisory locks, shared database rate limits, HTTP-only cookie authentication, mobile bearer-token APIs, eight analysis types, privacy/ghost modes and RevenueCat credit purchases. Browser requests are same-origin, so the Render hostname works without owning the former domain.
+`deno.json` uses Deno Deploy's Next.js preset, with standalone output and PostgreSQL through Prisma. The pre-deploy command validates production configuration and runs migrations before routing traffic. The database lives in Neon; retain TLS options from its connection string. Never disable certificate validation.
 
-The Blueprint selects paid compute, not expiring free database storage. Review the estimate shown by Render before creating resources; [current pricing](https://render.com/pricing) applies, plus external AI/payment usage. Nothing has been purchased by this migration.
+The app retains cookie and mobile authentication, eight analysis types, privacy/ghost modes, database-backed rate limits, credit purchases and webhooks. Same-origin browser requests work on the provider hostname.
+
+Deno Free currently includes 1M monthly requests, 10 CPU hours and 150 GiB-hours of memory time. Neon Free also has storage/compute quotas and suspends idle compute. Expect cold starts and service interruption when quotas are exhausted; these plans do not promise unlimited traffic. AI and payment services are separate from hosting: the current OpenAI integration still needs a usable API account. No old database backup is available, so this creates an empty app rather than recovering old data.
 
 ## First deployment
 
-1. Create/sign in to [Render](https://dashboard.render.com), connect this GitHub repository, and create a **Blueprint** from the branch containing `render.yaml`. Use the main branch after merging the migration PR.
-2. Render prompts for four external settings. Obtain them from the accounts below and enter them directly in Render:
+1. Sign in to [Deno Deploy](https://console.deno.com) and [Neon](https://console.neon.tech). Choose Free plans. Create a Neon PostgreSQL project and copy its TLS-enabled connection string into the Deno app's `DATABASE_URL` secret.
+2. Create a Deno app from this repository, selecting the migration branch until merged. Use the Next.js preset and the repository's `deno.json`. Prefer a region close to the database where available.
+3. Set the following in the **Production** environment, and separately in **Development** only with a different non-production database and test provider credentials. Never connect preview deployments to production data:
 
    | Variable | Source |
    | --- | --- |
-   | `OPENAI_API_KEY` | OpenAI API project with billing and access to the model configured in `src/backend/lib/openai.ts` |
-   | `NEXT_PUBLIC_GOOGLE_CLIENT_ID` | Google Cloud OAuth client of type **Web application** |
+   | `DATABASE_URL` | Neon connection string, including TLS settings |
+   | `JWT_SECRET`, `REFRESH_TOKEN_SECRET` | Two independently generated random secrets, at least 32 bytes each |
+   | `REVENUECAT_WEBHOOK_SECRET` | Another independent random secret |
+   | `OPENAI_API_KEY` | Usable OpenAI API project |
+   | `NEXT_PUBLIC_GOOGLE_CLIENT_ID` | Google OAuth Web application client |
    | `NEXT_PUBLIC_REVENUECAT_WEB_API_KEY` | RevenueCat Web Billing app public key |
-   | `REVENUECAT_SECRET_API_KEY` | RevenueCat secret key permitted to read subscriber purchases |
+   | `REVENUECAT_SECRET_API_KEY` | RevenueCat key permitted to read subscriber purchases |
 
-3. Render supplies the private `DATABASE_URL` and generates `JWT_SECRET`, `REFRESH_TOKEN_SECRET`, and `REVENUECAT_WEBHOOK_SECRET`. Do not replace these with the example/test values. Keep the signing secrets stable across deployments.
-4. Review the resources and cost before deploying. A first run applies all ten database migrations. With no backup, this creates a new, empty app; it cannot recover old users, chats, credits, or purchase identity mappings.
-5. Copy the exact successful Render app origin into Google Cloud's **Authorized JavaScript origins**. Configure the OAuth consent screen, allowed test users while testing, and production publication as appropriate. The app uses the Google popup token flow with `openid email profile` scopes.
-6. Configure RevenueCat Web Billing and its payment processor. Create the `credits_24` product and include it in an offering available to web customers. If your product identifier differs, update both the server and `NEXT_PUBLIC_` product variables together.
-7. Configure a RevenueCat webhook to `https://YOUR-APP.onrender.com/api/webhook/revenuecat`. Its Authorization header must exactly match the generated `REVENUECAT_WEBHOOK_SECRET`. Start with a sandbox/test purchase; do not use a real charge to test the flow.
-8. Optionally set `NEXT_PUBLIC_POSTHOG_KEY` and the PostHog host. Public variables are compiled into the browser bundle: rebuild after changing any `NEXT_PUBLIC_` value. The current ingestion proxy targets PostHog's US region.
-9. If adding an extra web/mobile origin, add its exact origin to comma-separated `CORS_ALLOWED_ORIGINS`. Same-origin web requests need no CORS setting. Configure an optional custom domain through Render and add that origin to Google too. Native apps built with the old API URL need a separately released URL configuration update or the old custom domain pointed at Render.
+4. Add the public `NEXT_PUBLIC_` values to the **Build** context as well; Next.js compiles these into browser bundles. Rebuild after changing them. Keep secrets out of Git and never deploy local test values. Keep signing secrets stable across releases.
+5. Check GitHub CI before deploying. The pre-deploy command applies all ten migrations to the new database. Verify the deployed `/api/health` returns 200.
+6. Add the exact deployed HTTPS origin to Google Cloud's **Authorized JavaScript origins**, configure the consent screen and allow test users. The popup flow uses `openid email profile`.
+7. Configure RevenueCat Web Billing and its payment processor. Create `credits_24` in an available web offering. If using another product ID, update both server and public product settings. Set the webhook to `https://YOUR-APP-HOST/api/webhook/revenuecat` with an Authorization header exactly matching `REVENUECAT_WEBHOOK_SECRET`. Use sandbox purchases for verification.
+8. Optional PostHog public settings must also exist in Build; the ingestion proxy targets the US region. Add extra exact origins to `CORS_ALLOWED_ORIGINS` only when needed. Native apps pointing at the old domain need an API URL update or the old domain routed to the new host.
 
-[Render Next.js guide](https://render.com/docs/deploy-nextjs-app) · [Blueprint reference](https://render.com/docs/blueprint-spec) · [Health checks](https://render.com/docs/health-checks)
+[Deno pricing](https://deno.com/deploy/pricing) · [Deno build configuration](https://docs.deno.com/deploy/reference/builds/) · [Neon no-card signup](https://neon.com/faster)
 
 ## Local and CI verification
 
@@ -54,7 +58,7 @@ node scripts/smoke-test.mjs http://localhost:3000
 
 `npm run check:contracts` separately compares the mobile repository. Clone `yigitml/chatlyzer-mobile` next to this repository, or set `CHATLYZER_MOBILE_ROOT` to its checkout path. This check does not require mobile dependencies.
 
-GitHub CI uses a disposable PostgreSQL service and test-only values. It runs schema validation, migration, types, lint, unit and integration tests, the production build and HTTP smoke tests. It never injects production secrets. Render auto-deploys only when CI checks pass.
+GitHub CI uses a disposable PostgreSQL service and test-only values. It runs schema validation, migration, types, lint, unit and integration tests, the production build and HTTP smoke tests. It never injects production secrets. Check that CI passes before manually deploying a revision; Deno GitHub auto-deploys are not gated by this workflow.
 
 ## Required live acceptance checks
 
@@ -75,5 +79,5 @@ Run these on the actual deployed origin before claiming full restoration. Use sy
 
 - The existing `/api/file` binary-upload endpoint intentionally returns 501; chat text imports run through `/api/chat` and work without a file storage service. The old `/api/checkout` endpoint intentionally returns 410 because checkout uses RevenueCat's browser SDK. These are existing API limitations, not functional upload/legacy-checkout features.
 - Live Google, OpenAI, RevenueCat checkout/webhooks and PostHog delivery remain unverified without accounts and credentials. No native client binary has been rebuilt or tested on a device.
-- AI analysis currently runs within a request. Graceful shutdown is increased to five minutes, but a crashed process during analysis can still need manual reconciliation of a stuck analysis and credits. Moving jobs to a durable queue is a separate change.
+- AI analysis currently runs within a request. A stopped or crashed process during analysis can still need manual reconciliation of a stuck analysis and credits. Moving jobs to a durable queue is a separate change.
 - `npm audit` after compatible updates reports four high-severity findings in Prisma tooling's transitive `deepmerge-ts`/`mysql2` chain. This app uses PostgreSQL, not MySQL, and does not accept user-supplied Prisma configuration. The suggested automatic fix downgrades Prisma across a major version; it was not applied. Review upstream fixes before launch.
