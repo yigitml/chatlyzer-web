@@ -17,7 +17,7 @@ Deno Free currently includes 1M monthly requests, 10 CPU hours and 150 GiB-hours
 ## First deployment
 
 1. Sign in to [Deno Deploy](https://console.deno.com) and [Neon](https://console.neon.tech). Choose Free plans. Create a Neon PostgreSQL project and copy its TLS-enabled connection string into the Deno app's `DATABASE_URL` secret.
-2. Create a Deno app from this repository, selecting the migration branch until merged. Use the Next.js preset and the repository's `deno.json`. Prefer a region close to the database where available.
+2. Create a local-source Deno app using `deno deploy create --org yigitml --app chatlyzer-web --source local --framework-preset nextjs --region eu`. Authorize the CLI in your signed-in browser when prompted. The repository's `deno.json` identifies this app and its build configuration. Publish the tested checkout with `deno deploy --prod`; do not include ignored local files or secrets in uploads. GitHub-connected app creation uses the default branch, so do not use it before the migration is merged.
 3. Set the following in the **Production** environment, and separately in **Development** only with a different non-production database and test provider credentials. Never connect preview deployments to production data:
 
    | Variable | Source |
