@@ -2,9 +2,9 @@
 
 ## Status
 
-The target is Deno Deploy Free and Neon Free PostgreSQL. The paid Render Blueprint has been removed. **Live deployment and real-provider verification are pending account setup.** Local builds and HTTP/database smoke tests passed under Deno 2.9.5; this does not prove the hosted environment or third-party accounts work.
+Production is live at **https://chatlyzerai.com** on Deno Deploy with Neon PostgreSQL. The provider hostname, **https://chatlyzer-web.yigitml.deno.net**, remains available as a fallback. The former Render/VPS deployment has been removed from the release path.
 
-Neon explicitly offers no-card signup. Deno advertises a $0 Free plan; confirm the account can create a Free app without card verification during signup. Do not select a paid plan or enter payment information. If signup requires a card, stop that provider setup and select another provider.
+The production database, TLS certificate, Google sign-in, OpenAI analysis, normal/privacy/ghost workflows, and RevenueCat sandbox credit fulfillment were verified on September 29, 2026. Deno automatically renews the custom-domain certificate. RevenueCat remains in sandbox mode until merchant onboarding is completed.
 
 ## Architecture and limits
 
@@ -78,6 +78,6 @@ Run these on the actual deployed origin before claiming full restoration. Use sy
 ## Existing limitations and remaining risks
 
 - The existing `/api/file` binary-upload endpoint intentionally returns 501; chat text imports run through `/api/chat` and work without a file storage service. The old `/api/checkout` endpoint intentionally returns 410 because checkout uses RevenueCat's browser SDK. These are existing API limitations, not functional upload/legacy-checkout features.
-- Live Google, OpenAI, RevenueCat checkout/webhooks and PostHog delivery remain unverified without accounts and credentials. No native client binary has been rebuilt or tested on a device.
+- RevenueCat web checkout and credit fulfillment are verified in sandbox mode; accepting real payments still requires merchant onboarding. PostHog delivery and a rebuilt native-client binary have not been verified.
 - AI analysis currently runs within a request. A stopped or crashed process during analysis can still need manual reconciliation of a stuck analysis and credits. Moving jobs to a durable queue is a separate change.
 - `npm audit` after compatible updates reports four high-severity findings in Prisma tooling's transitive `deepmerge-ts`/`mysql2` chain. This app uses PostgreSQL, not MySQL, and does not accept user-supplied Prisma configuration. The suggested automatic fix downgrades Prisma across a major version; it was not applied. Review upstream fixes before launch.

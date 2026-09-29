@@ -131,9 +131,9 @@ The core model connects users to devices, sessions, chats, messages, analyses, c
 
 ## Deployment
 
-The deployment target is Deno Deploy Free with Neon Free PostgreSQL. `deno.json` configures the Next.js build; releases validate the production environment and apply Prisma migrations from the release checkout before publishing. No VPS, SSH, Nginx, or PM2 is required. See the [cloud deployment guide](docs/cloud-deployment.md) for setup, free-plan limits, and the live acceptance checklist. Live deployment is still pending account setup.
+Production runs at [chatlyzerai.com](https://chatlyzerai.com) on Deno Deploy with Neon PostgreSQL. `deno.json` configures the Next.js build; releases validate the production environment and apply Prisma migrations from the release checkout before publishing. No VPS, SSH, Nginx, or PM2 is required. See the [cloud deployment guide](docs/cloud-deployment.md) for setup, service limits, and the live acceptance record.
 
-The migration has been tested locally with simulated external services. Live deployment requires configured Google OAuth, OpenAI API, and RevenueCat accounts; it is not yet verified online.
+Google sign-in, database persistence, OpenAI analysis, normal/privacy/ghost workflows, and RevenueCat sandbox credit fulfillment have been verified against production. RevenueCat remains in sandbox mode until merchant onboarding is completed.
 
 ## License
 
