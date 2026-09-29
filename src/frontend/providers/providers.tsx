@@ -66,7 +66,7 @@ export default function Providers({ children, nonce }: ProvidersProps) {
   return (
     <PostHogProvider>
       <ErrorBoundary FallbackComponent={RootErrorFallback}>
-        <GoogleOAuthProvider clientId={googleClientId}>
+        <GoogleOAuthProvider clientId={googleClientId} nonce={nonce}>
             <NextThemesProvider
               attribute="class"
               defaultTheme="dark"

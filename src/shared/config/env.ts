@@ -37,6 +37,8 @@ export function getServerEnv(source: EnvSource = process.env) {
 const productionRequiredServerKeys = [
   "REVENUECAT_SECRET_API_KEY",
   "REVENUECAT_WEBHOOK_SECRET",
+  "NEXT_PUBLIC_GOOGLE_CLIENT_ID",
+  "NEXT_PUBLIC_REVENUECAT_WEB_API_KEY",
 ] as const;
 
 export function validateProductionServerEnv(source: EnvSource = process.env) {
@@ -57,7 +59,14 @@ export function validateProductionServerEnv(source: EnvSource = process.env) {
   return env;
 }
 
-export function getPublicEnv(source: EnvSource = process.env) {
+export function getPublicEnv(source: EnvSource = {
+  // Next.js only inlines statically referenced NEXT_PUBLIC_ variables.
+  NEXT_PUBLIC_GOOGLE_CLIENT_ID: process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID,
+  NEXT_PUBLIC_POSTHOG_KEY: process.env.NEXT_PUBLIC_POSTHOG_KEY,
+  NEXT_PUBLIC_POSTHOG_HOST: process.env.NEXT_PUBLIC_POSTHOG_HOST,
+  NEXT_PUBLIC_REVENUECAT_WEB_API_KEY: process.env.NEXT_PUBLIC_REVENUECAT_WEB_API_KEY,
+  NEXT_PUBLIC_REVENUECAT_CREDITS_PRODUCT_ID: process.env.NEXT_PUBLIC_REVENUECAT_CREDITS_PRODUCT_ID,
+}) {
   const parsed = publicEnvSchema.safeParse(source);
   if (!parsed.success) {
     throw new Error(`Invalid public environment: ${formatEnvError(parsed.error)}`);

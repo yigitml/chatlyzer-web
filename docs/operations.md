@@ -8,31 +8,19 @@
 
 ## Deployment
 
-Production deploys run from GitHub Actions on published releases or manual dispatch.
+Deno Deploy runs the standalone Next.js service; Neon stores PostgreSQL data. See [cloud deployment](cloud-deployment.md) for setup and free-plan limits.
 
-1. Build and validate in CI.
-2. Copy build artifacts to `/home/prod/chatlyzer-web-update`.
-3. Write `.env` on the target host with mode `600`.
-4. Run `npx prisma migrate deploy`.
-5. Generate Prisma client and prune dev dependencies.
-6. Swap staged release into `/home/prod/chatlyzer-web`.
-7. Restart PM2 with updated environment.
+1. Check GitHub CI against its disposable database before deploying.
+2. Deno builds the selected revision with the Next.js preset.
+3. The pre-deploy command validates configuration and runs `prisma migrate deploy`.
+4. Verify `/api/health`, sign-in and persistence on the deployed URL. The Deno preview warmup does not replace these production checks.
+5. Monitor both providers' free quotas and cold-start behavior. Never upgrade or attach a payment method automatically.
 
 ## Rollback
 
-Use rollback when a release causes user-facing errors, failed health checks, or migration-related incidents.
+Redeploy a previously verified revision through Deno Deploy. Verify health, sign-in, chat listing and credit balance. Keep production and development databases separate.
 
-1. SSH to the production host.
-2. Confirm `/home/prod/chatlyzer-web-backup` exists.
-3. Move the failed release aside:
-   `mv /home/prod/chatlyzer-web /home/prod/chatlyzer-web-failed-$(date +%Y%m%d%H%M%S)`.
-4. Restore the previous app:
-   `mv /home/prod/chatlyzer-web-backup /home/prod/chatlyzer-web`.
-5. Restart PM2:
-   `cd /home/prod/chatlyzer-web && pm2 restart 0 --update-env`.
-6. Verify `GET /api/health`.
-
-Database migrations are not automatically rolled back. If the failed release included a destructive or incompatible migration, stop and create a forward-fix migration after inspecting production state.
+Database migrations are forward-only; rolling back application code does not reverse database changes. For incompatible schema changes, inspect the production database and apply a forward fix. Ensure current backups exist before applying destructive migrations.
 
 ## Database Backup And Restore
 

@@ -3,6 +3,7 @@ import { Pool } from "pg";
 import {
   RateLimiterMemory,
   RateLimiterPostgres,
+  RateLimiterRes,
 } from "rate-limiter-flexible";
 import { getRequiredServerEnv } from "../../shared/config/env";
 import { ApiResponse } from "../../shared/types/api/apiResponse";
@@ -54,6 +55,9 @@ function createRateLimiter(config: RateLimiterConfig): RateLimiter {
     storeClient: getRateLimitPool(),
     storeType: "pool",
     tableName: "rate_limits",
+    // Prisma migrations create this table before traffic reaches the app.
+    // Avoid asynchronous CREATE TABLE racing the first request after startup.
+    tableCreated: true,
     clearExpiredByTimeout: true,
   });
 }
@@ -134,13 +138,17 @@ export function withAuthRateLimiter(handler: ApiHandler): ApiHandler {
     const key = `${req.nextUrl.pathname}:${ip}`;
     try {
       await getAuthRateLimiter().consume(key);
-      return handler(req);
-    } catch {
+    } catch (error) {
+      if (!(error instanceof RateLimiterRes)) {
+        console.error("Rate limit database unavailable", error);
+        return ApiResponse.error("Service temporarily unavailable", 503).toResponse();
+      }
       return ApiResponse.error(
         "Too many requests, please try again later.",
         429,
       ).toResponse();
     }
+    return handler(req);
   };
 }
 
@@ -153,13 +161,17 @@ export function withRateLimiter(handler: ApiHandler): ApiHandler {
     const ip = getClientIp(req);
     try {
       await getApiRateLimiter().consume(ip);
-      return handler(req);
-    } catch {
+    } catch (error) {
+      if (!(error instanceof RateLimiterRes)) {
+        console.error("Rate limit database unavailable", error);
+        return ApiResponse.error("Service temporarily unavailable", 503).toResponse();
+      }
       return ApiResponse.error(
         "Too many requests, please try again later.",
         429,
       ).toResponse();
     }
+    return handler(req);
   };
 }
 
@@ -172,12 +184,16 @@ export function withAnalysisRateLimiter(handler: ApiHandler): ApiHandler {
     const ip = getClientIp(req);
     try {
       await getAnalysisRateLimiter().consume(ip);
-      return handler(req);
-    } catch {
+    } catch (error) {
+      if (!(error instanceof RateLimiterRes)) {
+        console.error("Rate limit database unavailable", error);
+        return ApiResponse.error("Service temporarily unavailable", 503).toResponse();
+      }
       return ApiResponse.error(
         "Too many analysis requests, please try again later.",
         429,
       ).toResponse();
     }
+    return handler(req);
   };
 }

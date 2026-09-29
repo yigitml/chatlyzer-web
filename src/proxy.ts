@@ -1,16 +1,20 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
-// Define your VIP list of allowed mobile and web origins
-const allowedOrigins = [
+// Explicit cross-origin clients. Same-origin web requests do not need CORS.
+const mobileOrigins = [
   "https://chatlyzerai.com",
   "capacitor://localhost",
   "http://localhost",
-  "http://localhost:3000",
 ];
 
 export function proxy(request: NextRequest) {
   const origin = request.headers.get("origin") ?? "";
+  const allowedOrigins = [
+    ...mobileOrigins,
+    ...(process.env.CORS_ALLOWED_ORIGINS || "").split(",").map(value => value.trim()).filter(Boolean),
+    ...(process.env.NODE_ENV !== "production" ? ["http://localhost:3000"] : []),
+  ];
   const isApiRoute = request.nextUrl.pathname.startsWith("/api/");
   const nonce = crypto.randomUUID().replace(/-/g, "");
   const requestId = request.headers.get("x-request-id") || crypto.randomUUID();
@@ -21,7 +25,7 @@ export function proxy(request: NextRequest) {
   // Browsers send an OPTIONS request before a POST/PUT to check permissions
   // =======================================================================
   if (isApiRoute && request.method === "OPTIONS") {
-    const preflightHeaders = new Headers();
+    const preflightHeaders = new Headers({ Vary: "Origin" });
     if (allowedOrigins.includes(origin)) {
       preflightHeaders.set("Access-Control-Allow-Origin", origin);
     }
@@ -48,6 +52,8 @@ export function proxy(request: NextRequest) {
 
   // Apply CORS dynamically if it's an API route
   if (isApiRoute) {
+    response.headers.append("Vary", "Origin");
+    response.headers.set("Access-Control-Expose-Headers", "X-Next-Cursor, X-Has-More, X-Page-Limit, X-Request-Id");
     if (allowedOrigins.includes(origin)) {
       response.headers.set("Access-Control-Allow-Origin", origin);
     }
@@ -58,9 +64,17 @@ export function proxy(request: NextRequest) {
 
   // =======================================================================
   // 3. GLOBAL SECURITY POLICIES (Applied to ALL matched routes)
-  // Note: HSTS, Clickjacking, and MIME-sniffing headers are handled by Nginx
+  // These protections travel with the app; no VPS/Nginx is required.
   // =======================================================================
   
+  response.headers.set("X-Content-Type-Options", "nosniff");
+  response.headers.set("X-Frame-Options", "DENY");
+  response.headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
+  response.headers.set("Cross-Origin-Opener-Policy", "same-origin-allow-popups");
+  if (process.env.NODE_ENV === "production") {
+    response.headers.set("Strict-Transport-Security", "max-age=31536000");
+  }
+
   // Disable unused browser APIs
   response.headers.set(
     "Permissions-Policy",

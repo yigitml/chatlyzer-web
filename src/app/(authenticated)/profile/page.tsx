@@ -97,7 +97,7 @@ const CreditsDisplay = ({ credits }: { credits: number }) => {
 };
 
 export default function ProfilePage() {
-  const { user, isInitialized, updateUser, setUser, deleteUser } = useAuthStore();
+  const { user, isAuthenticated, isInitialized, updateUser, setUser, deleteUser } = useAuthStore();
   const { chats, fetchChats } = useChatStore();
   const { fetchMessages } = useMessageStore();
   const { analyzes, fetchAnalyzes } = useAnalysisStore();
@@ -415,14 +415,14 @@ export default function ProfilePage() {
             <div className="flex items-center justify-between p-4 bg-white/5 rounded-lg">
               <div>
                 <h4 className="font-medium text-white">Account Status</h4>
-                <p className="text-white/60 text-sm">Your account is {user.isActive ? "active" : "inactive"}</p>
+                <p className="text-white/60 text-sm">Your account is {isAuthenticated ? "active" : "inactive"}</p>
               </div>
               <div className={`px-3 py-1 rounded-full text-sm ${
-                user.isActive 
+                isAuthenticated
                   ? "bg-green-500/20 text-green-300 border border-green-500/30"
                   : "bg-red-500/20 text-red-300 border border-red-500/30"
               }`}>
-                {user.isActive ? "Active" : "Inactive"}
+                {isAuthenticated ? "Active" : "Inactive"}
               </div>
             </div>
 
