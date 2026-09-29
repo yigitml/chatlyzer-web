@@ -131,7 +131,7 @@ The core model connects users to devices, sessions, chats, messages, analyses, c
 
 ## Deployment
 
-The deployment target is Deno Deploy Free with Neon Free PostgreSQL. `deno.json` configures Next.js and applies migrations before deployment. No VPS, SSH, Nginx, or PM2 is required. See the [cloud deployment guide](docs/cloud-deployment.md) for setup, free-plan limits, and the live acceptance checklist. Live deployment is still pending account setup.
+The deployment target is Deno Deploy Free with Neon Free PostgreSQL. `deno.json` configures the Next.js build; releases validate the production environment and apply Prisma migrations from the release checkout before publishing. No VPS, SSH, Nginx, or PM2 is required. See the [cloud deployment guide](docs/cloud-deployment.md) for setup, free-plan limits, and the live acceptance checklist. Live deployment is still pending account setup.
 
 The migration has been tested locally with simulated external services. Live deployment requires configured Google OAuth, OpenAI API, and RevenueCat accounts; it is not yet verified online.
 

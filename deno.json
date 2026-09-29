@@ -5,7 +5,6 @@
     "app": "chatlyzer-web",
     "framework": "nextjs",
     "install": "npm ci",
-    "build": "npm run build",
-    "predeploy": "deno run -A scripts/validate-production-env.mjs && deno run -A node_modules/prisma/build/index.js migrate deploy"
+    "build": "npm run build"
   }
 }

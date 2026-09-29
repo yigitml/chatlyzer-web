@@ -8,7 +8,7 @@ Neon explicitly offers no-card signup. Deno advertises a $0 Free plan; confirm t
 
 ## Architecture and limits
 
-`deno.json` uses Deno Deploy's Next.js preset, with standalone output and PostgreSQL through Prisma. The pre-deploy command validates production configuration and runs migrations before routing traffic. The database lives in Neon; retain TLS options from its connection string. Never disable certificate validation.
+`deno.json` uses Deno Deploy's Next.js preset, with standalone output and PostgreSQL through Prisma. The database lives in Neon; retain TLS options from its connection string. Never disable certificate validation. Deno's Next.js build artifact does not include repository maintenance scripts, so validate the production environment and apply migrations from the release checkout before publishing a revision.
 
 The app retains cookie and mobile authentication, eight analysis types, privacy/ghost modes, database-backed rate limits, credit purchases and webhooks. Same-origin browser requests work on the provider hostname.
 
@@ -31,7 +31,7 @@ Deno Free currently includes 1M monthly requests, 10 CPU hours and 150 GiB-hours
    | `REVENUECAT_SECRET_API_KEY` | RevenueCat key permitted to read subscriber purchases |
 
 4. Add the public `NEXT_PUBLIC_` values to the **Build** context as well; Next.js compiles these into browser bundles. Rebuild after changing them. Keep secrets out of Git and never deploy local test values. Keep signing secrets stable across releases.
-5. Check GitHub CI before deploying. The pre-deploy command applies all ten migrations to the new database. Verify the deployed `/api/health` returns 200.
+5. Check GitHub CI before deploying. From the release checkout, load the production environment, run `npm run check:env:production`, and run `npx prisma migrate deploy` against the Neon production database. Only then run `deno deploy --prod`. Verify the deployed `/api/health` returns 200.
 6. Add the exact deployed HTTPS origin to Google Cloud's **Authorized JavaScript origins**, configure the consent screen and allow test users. The popup flow uses `openid email profile`.
 7. Configure RevenueCat Web Billing and its payment processor. Create `credits_24` in an available web offering. If using another product ID, update both server and public product settings. Set the webhook to `https://YOUR-APP-HOST/api/webhook/revenuecat` with an Authorization header exactly matching `REVENUECAT_WEBHOOK_SECRET`. Use sandbox purchases for verification.
 8. Optional PostHog public settings must also exist in Build; the ingestion proxy targets the US region. Add extra exact origins to `CORS_ALLOWED_ORIGINS` only when needed. Native apps pointing at the old domain need an API URL update or the old domain routed to the new host.
