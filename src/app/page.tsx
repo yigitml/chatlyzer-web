@@ -180,7 +180,8 @@ export default function Home() {
             </div>
             
             <div className="flex flex-col sm:flex-row flex-wrap gap-x-12 gap-y-3 text-center justify-center font-mono font-bold uppercase text-xs sm:text-sm tracking-widest">
-              <Link href="#" className="hover:line-through hover:text-primary transition">Privacy_Policy.txt</Link>
+              <Link href="/privacy" className="hover:line-through hover:text-primary transition">Privacy_Policy.txt</Link>
+              <Link href="/terms" className="hover:line-through hover:text-primary transition">Terms_Of_Service.txt</Link>
               <Link href="/contact" className="hover:line-through hover:text-primary transition">Contact_Us.exe</Link>
               <Link href="/delete-account" className="hover:line-through text-destructive transition">Purge_Data.sh</Link>
             </div>
