@@ -3,6 +3,7 @@
 import { Loader2, Zap } from "lucide-react";
 import { Button } from "@/frontend/components/ui/button";
 import { useCreditStore } from "@/frontend/store/creditStore";
+import { revenueCatCheckoutAvailable } from "@/frontend/lib/revenueCatWeb";
 
 interface BuyCreditsButtonProps {
   className?: string;
@@ -15,6 +16,7 @@ export const BuyCreditsButton = ({
 }: BuyCreditsButtonProps) => {
   const purchaseCredits = useCreditStore((s) => s.purchaseCredits);
   const isPurchasing = useCreditStore((s) => s.isPurchasing);
+  const checkoutAvailable = revenueCatCheckoutAvailable();
   const handlePurchase = () => {
     void purchaseCredits().catch((error) => {
       if (error instanceof Error && error.name === "AbortError") return;
@@ -29,11 +31,15 @@ export const BuyCreditsButton = ({
     return (
       <Button
         onClick={handlePurchase}
-        disabled={isPurchasing}
+        disabled={isPurchasing || !checkoutAvailable}
         size="icon"
         className={`bg-gradient-to-br from-blue-600 to-cyan-500 hover:from-blue-500 hover:to-cyan-400 text-white shadow-[0_0_10px_rgba(6,182,212,0.5)] border border-cyan-400/50 transition-all duration-300 hover:scale-105 ${className}`}
-        title="Buy credits"
-        aria-label="Buy credits"
+        title={
+          checkoutAvailable ? "Buy credits" : "Credit purchases unavailable"
+        }
+        aria-label={
+          checkoutAvailable ? "Buy credits" : "Credit purchases unavailable"
+        }
       >
         {isPurchasing ? (
           <Loader2 className="w-4 h-4 animate-spin" />
@@ -47,7 +53,7 @@ export const BuyCreditsButton = ({
   return (
     <Button
       onClick={handlePurchase}
-      disabled={isPurchasing}
+      disabled={isPurchasing || !checkoutAvailable}
       className={`bg-gradient-to-r from-blue-600 to-cyan-500 hover:from-blue-500 hover:to-cyan-400 text-white font-bold shadow-[0_0_15px_rgba(6,182,212,0.5)] border border-cyan-400/50 transition-all duration-300 hover:scale-105 ${className}`}
     >
       {isPurchasing ? (
@@ -55,7 +61,11 @@ export const BuyCreditsButton = ({
       ) : (
         <Zap className="w-4 h-4 mr-2" />
       )}
-      {isPurchasing ? "Processing..." : "Buy 24 Credits"}
+      {!checkoutAvailable
+        ? "Purchases Unavailable"
+        : isPurchasing
+          ? "Processing..."
+          : "Buy 24 Credits"}
     </Button>
   );
 };

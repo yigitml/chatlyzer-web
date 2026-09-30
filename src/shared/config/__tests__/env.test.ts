@@ -36,8 +36,8 @@ const validProduction = {
   OPENAI_API_KEY: "synthetic-openai", REVENUECAT_SECRET_API_KEY: "synthetic-revenuecat",
   NEXT_PUBLIC_REVENUECAT_WEB_API_KEY: "synthetic-web-key", NEXT_PUBLIC_GOOGLE_CLIENT_ID: "fixture.apps.googleusercontent.com",
 };
-it("accepts strong independent production secrets and explicit sandbox operation", () => {
-  expect(validateProductionServerEnv(validProduction).REVENUECAT_FULFILLMENT_MODE).toBe("sandbox");
+it("accepts strong independent production secrets and defaults to paid credits", () => {
+  expect(validateProductionServerEnv(validProduction).REVENUECAT_FULFILLMENT_MODE).toBe("production");
 });
 it.each([
   { JWT_SECRET: "x" }, { REFRESH_TOKEN_SECRET: validProduction.JWT_SECRET },

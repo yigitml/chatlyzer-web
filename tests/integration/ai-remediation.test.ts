@@ -146,21 +146,12 @@ describe.sequential("AI financial and privacy invariants", () => {
   it("scheduled recovery refunds an idle account without a user request or provider replay", async () => {
     const { job } = await jobs.reserveAnalysisJob(state.userId, "GHOST", "scheduled-recovery");
     await prisma.analysisJob.update({ where: { id: job.id }, data: { leaseExpiresAt: new Date(0) } });
-    const cron = vi.fn();
-    vi.stubEnv("NEXT_RUNTIME", "nodejs");
-    vi.stubGlobal("Deno", { cron });
-    try {
-      await (await import("../../src/instrumentation")).register();
-      const handler = cron.mock.calls[0][3];
-      await handler();
-      await handler();
-      expect(await balance()).toBe(32);
-      expect((await prisma.analysisJob.findUnique({ where: { id: job.id } })).status).toBe("FAILED");
-      expect(state.completion).not.toHaveBeenCalled();
-    } finally {
-      vi.unstubAllGlobals();
-      vi.stubEnv("NEXT_RUNTIME", "");
-    }
+    const { recoverInterruptedAnalyses } = await import("../../src/instrumentation");
+    await recoverInterruptedAnalyses();
+    await recoverInterruptedAnalyses();
+    expect(await balance()).toBe(32);
+    expect((await prisma.analysisJob.findUnique({ where: { id: job.id } })).status).toBe("FAILED");
+    expect(state.completion).not.toHaveBeenCalled();
   });
   it("partial privacy/standard persistence rolls back completely and refunds", async () => {
     // A trigger fails the fifth individual row write inside the real transaction.

@@ -20,6 +20,14 @@ function getRevenueCatWebApiKey() {
   return process.env.NEXT_PUBLIC_REVENUECAT_WEB_API_KEY || "";
 }
 
+export function revenueCatCheckoutAvailable() {
+  const key = getRevenueCatWebApiKey();
+  return (
+    Boolean(key) &&
+    (process.env.NODE_ENV !== "production" || !key.startsWith("rcb_sb_"))
+  );
+}
+
 function getCreditsProductId() {
   return (
     process.env.NEXT_PUBLIC_REVENUECAT_CREDITS_PRODUCT_ID ||
@@ -29,6 +37,9 @@ function getCreditsProductId() {
 }
 
 async function getPurchasesForUser(user: User) {
+  if (!revenueCatCheckoutAvailable()) {
+    throw new Error("Credit purchases are currently unavailable.");
+  }
   const apiKey = getRevenueCatWebApiKey();
   if (!apiKey) {
     throw new Error("RevenueCat web API key is not configured.");

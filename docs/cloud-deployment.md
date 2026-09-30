@@ -8,7 +8,7 @@ Use Node 22 and TLS-enabled PostgreSQL. Keep signing secrets stable across relea
 
 - Set `NEXT_PUBLIC_APP_URL` to the canonical HTTPS origin and authorize that origin in Google Identity Services.
 - Set `GOOGLE_ALLOWED_CLIENT_IDS` to approved web/mobile client IDs. By default, only `NEXT_PUBLIC_GOOGLE_CLIENT_ID` is accepted.
-- Keep `REVENUECAT_FULFILLMENT_MODE=sandbox` until merchant onboarding and historical purchase reconciliation are complete.
+- Set `REVENUECAT_FULFILLMENT_MODE=production` on public production; only isolated test environments may use sandbox credits.
 - Keep `TRUSTED_CLIENT_IP_HEADER=none` unless ingress is verified to overwrite the selected header. Untrusted anonymous requests share a bounded rate-limit bucket.
 - Set public `NEXT_PUBLIC_` values in Build and Production. Rebuild when they change.
 - Give previews a separate test database and provider credentials; never connect previews to production data.
@@ -28,6 +28,6 @@ The September 30 migrations add account/session generations, durable analysis jo
 
 ## Limits
 
-RevenueCat checkout remains in sandbox mode. Binary `/api/file` uploads are unavailable; conversation text imports use `/api/chat`. Legacy `/api/checkout` returns 410; current checkout uses the RevenueCat browser SDK.
+Sandbox checkout is disabled in production builds. A live RevenueCat Web Billing key is required to enable purchases. Binary `/api/file` uploads are unavailable; conversation text imports use `/api/chat`. Legacy `/api/checkout` returns 410; current checkout uses the RevenueCat browser SDK.
 
 Hosting and database free plans have quotas and cold starts. Monitor usage in both provider dashboards. Optional PostHog delivery and native app acceptance require their own live checks.

@@ -6,7 +6,7 @@ function positiveAmount(amount: number) {
   if (!Number.isSafeInteger(amount) || amount <= 0) throw new Error("Credit amount must be a positive integer");
 }
 export function creditEnvironment(): "sandbox" | "production" {
-  const mode = process.env.REVENUECAT_FULFILLMENT_MODE || "sandbox";
+  const mode = process.env.REVENUECAT_FULFILLMENT_MODE || "production";
   if (mode !== "sandbox" && mode !== "production") throw new Error("Invalid billing fulfillment mode");
   return mode;
 }
