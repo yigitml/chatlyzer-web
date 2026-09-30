@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { apiErrorResponse } from "@/backend/lib/apiBoundary";
 
 export interface AuthenticatedRequest extends NextRequest {
   requestId?: string;
@@ -9,6 +10,7 @@ export interface AuthenticatedRequest extends NextRequest {
     sessionId?: string;
     deviceId?: string;
     tokenVersion?: number;
+    loginGeneration?: string;
   };
 }
 
@@ -21,6 +23,7 @@ export function combineMiddleware(
 ): (handler: (req: AuthenticatedRequest) => Promise<NextResponse>) => (req: NextRequest) => Promise<NextResponse> {
   return (handler) => {
     return async (req: NextRequest): Promise<NextResponse> => {
+      try {
       let currentRequest = req as AuthenticatedRequest;
 
       for (const middleware of middlewares) {
@@ -37,7 +40,8 @@ export function combineMiddleware(
         }
       }
 
-      return handler(currentRequest);
+      return await handler(currentRequest);
+      } catch (error) { return apiErrorResponse(error); }
     };
   };
 }

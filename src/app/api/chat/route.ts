@@ -1,184 +1,79 @@
 import { NextRequest } from "next/server";
-import prisma from "@/backend/lib/prisma";
+import prisma, { rawPrisma } from "@/backend/lib/prisma";
 import { withProtectedRoute } from "@/backend/middleware/jwtAuth";
 import { withRateLimiter } from "@/backend/middleware/rateLimiter";
 import { ApiResponse } from "@/shared/types/api/apiResponse";
-import { ChatPutRequest, ChatDeleteRequest } from "@/shared/types/api/apiRequest";
-import { Prisma } from "../../../generated/client/client";
-import { smartChatSampler } from "@/backend/lib/openai";
-import {
-  chatPostSchema,
-  chatPutSchema,
-  getValidationMessage,
-  idBodySchema,
-} from "@/shared/types/api/requestSchemas";
+import { Prisma } from "@/generated/client";
+import { chatPostSchema, chatPutSchema, getValidationMessage, idBodySchema } from "@/shared/types/api/requestSchemas";
 import { getPagination, paginateResults, paginationHeaders } from "@/shared/utils/pagination";
+import { ApiError, apiErrorResponse, readJson } from "@/backend/lib/apiBoundary";
+import { cancelChatJobs } from "@/backend/lib/analysisJobs";
+import { lockActiveAccount } from "@/backend/lib/accountLock";
 
 export const GET = withRateLimiter(withProtectedRoute(async (request: NextRequest) => {
-    try {
-        const { searchParams } = new URL(request.url);
-        const id = searchParams.get("id");
-        const authenticatedUserId = request.user!.id;
-
-        if (id) {
-          const chat = await prisma.chat.findFirst({
-              where: { id, userId: authenticatedUserId, deletedAt: null },
-          });
-          if (chat) {
-            return ApiResponse.success(chat).toResponse();
-          }
-          return ApiResponse.error("Chat not found", 404).toResponse();
-        } else {
-          const pagination = getPagination(searchParams);
-          const chats = await prisma.chat.findMany({
-            where: { userId: authenticatedUserId, deletedAt: null },
-            orderBy: { createdAt: "desc" },
-            take: pagination.take,
-            ...(pagination.cursor ? { cursor: { id: pagination.cursor }, skip: 1 } : {}),
-          });
-          const page = paginateResults(chats, pagination.limit);
-          return ApiResponse.success(page.items).toResponse(paginationHeaders(page.pageInfo));
-        }
-    } catch (error) {
-      console.error("Error fetching chats:", error);
-      return ApiResponse.error("Internal server error", 500).toResponse();
+  try {
+    const { searchParams } = new URL(request.url);
+    const id = searchParams.get("id");
+    const userId = request.user!.id;
+    if (id) {
+      const chat = await prisma.chat.findFirst({ where: { id, userId, deletedAt: null } });
+      if (!chat) throw new ApiError("Chat not found", 404);
+      return ApiResponse.success(chat).toResponse();
     }
+    const pagination = getPagination(searchParams);
+    const chats = await prisma.chat.findMany({ where: { userId, deletedAt: null }, orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+      take: pagination.take, ...(pagination.cursor ? { cursor: { id: pagination.cursor }, skip: 1 } : {}) });
+    const page = paginateResults(chats, pagination.limit);
+    return ApiResponse.success(page.items).toResponse(paginationHeaders(page.pageInfo));
+  } catch (error) { return apiErrorResponse(error); }
 }));
 
 export const POST = withRateLimiter(withProtectedRoute(async (request: NextRequest) => {
   try {
-    const authenticatedUserId = request.user!.id;
-    const parsed = chatPostSchema.safeParse(await request.json());
-    if (!parsed.success) {
-      return ApiResponse.error(getValidationMessage(parsed.error), 400).toResponse();
-    }
-    const data = parsed.data;
-
-    const existingChat = await prisma.chat.findFirst({
-      where: {
-        title: data.title,
-        userId: authenticatedUserId,
-        deletedAt: null,
-      }
+    const parsed = chatPostSchema.safeParse(await readJson(request));
+    if (!parsed.success) throw new ApiError(getValidationMessage(parsed.error), 400);
+    const { title, messages } = parsed.data;
+    // Equal titles are allowed: they do not identify an import. A failed import
+    // rolls back fully and can be retried with no title collision or residue.
+    const chat = await rawPrisma.$transaction(async tx => {
+      await lockActiveAccount(tx, request.user!.id, request.user!.tokenVersion);
+      const chat = await tx.chat.create({ data: { title, userId: request.user!.id, participants: [...new Set(messages.map(message => message.sender))] } });
+      await tx.message.createMany({ data: messages.map(message => ({ userId: request.user!.id, chatId: chat.id,
+        sender: message.sender, content: message.content, timestamp: message.timestamp, metadata: (message.metadata || {}) as Prisma.InputJsonValue })) });
+      return chat;
     });
-
-    if (existingChat) {
-      return ApiResponse.error("Chat already exists", 400).toResponse();
-    }
-
-    const validMessages = data.messages;
-
-    let sampledMessages = [];
-
-    if (validMessages.length > 0) {
-      // Use smartChatSampler to ensure we don't store excessively large chats
-      // We use a slightly higher limit for storage (200k tokens) to preserve more history than analysis
-      sampledMessages = smartChatSampler(validMessages, 200000);
-    } else {
-      sampledMessages = validMessages;
-    }
-    
-    const participants = sampledMessages ? [...new Set(sampledMessages.map(message => message.sender))] : [];
-
-    const chat = await prisma.chat.create({
-      data: {
-        title: data.title,
-        participants: participants,
-        userId: authenticatedUserId,
-      }
-    });
-
-    if (sampledMessages && sampledMessages.length > 0) {
-      const messagesToCreate = sampledMessages
-        .map(message => ({
-          userId: authenticatedUserId,
-          chatId: chat.id,
-          sender: message.sender,
-          content: message.content,
-          timestamp: message.timestamp,
-          metadata: message.metadata as Prisma.InputJsonValue,
-        }));
-
-      if (messagesToCreate.length > 0) {
-        await prisma.message.createMany({
-          data: messagesToCreate,
-        });
-      }
-    } else {
-      return ApiResponse.error("Chat must contain at least one valid message", 400).toResponse();
-    }
-
-    return ApiResponse.success(chat, "Chat created successfully", 200).toResponse();
-  } catch (error) {
-    console.error("Error creating chat:", error);
-    return ApiResponse.error("Internal server error", 500).toResponse();
-  }
+    return ApiResponse.success(chat, "Chat created successfully").toResponse();
+  } catch (error) { return apiErrorResponse(error); }
 }));
 
 export const PUT = withRateLimiter(withProtectedRoute(async (request: NextRequest) => {
   try {
-    const authenticatedUserId = request.user!.id;
-    const parsed = chatPutSchema.safeParse(await request.json());
-    if (!parsed.success) {
-      return ApiResponse.error(getValidationMessage(parsed.error), 400).toResponse();
-    }
-    const data: ChatPutRequest = parsed.data;
-
-    const updatedModel = await prisma.chat.update({
-      where: { id: data.id, userId: authenticatedUserId, deletedAt: null },
-      data: {
-        title: data.title,
-      }
+    const parsed = chatPutSchema.safeParse(await readJson(request));
+    if (!parsed.success) throw new ApiError(getValidationMessage(parsed.error), 400);
+    const chat = await rawPrisma.$transaction(async tx => {
+      await lockActiveAccount(tx, request.user!.id, request.user!.tokenVersion);
+      return tx.chat.update({ where: { id: parsed.data.id, userId: request.user!.id, deletedAt: null }, data: { title: parsed.data.title } });
     });
-
-    if (updatedModel) {
-      return ApiResponse.success(updatedModel, "Chat updated successfully", 200).toResponse();
-    }
-
-    return ApiResponse.error("Chat not found", 404).toResponse();
-  } catch (error) {
-    console.error("Error updating chat:", error);
-    return ApiResponse.error("Internal server error", 500).toResponse();
-  }
+    return ApiResponse.success(chat, "Chat updated successfully").toResponse();
+  } catch (error) { return apiErrorResponse(error); }
 }));
 
 export const DELETE = withRateLimiter(withProtectedRoute(async (request: NextRequest) => {
   try {
-    const authenticatedUserId = request.user!.id;
-    const parsed = idBodySchema.safeParse(await request.json());
-    if (!parsed.success) {
-      return ApiResponse.error(getValidationMessage(parsed.error), 400).toResponse();
-    }
-    const { id }: ChatDeleteRequest = parsed.data;
-
-    // Use a transaction to ensure both chat and analyses are deleted together
-    const result = await prisma.$transaction(async (tx) => {
-      // First, soft-delete the chat
-      const deletedChat = await tx.chat.update({
-        where: { id, userId: authenticatedUserId, deletedAt: null },
-        data: {
-          deletedAt: new Date(),
-        },
-      });
-
-      // Then, soft-delete all analyses associated with this chat
-      await tx.analysis.updateMany({
-        where: {
-          chatId: id,
-          userId: authenticatedUserId,
-          deletedAt: null, // Only delete analyses that aren't already deleted
-        },
-        data: {
-          deletedAt: new Date(),
-        },
-      });
-
-      return deletedChat;
+    const parsed = idBodySchema.safeParse(await readJson(request));
+    if (!parsed.success) throw new ApiError(getValidationMessage(parsed.error), 400);
+    const userId = request.user!.id;
+    const id = parsed.data.id;
+    const deletedAt = new Date();
+    const chat = await rawPrisma.$transaction(async tx => {
+      await lockActiveAccount(tx, userId, request.user!.tokenVersion);
+      const chat = await tx.chat.update({ where: { id, userId, deletedAt: null }, data: { deletedAt, title: null, participants: [] } });
+      await tx.analysis.updateMany({ where: { chatId: id, userId }, data: { deletedAt, result: Prisma.DbNull, error: null } });
+      await tx.message.updateMany({ where: { chatId: id, userId }, data: { deletedAt, content: "", sender: "", metadata: {}, timestamp: new Date(0) } });
+      await tx.file.updateMany({ where: { chatId: id, userId }, data: { deletedAt, url: "", size: 0 } });
+      await cancelChatJobs(tx, userId, id);
+      return chat;
     });
-
-    return ApiResponse.success(result, "Chat and associated analyses deleted successfully", 200).toResponse();
-  } catch (error) {
-    console.error("Error deleting chat:", error);
-    return ApiResponse.error("Internal server error", 500).toResponse();
-  }
+    return ApiResponse.success(chat, "Chat and associated content deleted successfully").toResponse();
+  } catch (error) { return apiErrorResponse(error); }
 }));

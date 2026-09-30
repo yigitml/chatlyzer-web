@@ -1,4 +1,4 @@
-import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
+import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { NextRequest, NextResponse } from "next/server";
 import { Pool } from "pg";
 
@@ -44,9 +44,14 @@ function sample(schema: any): any {
 
 async function call(path: string, method = "GET", body?: unknown, auth = cookie, extra: Record<string, string> = {}) {
   const route = path.split("?")[0];
+  if (route === "auth/web" && method === "POST") {
+    const handshake = await routes[route].GET!(new NextRequest("https://cloud-test.example/api/auth/web"));
+    const csrfToken = (await handshake.json()).data.csrfToken;
+    extra = { ...extra, "x-csrf-token": csrfToken, cookie: `loginCsrf=${csrfToken}` };
+  }
   const request = new NextRequest(`https://cloud-test.example/api/${path}`, {
     method,
-    headers: { "Content-Type": "application/json", "x-forwarded-for": `192.0.2.${++requestNumber}`, ...(auth ? { cookie: auth } : {}), ...extra },
+    headers: { "Content-Type": "application/json", origin: "https://cloud-test.example", "x-forwarded-for": `192.0.2.${++requestNumber}`, ...(auth ? { cookie: auth } : {}), ...extra },
     ...(body !== undefined ? { body: JSON.stringify(body) } : {}),
   });
   return routes[route][method as "GET"]!(request);
@@ -55,6 +60,9 @@ async function call(path: string, method = "GET", body?: unknown, auth = cookie,
 beforeAll(async () => {
   const url = new URL(process.env.DATABASE_URL || "http://missing");
   if (!url.pathname.endsWith("_test")) throw new Error("Integration tests require a dedicated DATABASE_URL ending in _test");
+  vi.stubEnv("NEXT_PUBLIC_APP_URL", "https://cloud-test.example");
+  vi.stubEnv("TRUSTED_CLIENT_IP_HEADER", "x-forwarded-for");
+  vi.stubEnv("REVENUECAT_FULFILLMENT_MODE", "production");
   pool = new Pool({ connectionString: process.env.DATABASE_URL });
   prisma = (await import("../../src/backend/lib/prisma")).default;
   routes = {
@@ -82,17 +90,24 @@ beforeAll(async () => {
   external.completion.mockImplementation(async (request: any) => ({ choices: [{ message: { content: JSON.stringify(sample(request.response_format.json_schema.schema)) } }] }));
   vi.stubGlobal("fetch", vi.fn(async (input: string) => {
     if (input.includes("googleapis.com")) return Response.json({ email, name: "Cloud Test", sub: "google-test", email_verified: true });
-    if (input.includes("api.revenuecat.com")) return Response.json({ subscriber: { non_subscriptions: { credits_24: [{ id: `purchase-${userId}`, product_id: "credits_24", store: "rc_billing", purchase_date: "2026-01-01T12:00:00Z" }] } } });
+    if (input.includes("api.revenuecat.com")) return Response.json({ subscriber: { non_subscriptions: { credits_24: [{ id: `rc-purchase-${userId}`, transaction_id: `purchase-${userId}`, product_id: "credits_24", store: "rc_billing", is_sandbox: false, purchase_date: "2026-01-01T12:00:00Z" }] } } });
     throw new Error(`Unexpected external request: ${input}`);
   }));
 });
 
+afterEach(async () => {
+  // Independent workflow cases must not share rate limiter time windows. Dedicated
+  // security regression cases separately assert the real thresholds.
+  await pool.query("DELETE FROM rate_limits");
+});
 afterAll(async () => {
   vi.unstubAllGlobals();
+  vi.unstubAllEnvs();
   if (userId) {
-    for (const table of ["Analysis", "Message", "File", "Chat", "RevenueCatPurchase", "Order", "UserCredit", "Subscription", "UserSession", "UserDevice"])
+    for (const table of ["AnalysisJob", "Analysis", "Message", "File", "Chat", "RevenueCatPurchase", "Order", "UserCredit", "Subscription", "UserSession", "UserDevice"])
       await pool.query(`DELETE FROM "${table}" WHERE "userId" = $1`, [userId]);
     await pool.query('DELETE FROM "User" WHERE id = $1', [userId]);
+    await pool.query('DELETE FROM "RevenueCatEvent" WHERE id = $1', [`test-event-${userId}`]);
   }
   await prisma?.$disconnect();
   await pool?.end();
@@ -105,7 +120,7 @@ describe.sequential("Fresh cloud database application workflows", () => {
     expect((await call("user", "GET", undefined, "")).status).toBe(401);
   });
   it("web login provisions account and sets secure HttpOnly cookies", async () => {
-    const response = await call("auth/web", "POST", { accessToken: "simulated-google-token", sessionId: "cloud-test-session" }, "");
+    const response = await call("auth/web", "POST", { idToken: "simulated-google-token", sessionId: "cloud-test-session" }, "");
     expect(response.status).toBe(200);
     userId = (await response.json()).data.user.id;
     const cookies = response.headers.getSetCookie();
@@ -123,6 +138,8 @@ describe.sequential("Fresh cloud database application workflows", () => {
     const response = await call("auth/web/refresh", "POST", undefined, refreshCookie);
     expect(response.status).toBe(200);
     expect(response.headers.get("set-cookie")).toContain("accessToken=");
+    expect((await call("auth/web/refresh", "POST", undefined, refreshCookie)).status).toBe(401);
+    refreshCookie = response.headers.getSetCookie().find(c => c.startsWith("refreshToken="))!.split(";")[0];
   });
   it("imports, paginates, and renames a chat", async () => {
     const response = await call("chat", "POST", { title: "Cloud chat", messages });
@@ -151,9 +168,9 @@ describe.sequential("Fresh cloud database application workflows", () => {
     expect((await prisma.userCredit.findFirst({ where: { userId } })).amount).toBe(24);
   });
   it("authenticates RevenueCat webhooks and replays without duplicate credits", async () => {
-    const body = { event: { id: "test-event", type: "NON_RENEWING_PURCHASE", app_user_id: userId } };
+    const body = { event: { id: `test-event-${userId}`, type: "NON_RENEWING_PURCHASE", app_user_id: userId, transaction_id: `purchase-${userId}`, product_id: "credits_24", environment: "PRODUCTION", event_timestamp_ms: Date.now() } };
     expect((await call("webhook/revenuecat", "POST", body, "")).status).toBe(401);
-    const response = await call("webhook/revenuecat", "POST", body, "", { authorization: "integration-webhook-authorization" });
+    const response = await call("webhook/revenuecat", "POST", body, "", { authorization: process.env.REVENUECAT_WEBHOOK_SECRET! });
     expect(response.status).toBe(200);
     expect((await response.json()).creditsGranted).toBe(0);
   });
@@ -213,6 +230,8 @@ describe.sequential("Fresh cloud database application workflows", () => {
     expect((await call("chat", "DELETE", { id: chatId })).status).toBe(200);
     expect((await call(`chat?id=${chatId}`)).status).toBe(404);
     expect(await prisma.analysis.count({ where: { id: { in: analysisIds }, deletedAt: null } })).toBe(0);
+    expect((await call(`message?chatId=${chatId}`)).status).toBe(404);
+    expect(await prisma.message.count({ where: { chatId, content: { not: "" } } })).toBe(0);
   });
   it("logs out web session and rejects its old tokens", async () => {
     expect((await call("auth/web/logout", "POST", {})).status).toBe(200);
@@ -220,8 +239,10 @@ describe.sequential("Fresh cloud database application workflows", () => {
     expect((await call("auth/web/refresh", "POST", undefined, refreshCookie)).status).toBe(401);
   });
   it("allows web re-login with the same session identifier after logout", async () => {
-    const response = await call("auth/web", "POST", { accessToken: "simulated-google-token", sessionId: "cloud-test-session" }, "");
+    const oldCookie = cookie;
+    const response = await call("auth/web", "POST", { idToken: "simulated-google-token", sessionId: "cloud-test-session" }, "");
     expect(response.status).toBe(200);
+    expect((await call("user", "GET", undefined, oldCookie)).status).toBe(401);
     cookie = response.headers.getSetCookie().find(c => c.startsWith("accessToken="))!.split(";")[0];
     expect((await call("user")).status).toBe(200);
   });

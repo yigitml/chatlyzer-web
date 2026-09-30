@@ -18,7 +18,7 @@ export default function PrivacyPage() {
           content: (
             <>
               <p><strong>Account data.</strong> Google Sign-In provides your Google account identifier, name, email address, and profile image. Chatlyzer uses this information to create and secure your account. We never receive your Google password.</p>
-              <p><strong>Conversation data.</strong> When you import or paste a chat, we process its title, participants, message content, and timestamps. Standard mode stores the imported chat and resulting analyses. Privacy mode stores the analysis but not the raw messages. Ghost mode stores neither the raw messages nor the analysis after returning the result to you.</p>
+              <p><strong>Conversation data.</strong> When you import or paste a chat, we process its title, participants, message content, and timestamps. Standard mode stores the imported chat and resulting analyses. Privacy mode stores the analysis but not the raw messages. Ghost mode stores neither raw conversation content nor analysis results. All modes retain minimal non-content request, debit, and recovery records to prevent duplicate charges and reconcile interrupted work. A lost Ghost result cannot be replayed; running it again requires a new request and may consume credits.</p>
               <p><strong>Service data.</strong> We process credit balances, purchase identifiers, sessions, device identifiers, request logs, and basic diagnostic information needed to operate, secure, and troubleshoot the service.</p>
             </>
           ),

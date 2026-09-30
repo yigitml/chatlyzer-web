@@ -1,10 +1,12 @@
 import { NextResponse } from "next/server";
 import prisma from "@/backend/lib/prisma";
+import { validateProductionServerEnv } from "@/shared/config/env";
 
 export const dynamic = "force-dynamic";
 
 export async function GET() {
   try {
+    validateProductionServerEnv();
     await prisma.$queryRaw`SELECT 1`;
 
     return NextResponse.json(

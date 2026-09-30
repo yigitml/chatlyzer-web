@@ -1,3 +1,4 @@
+import { apiErrorResponse } from "@/backend/lib/apiBoundary";
 import { NextRequest } from "next/server";
 import { withProtectedRoute } from "@/backend/middleware/jwtAuth";
 import { withRateLimiter } from "@/backend/middleware/rateLimiter";
@@ -43,7 +44,6 @@ export const GET = withRateLimiter(withProtectedRoute(async (request: NextReques
     const page = paginateResults(orders, pagination.limit);
     return ApiResponse.success(page.items).toResponse(paginationHeaders(page.pageInfo));
   } catch (error) {
-    console.error("Error fetching orders:", error);
-    return ApiResponse.error("Failed to fetch orders", 500).toResponse();
+    return apiErrorResponse(error, "Failed to fetch orders");
   }
 }));

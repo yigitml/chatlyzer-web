@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useAuthStore } from "@/frontend/store/authStore";
 import { useMessageStore } from "@/frontend/store/messageStore";
 import { LoadingSpinner } from "@/frontend/components/common/loading-spinner";
@@ -21,40 +21,51 @@ import { GhostResultsModal } from "@/frontend/components/modals/ghost-results-mo
 
 export default function UserDashboard() {
   const hasFetchedData = useRef(false);
-  
+  const [bootstrapAttempt, setBootstrapAttempt] = useState(0);
+  const [bootstrapError, setBootstrapError] = useState<string | null>(null);
+
   // Store hooks
   const { user, isInitialized } = useAuthStore();
   const { messages, fetchMessages } = useMessageStore();
-  
+
   // Custom hooks
   const chatManagement = useChatManagement();
   const analysisManagement = useAnalysisManagement();
   const { toast, showToast, hideToast } = useToast();
-  const { 
-    sidebarCollapsed, 
+  const {
+    sidebarCollapsed,
     sidebarWidth,
-    isLoadingChatData, 
-    setIsLoadingChatData, 
+    isLoadingChatData,
+    setIsLoadingChatData,
     toggleSidebar,
     setSidebarWidth,
     minSidebarWidth,
-    maxSidebarWidth 
+    maxSidebarWidth,
   } = useUIState();
 
   // Computed values
-  const selectedChatMessages = chatManagement.selectedChatId ? messages.filter(msg => msg.chatId === chatManagement.selectedChatId) : [];
-  const selectedChatAnalyzes = chatManagement.selectedChatId ? analysisManagement.analyzes.filter(analysis => analysis.chatId === chatManagement.selectedChatId) : [];
-  const analysesByType = chatManagement.selectedChatId ? analysisManagement.getAnalysesByType(chatManagement.selectedChatId) : {};
+  const selectedChatMessages = chatManagement.selectedChatId
+    ? messages.filter((msg) => msg.chatId === chatManagement.selectedChatId)
+    : [];
+  const selectedChatAnalyzes = chatManagement.selectedChatId
+    ? analysisManagement.analyzes.filter(
+        (analysis) => analysis.chatId === chatManagement.selectedChatId,
+      )
+    : [];
+  const analysesByType = chatManagement.selectedChatId
+    ? analysisManagement.getAnalysesByType(chatManagement.selectedChatId)
+    : {};
 
   // Data fetching
   useEffect(() => {
     const abortController = new AbortController();
-    
+
     const fetchData = async () => {
       if (hasFetchedData.current || !user?.id) return;
-      
+
       try {
         hasFetchedData.current = true;
+        setBootstrapError(null);
         await Promise.all([
           chatManagement.fetchChats(),
           analysisManagement.fetchAnalyzes(),
@@ -62,36 +73,43 @@ export default function UserDashboard() {
         ]);
       } catch (error) {
         hasFetchedData.current = false;
-        if (!abortController.signal.aborted && error instanceof Error && error.name !== 'AbortError') {
+        if (
+          !abortController.signal.aborted &&
+          error instanceof Error &&
+          error.name !== "AbortError"
+        ) {
+          setBootstrapError(error.message || "Failed to load data");
           showToast(error.message || "Failed to load data", "error");
         }
       }
     };
 
     fetchData();
-    
+
     return () => {
       abortController.abort();
     };
-  // Initial dashboard bootstrap is intentionally gated by hasFetchedData to avoid
-  // refetching when action helpers are recreated by local management hooks.
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user]);
+    // Initial dashboard bootstrap is intentionally gated by hasFetchedData to avoid
+    // refetching when action helpers are recreated by local management hooks.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user, bootstrapAttempt]);
 
   useEffect(() => {
     const chatId = chatManagement.selectedChatId;
-    if(!chatId) return;
+    if (!chatId) return;
 
     let cancelled = false;
-        
+
     const fetchChatData = async () => {
       try {
         setIsLoadingChatData(true);
         analysisManagement.setSelectedAnalysisType(null);
-        
+
         await Promise.all([
-          fetchMessages({ chatId }),
-          analysisManagement.checkAnalysisStatus(chatId)
+          ...(chatManagement.selectedChat?.isPrivacy
+            ? []
+            : [fetchMessages({ chatId })]),
+          analysisManagement.checkAnalysisStatus(chatId),
         ]);
 
         // Start polling if there are in-progress analyses
@@ -99,42 +117,49 @@ export default function UserDashboard() {
           analysisManagement.startPolling(chatId);
         }
       } catch (error) {
-        if (error instanceof Error && error.name !== 'AbortError') {
+        if (
+          !cancelled &&
+          error instanceof Error &&
+          error.name !== "AbortError"
+        ) {
           showToast(error.message || "Failed to load chat data", "error");
         }
       } finally {
         if (!cancelled) {
-          setTimeout(() => {
-            setIsLoadingChatData(false);
-          }, 100);
+          setIsLoadingChatData(false);
         }
       }
     };
 
     fetchChatData();
-    
+
     return () => {
       cancelled = true;
       analysisManagement.stopPolling();
     };
-  // Chat selection drives this effect; including hook action objects here would
-  // restart polling on every render because the management hooks own local state.
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // Chat selection drives this effect; including hook action objects here would
+    // restart polling on every render because the management hooks own local state.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [chatManagement.selectedChatId]);
 
   useEffect(() => {
     if (chatManagement.chats.length > 0) {
-      const storedChatId = getStorageItem(LOCAL_STORAGE_KEYS.SELECTED_CHAT_ID, null);
-      const storedChatExists = storedChatId && chatManagement.chats.some(chat => chat.id === storedChatId);
-      
+      const storedChatId = getStorageItem(
+        LOCAL_STORAGE_KEYS.SELECTED_CHAT_ID,
+        null,
+      );
+      const storedChatExists =
+        storedChatId &&
+        chatManagement.chats.some((chat) => chat.id === storedChatId);
+
       if (storedChatExists && chatManagement.selectedChatId !== storedChatId) {
         chatManagement.selectChat(storedChatId);
       } else if (!chatManagement.selectedChatId && !storedChatExists) {
         chatManagement.selectChat(chatManagement.chats[0].id);
       }
     }
-  // This only reconciles persisted selection when the chat list or selected id changes.
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // This only reconciles persisted selection when the chat list or selected id changes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [chatManagement.chats, chatManagement.selectedChatId]);
 
   if (!isInitialized) {
@@ -142,7 +167,9 @@ export default function UserDashboard() {
       <div className="min-h-screen flex items-center justify-center text-foreground">
         <div className="flex flex-col items-center">
           <LoadingSpinner size="lg" />
-          <p className="text-muted-foreground font-mono uppercase mt-4">Loading...</p>
+          <p className="text-muted-foreground font-mono uppercase mt-4">
+            Loading...
+          </p>
         </div>
       </div>
     );
@@ -152,8 +179,13 @@ export default function UserDashboard() {
     return (
       <div className="min-h-screen flex items-center justify-center text-foreground">
         <div className="text-center bg-card border-2 border-primary shadow-brutal p-12">
-          <h1 className="text-2xl font-bold font-mono uppercase tracking-widest text-card-foreground mb-4">Not authenticated</h1>
-          <Link href="/auth/sign-in" className="text-primary font-mono uppercase hover:underline">
+          <h1 className="text-2xl font-bold font-mono uppercase tracking-widest text-card-foreground mb-4">
+            Not authenticated
+          </h1>
+          <Link
+            href="/auth/sign-in"
+            className="text-primary font-mono uppercase hover:underline"
+          >
             Sign in to continue
           </Link>
         </div>
@@ -162,17 +194,27 @@ export default function UserDashboard() {
   }
 
   return (
-    <div className="min-h-screen text-foreground">
+    <div className="ph-no-capture ph-mask min-h-screen text-foreground">
       {/* Header */}
       <Header user={user} totalCredits={analysisManagement.totalCredits} />
 
+      {bootstrapError && (
+        <div
+          role="alert"
+          className="p-4 border-b-2 border-destructive flex flex-wrap items-center gap-4"
+        >
+          <p>{bootstrapError}</p>
+          <button
+            className="border-2 p-2 focus-visible:outline focus-visible:outline-2"
+            onClick={() => setBootstrapAttempt((value) => value + 1)}
+          >
+            Retry loading data
+          </button>
+        </div>
+      )}
       {/* Toast */}
       {toast && (
-        <Toast
-          message={toast.message}
-          type={toast.type}
-          onClose={hideToast}
-        />
+        <Toast message={toast.message} type={toast.type} onClose={hideToast} />
       )}
 
       {/* Delete Confirmation Dialog */}
@@ -187,14 +229,20 @@ export default function UserDashboard() {
       {/* Create Chat Modal */}
       <CreateChatModal
         isOpen={chatManagement.isCreateModalOpen}
-        onClose={chatManagement.closeCreateChatModal}
-        onCreateChat={() => chatManagement.handleCreateChat(
-          showToast,
-          analysisManagement.isPrivacyMode,
-          analysisManagement.isGhostMode,
-          analysisManagement.handlePrivacyAnalysis
-        )}
+        onClose={() => {
+          analysisManagement.discardPrivacyDraft();
+          chatManagement.closeCreateChatModal();
+        }}
+        onCreateChat={() =>
+          chatManagement.handleCreateChat(
+            showToast,
+            analysisManagement.isPrivacyMode,
+            analysisManagement.isGhostMode,
+            analysisManagement.handlePrivacyAnalysis,
+          )
+        }
         isCreating={chatManagement.isCreatingChat}
+        canRecoverPrivacyRequest={analysisManagement.canRecoverPrivacyRequest}
         chatTitle={chatManagement.chatTitle}
         onTitleChange={chatManagement.setChatTitle}
         chatMessages={chatManagement.chatMessages}
@@ -206,6 +254,7 @@ export default function UserDashboard() {
         whatsappImportText={chatManagement.whatsappImportText}
         onWhatsappImportTextChange={chatManagement.setWhatsappImportText}
         importMode={chatManagement.importMode}
+        onImportModeChange={chatManagement.setImportMode}
         onShowToast={showToast}
         isPrivacyMode={analysisManagement.isPrivacyMode}
         isGhostMode={analysisManagement.isGhostMode}
@@ -223,12 +272,12 @@ export default function UserDashboard() {
       <div className="flex h-[calc(100vh-73px)] relative">
         {/* Mobile Sidebar Overlay */}
         {!sidebarCollapsed && (
-          <div 
+          <div
             className="fixed inset-0 bg-black/50 z-40 lg:hidden"
             onClick={() => toggleSidebar()}
           />
         )}
-        
+
         {/* Sidebar */}
         <Sidebar
           isCollapsed={sidebarCollapsed}
@@ -245,7 +294,9 @@ export default function UserDashboard() {
           editingTitle={chatManagement.editingTitle}
           isUpdatingTitle={chatManagement.isUpdatingTitle}
           onEditChat={chatManagement.startEditingChat}
-          onSaveEdit={(chatId: string) => chatManagement.handleEditChatTitle(chatId, showToast)}
+          onSaveEdit={(chatId: string) =>
+            chatManagement.handleEditChatTitle(chatId, showToast)
+          }
           onCancelEdit={chatManagement.cancelEditingChat}
           onTitleChange={chatManagement.setEditingTitle}
         />
@@ -261,8 +312,28 @@ export default function UserDashboard() {
             isLoadingChatData={isLoadingChatData}
             isAnalyzing={analysisManagement.isAnalyzing}
             totalCredits={analysisManagement.totalCredits}
-            hasInProgressAnalysis={chatManagement.selectedChatId ? analysisManagement.hasInProgressAnalysis(chatManagement.selectedChatId) : false}
-            onAnalyzeChat={() => chatManagement.selectedChatId && analysisManagement.handleAnalyzeChat(chatManagement.selectedChatId, showToast)}
+            canAnalyze={analysisManagement.canAnalyze}
+            hasRecoverableRequest={
+              chatManagement.selectedChatId
+                ? analysisManagement.hasRecoverableAnalysisRequest(
+                    chatManagement.selectedChatId,
+                  )
+                : false
+            }
+            hasInProgressAnalysis={
+              chatManagement.selectedChatId
+                ? analysisManagement.hasInProgressAnalysis(
+                    chatManagement.selectedChatId,
+                  )
+                : false
+            }
+            onAnalyzeChat={() =>
+              chatManagement.selectedChatId &&
+              analysisManagement.handleAnalyzeChat(
+                chatManagement.selectedChatId,
+                showToast,
+              )
+            }
             onDeleteChat={() => chatManagement.setIsDeleteDialogOpen(true)}
             onCreateChat={() => chatManagement.setIsCreateModalOpen(true)}
             onSelectAnalysisType={analysisManagement.setSelectedAnalysisType}

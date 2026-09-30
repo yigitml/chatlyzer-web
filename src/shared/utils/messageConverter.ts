@@ -17,10 +17,42 @@ export enum ChatPlatform {
   GENERIC = 'generic'
 }
 
+export interface ExportParseOptions { dateOrder?: "dmy" | "mdy" }
+
+function checkedDate(year: number, month: number, day: number, hours: number, minutes: number, seconds: number): Date {
+  const value = new Date(year, month - 1, day, hours, minutes, seconds);
+  if (value.getFullYear() !== year || value.getMonth() !== month - 1 || value.getDate() !== day || value.getHours() !== hours || value.getMinutes() !== minutes || value.getSeconds() !== seconds) {
+    throw new Error("Invalid export date or time; check the format and date order");
+  }
+  return value;
+}
+function exportTimestamp(dateStr: string, timeStr: string, order?: "dmy" | "mdy"): Date {
+  const parts = dateStr.split(/[./]/).map(Number);
+  let [day, month, year] = parts;
+  if (dateStr.includes("/")) {
+    const resolved = order || (parts[0] > 12 ? "dmy" : parts[1] > 12 ? "mdy" : undefined);
+    if (!resolved) throw new Error("Ambiguous slash dates: select day/month/year or month/day/year before importing");
+    if (resolved === "mdy") [month, day, year] = parts;
+  }
+  if (year < 100) year += year <= 50 ? 2000 : 1900;
+  const match = timeStr.match(/^(\d{1,2}):(\d{2})(?::(\d{2}))?\s*(AM|PM)?$/i);
+  if (!match) throw new Error("Unsupported export time");
+  let hours = Number(match[1]);
+  if (match[4]) {
+    if (hours < 1 || hours > 12) throw new Error("Invalid 12-hour export time");
+    hours = hours % 12 + (match[4].toUpperCase() === "PM" ? 12 : 0);
+  }
+  return checkedDate(year, month, day, hours, Number(match[2]), Number(match[3] || 0));
+}
+const whatsappHeader = /^(?:\[)?(\d{1,2}[./]\d{1,2}[./]\d{2,4}),\s+(\d{1,2}:\d{2}(?::\d{2})?(?:\s*[AP]M)?)(?:\]\s*|\s+-\s+)(.*)$/i;
+function normalizeExport(text: string) {
+  return text.replace(/[\u200e\u200f\u202a-\u202e\u2066-\u2069]/g, "").replace(/[\u00a0\u202f]/g, " ").replace(/\r\n?/g, "\n");
+}
+
 // Abstract base converter class
 abstract class MessageConverter {
   abstract platform: ChatPlatform;
-  abstract parseMessages(rawText: string): ParsedMessage[];
+  abstract parseMessages(rawText: string, options?: ExportParseOptions): ParsedMessage[];
   
   // Convert parsed messages to Message objects (without DB-specific fields)
   convertToMessages(parsedMessages: ParsedMessage[]): Omit<Message, 'id' | 'chatId' | 'userId' | 'createdAt' | 'updatedAt' | 'deletedAt'>[] {
@@ -36,12 +68,6 @@ abstract class MessageConverter {
 // WhatsApp message converter
 class WhatsAppConverter extends MessageConverter {
   platform = ChatPlatform.WHATSAPP;
-
-  // WhatsApp date+time formats for exported messages
-  // Old format: 31.12.23, 23:59 - Sender: Message
-  private static readonly MESSAGE_HEADER_OLD = /^(\d{1,2}\.\d{1,2}\.\d{2,4}), (\d{2}:\d{2}) - (.*)$/;
-  // New format: [31.12.2023, 23:59:59] Sender: Message
-  private static readonly MESSAGE_HEADER_NEW = /^\[(\d{1,2}\.\d{1,2}\.\d{4}), (\d{2}:\d{2}:\d{2})\] (.*)$/;
 
   // System messages (tr, en, de)
   private static readonly SYSTEM_MESSAGES = [
@@ -94,23 +120,18 @@ class WhatsAppConverter extends MessageConverter {
     "Verpasster Videoanruf"
   ];
 
-  parseMessages(rawText: string): ParsedMessage[] {
+  parseMessages(rawText: string, options?: ExportParseOptions): ParsedMessage[] {
     const lines = rawText.split('\n');
+    const unambiguousOrders = lines.map(line => line.match(whatsappHeader)?.[1]).filter((date): date is string => !!date && date.includes('/')).map(date => date.split('/').map(Number)).filter(parts => parts[0] > 12 || parts[1] > 12).map(parts => parts[0] > 12 ? "dmy" as const : "mdy" as const);
+    if (new Set(unambiguousOrders).size > 1) throw new Error("Mixed export date orders; import each export separately");
+    const inferredOrder = unambiguousOrders[0];
     const messages: ParsedMessage[] = [];
     let currentMessage: string[] | null = null;
     let currentSender: string | null = null;
     let currentTimestamp: Date | null = null;
 
     for (const line of lines) {
-      // Try both WhatsApp formats
-      let match = line.match(WhatsAppConverter.MESSAGE_HEADER_NEW);
-      let isNewFormat = true;
-      
-      if (!match) {
-        match = line.match(WhatsAppConverter.MESSAGE_HEADER_OLD);
-        isNewFormat = false;
-      }
-
+      const match = line.match(whatsappHeader);
       if (match) {
         // Finalize previous message if exists
         if (currentSender && currentMessage && currentTimestamp) {
@@ -123,7 +144,7 @@ class WhatsAppConverter extends MessageConverter {
         }
 
         const [, dateStr, timeStr, rest] = match;
-        const timestamp = this.parseTimestamp(dateStr, timeStr, isNewFormat);
+        const timestamp = exportTimestamp(dateStr, timeStr, options?.dateOrder || inferredOrder);
         if (!timestamp) continue;
 
         const colonIndex = rest.indexOf(':');
@@ -192,45 +213,6 @@ class WhatsAppConverter extends MessageConverter {
     }
 
     return messages;
-  }
-
-  private parseTimestamp(dateStr: string, timeStr: string, hasSeconds: boolean = false): Date | null {
-    try {
-      // Parse based on the format pattern
-      const [day, month, year] = dateStr.split('.');
-      const timeParts = timeStr.split(':');
-      const hours = timeParts[0];
-      const minutes = timeParts[1];
-      const seconds = hasSeconds && timeParts.length > 2 ? timeParts[2] : '0';
-      
-      let fullYear: number;
-      if (year.length === 2) {
-        const yearNum = parseInt(year);
-        // Assume 20xx for years 00-50, 19xx for years 51-99
-        fullYear = yearNum <= 50 ? 2000 + yearNum : 1900 + yearNum;
-      } else {
-        fullYear = parseInt(year);
-      }
-
-      const date = new Date(
-        fullYear,
-        parseInt(month) - 1, // Month is 0-indexed
-        parseInt(day),
-        parseInt(hours),
-        parseInt(minutes),
-        parseInt(seconds)
-      );
-
-      // Validate the date
-      if (isNaN(date.getTime())) {
-        return null;
-      }
-
-      return date;
-    } catch (error) {
-      console.warn('Failed to parse WhatsApp timestamp:', dateStr, timeStr, error);
-      return null;
-    }
   }
 
   private isSystemMessage(content: string): boolean {
@@ -313,7 +295,7 @@ class TelegramConverter extends MessageConverter {
   platform = ChatPlatform.TELEGRAM;
   
   parseMessages(rawText: string): ParsedMessage[] {
-    const lines = rawText.split('\n').filter(line => line.trim());
+    const lines = rawText.split('\n');
     const messages: ParsedMessage[] = [];
     
     // Telegram pattern: [DD.MM.YYYY HH:MM:SS] Sender: Message
@@ -321,7 +303,12 @@ class TelegramConverter extends MessageConverter {
     
     for (const line of lines) {
       const match = line.match(messagePattern);
-      if (!match) continue;
+      if (!match) {
+        const previous = messages[messages.length - 1];
+        if (previous) previous.content += "\n" + line;
+        else if (line.trim()) throw new Error("Unrecognized export header; select the correct platform");
+        continue;
+      }
       
       const [, dateStr, timeStr, content] = match;
       
@@ -349,23 +336,8 @@ class TelegramConverter extends MessageConverter {
     return messages;
   }
 
-  private parseTelegramTimestamp(dateStr: string, timeStr: string): Date | null {
-    try {
-      const [day, month, year] = dateStr.split('.');
-      const [hours, minutes, seconds] = timeStr.split(':');
-      
-      return new Date(
-        parseInt(year),
-        parseInt(month) - 1,
-        parseInt(day),
-        parseInt(hours),
-        parseInt(minutes),
-        parseInt(seconds)
-      );
-    } catch (error) {
-      console.warn('Failed to parse Telegram timestamp:', dateStr, timeStr, error);
-      return null;
-    }
+  private parseTelegramTimestamp(dateStr: string, timeStr: string): Date {
+    return exportTimestamp(dateStr, timeStr, "dmy");
   }
 }
 
@@ -374,7 +346,7 @@ class DiscordConverter extends MessageConverter {
   platform = ChatPlatform.DISCORD;
   
   parseMessages(rawText: string): ParsedMessage[] {
-    const lines = rawText.split('\n').filter(line => line.trim());
+    const lines = rawText.split('\n');
     const messages: ParsedMessage[] = [];
     
     // Discord pattern: [DD-Mon-YY HH:MM:SS] Sender: Message
@@ -382,7 +354,12 @@ class DiscordConverter extends MessageConverter {
     
     for (const line of lines) {
       const match = line.match(messagePattern);
-      if (!match) continue;
+      if (!match) {
+        const previous = messages[messages.length - 1];
+        if (previous) previous.content += "\n" + line;
+        else if (line.trim()) throw new Error("Unrecognized export header; select the correct platform");
+        continue;
+      }
       
       const [, dateStr, timeStr, content] = match;
       
@@ -410,32 +387,12 @@ class DiscordConverter extends MessageConverter {
     return messages;
   }
 
-  private parseDiscordTimestamp(dateStr: string, timeStr: string): Date | null {
-    try {
-      // Parse format like "31-Dec-23"
-      const [day, monthStr, year] = dateStr.split('-');
-      const [hours, minutes, seconds] = timeStr.split(':');
-      
-      const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-                         'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-      const monthIndex = monthNames.indexOf(monthStr);
-      
-      if (monthIndex === -1) return null;
-      
-      const fullYear = parseInt(year) + 2000; // Assuming 20xx
-      
-      return new Date(
-        fullYear,
-        monthIndex,
-        parseInt(day),
-        parseInt(hours),
-        parseInt(minutes),
-        parseInt(seconds)
-      );
-    } catch (error) {
-      console.warn('Failed to parse Discord timestamp:', dateStr, timeStr, error);
-      return null;
-    }
+  private parseDiscordTimestamp(dateStr: string, timeStr: string): Date {
+    const [day, monthStr, year] = dateStr.split('-');
+    const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const month = monthNames.findIndex(name => name.toLowerCase() === monthStr.toLowerCase()) + 1;
+    const [hours, minutes, seconds] = timeStr.split(':').map(Number);
+    return checkedDate(Number(year) + 2000, month, Number(day), hours, minutes, seconds);
   }
 }
 
@@ -444,7 +401,7 @@ class GenericConverter extends MessageConverter {
   platform = ChatPlatform.GENERIC;
   
   parseMessages(rawText: string): ParsedMessage[] {
-    const lines = rawText.split('\n').filter(line => line.trim());
+    const lines = rawText.split('\n');
     const messages: ParsedMessage[] = [];
     
     for (const line of lines) {
@@ -498,14 +455,9 @@ class MessageConverterFactory {
   static detectPlatform(rawText: string): ChatPlatform {
     // Auto-detect platform based on content patterns
     
-    // WhatsApp patterns: 
-    // Old format: DD.MM.YY, HH:MM - 
-    // New format: [DD.MM.YYYY, HH:MM:SS] 
-    if (/\d{1,2}\.\d{1,2}\.\d{2,4},\s\d{2}:\d{2}\s-\s/.test(rawText) || 
-        /\[\d{1,2}\.\d{1,2}\.\d{4},\s\d{2}:\d{2}:\d{2}\]/.test(rawText)) {
-      return ChatPlatform.WHATSAPP;
-    }
-    
+    rawText = normalizeExport(rawText);
+    if (rawText.split("\n").some(line => whatsappHeader.test(line))) return ChatPlatform.WHATSAPP;
+
     // Instagram: Try to parse as JSON array
     try {
       const parsed = JSON.parse(rawText);
@@ -526,21 +478,25 @@ class MessageConverterFactory {
       return ChatPlatform.DISCORD;
     }
     
-    // Default to Generic if nothing else matches but there is content
-    if (rawText.trim().length > 0) {
-        return ChatPlatform.GENERIC;
-    }
-    
+    // Automatic generic detection is limited to explicit sender: text lines.
+    // Timestamp-like unknown exports must never become import-time messages.
+    if (rawText.trim() && rawText.split("\n").filter(line => line.trim()).every(line => /^[^\d\[\]{}:][^:]{0,119}:\s*\S/.test(line))) return ChatPlatform.GENERIC;
+
     throw new Error("Platform couldn't be identified");
   }
   
   static convertMessages(
     rawText: string, 
-    platform?: ChatPlatform
+    platform?: ChatPlatform,
+    options?: ExportParseOptions
   ): Omit<Message, 'id' | 'chatId' | 'userId' | 'createdAt' | 'updatedAt' | 'deletedAt'>[] {
     const detectedPlatform = platform || this.detectPlatform(rawText);
     const converter = this.getConverter(detectedPlatform);
-    const parsedMessages = converter.parseMessages(rawText);
+    const parsedMessages = converter.parseMessages(normalizeExport(rawText), options);
+    for (const [index, message] of parsedMessages.entries()) {
+      if (message.content.length > 20000) throw new Error(`Message ${index + 1} exceeds 20,000 characters; shorten it before importing`);
+    }
+    if (!parsedMessages.length) throw new Error("No messages recognized; check the platform and export format");
     return converter.convertToMessages(parsedMessages);
   }
 
@@ -577,14 +533,15 @@ export default MessageConverterFactory;
 // Utility function for easy usage
 export function convertChatExport(
   rawText: string,
-  platform?: ChatPlatform
+  platform?: ChatPlatform,
+  options?: ExportParseOptions
 ): { 
     messages: Omit<Message, 'id' | 'chatId' | 'userId' | 'createdAt' | 'updatedAt' | 'deletedAt'>[],
     title: string,
     platform: ChatPlatform
 } {
   const detectedPlatform = platform || MessageConverterFactory.detectPlatform(rawText);
-  const messages = MessageConverterFactory.convertMessages(rawText, detectedPlatform);
+  const messages = MessageConverterFactory.convertMessages(rawText, detectedPlatform, options);
   const title = MessageConverterFactory.generateChatTitle(detectedPlatform, messages);
   
   return { messages, title, platform: detectedPlatform };

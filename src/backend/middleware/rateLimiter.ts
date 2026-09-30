@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { Pool } from "pg";
+import { isIP } from "node:net";
+import { logger } from "@/backend/lib/logger";
 import {
   RateLimiterMemory,
   RateLimiterPostgres,
@@ -65,6 +67,7 @@ function createRateLimiter(config: RateLimiterConfig): RateLimiter {
 let authRateLimiter: RateLimiter | undefined;
 let apiRateLimiter: RateLimiter | undefined;
 let analysisRateLimiter: RateLimiter | undefined;
+let analysisUserRateLimiter: RateLimiter | undefined;
 
 function getAuthRateLimiter() {
   authRateLimiter ??= createRateLimiter({
@@ -94,38 +97,19 @@ function getAnalysisRateLimiter() {
   return analysisRateLimiter;
 }
 
-/**
- * Extract client IP from request headers.
- * Prefer CDN-provided client IP headers before generic proxy headers. If the
- * deployment proxy does not forward these, rate limits can collapse all users
- * into a shared server/proxy IP bucket.
+/** Only use the single header explicitly guaranteed to be overwritten by ingress.
+ * With no contract configured, untrusted caller headers share a bounded bucket.
  */
 export function getClientIp(req: NextRequest): string {
-  const cloudflareIp = normalizeIp(req.headers.get("cf-connecting-ip"));
-  if (cloudflareIp) return cloudflareIp;
-
-  const trueClientIp = normalizeIp(req.headers.get("true-client-ip"));
-  if (trueClientIp) return trueClientIp;
-
-  const forwarded = req.headers.get("x-forwarded-for");
-  if (forwarded) {
-    const firstForwardedIp = normalizeIp(forwarded.split(",")[0]);
-    if (firstForwardedIp) return firstForwardedIp;
-  }
-
-  return normalizeIp(req.headers.get("x-real-ip")) || "unknown";
-}
-
-function normalizeIp(value: string | null): string | null {
-  const trimmed = value?.trim();
-  if (!trimmed) return null;
-
-  if (trimmed.startsWith("[") && trimmed.includes("]")) {
-    return trimmed.slice(1, trimmed.indexOf("]"));
-  }
-
-  const withoutPort = trimmed.match(/^(\d{1,3}(?:\.\d{1,3}){3})(?::\d+)?$/);
-  return withoutPort?.[1] ?? trimmed;
+  const header = process.env.TRUSTED_CLIENT_IP_HEADER;
+  if (!["cf-connecting-ip", "x-forwarded-for", "x-real-ip"].includes(header || "")) return "unknown";
+  const raw = req.headers.get(header!);
+  const value = header === "x-forwarded-for" ? raw?.split(",")[0] : raw;
+  const trimmed = value?.trim() || "";
+  const bracketed = trimmed.match(/^\[([^\]]+)\](?::\d+)?$/);
+  const ipv4Port = trimmed.match(/^(\d{1,3}(?:\.\d{1,3}){3}):\d+$/);
+  const ip = bracketed?.[1] || ipv4Port?.[1] || trimmed;
+  return isIP(ip) ? ip.toLowerCase() : "unknown";
 }
 
 /**
@@ -140,7 +124,7 @@ export function withAuthRateLimiter(handler: ApiHandler): ApiHandler {
       await getAuthRateLimiter().consume(key);
     } catch (error) {
       if (!(error instanceof RateLimiterRes)) {
-        console.error("Rate limit database unavailable", error);
+        logger.error("Rate limit database unavailable", error);
         return ApiResponse.error("Service temporarily unavailable", 503).toResponse();
       }
       return ApiResponse.error(
@@ -163,7 +147,7 @@ export function withRateLimiter(handler: ApiHandler): ApiHandler {
       await getApiRateLimiter().consume(ip);
     } catch (error) {
       if (!(error instanceof RateLimiterRes)) {
-        console.error("Rate limit database unavailable", error);
+        logger.error("Rate limit database unavailable", error);
         return ApiResponse.error("Service temporarily unavailable", 503).toResponse();
       }
       return ApiResponse.error(
@@ -184,9 +168,13 @@ export function withAnalysisRateLimiter(handler: ApiHandler): ApiHandler {
     const ip = getClientIp(req);
     try {
       await getAnalysisRateLimiter().consume(ip);
+      if (req.user?.id) {
+        analysisUserRateLimiter ??= createRateLimiter({ keyPrefix: "analysis_user", points: 5, duration: 60 });
+        await analysisUserRateLimiter.consume(req.user.id);
+      }
     } catch (error) {
       if (!(error instanceof RateLimiterRes)) {
-        console.error("Rate limit database unavailable", error);
+        logger.error("Rate limit database unavailable", error);
         return ApiResponse.error("Service temporarily unavailable", 503).toResponse();
       }
       return ApiResponse.error(

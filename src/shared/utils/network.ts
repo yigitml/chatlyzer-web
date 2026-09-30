@@ -1,4 +1,5 @@
-import { createApiClient, ApiClient } from "@/shared/utils/api";
+import type { PublicUser as User, PublicCredit as UserCredit } from "@/shared/types/api/publicDtos";
+import { createApiClient, ApiClient, currentApiIdentity, assertApiIdentity, settleCookieRefresh } from "@/shared/utils/api";
 import {
   AuthWebPostRequest,
   UserPutRequest,
@@ -21,8 +22,6 @@ import {
 } from "@/shared/types/api/apiRequest";
 import { API_ENDPOINTS } from "@/shared/types/api/apiEndpoints";
 import {
-  User,
-  UserCredit,
   Subscription,
   File,
   Chat,
@@ -30,8 +29,12 @@ import {
   Analysis,
 } from "../../generated/client";
 
+export interface PageInfo { hasMore: boolean; nextCursor: string | null; limit: number }
+export interface Page<T> { items: T[]; pageInfo: PageInfo }
+
 export class NetworkService {
   private api: ApiClient;
+  private identityTransition: Promise<unknown> = Promise.resolve();
   private static instance: NetworkService | null = null;
 
   private constructor(getToken: () => string | null) {
@@ -45,20 +48,59 @@ export class NetworkService {
     return NetworkService.instance;
   }
 
+  private async fetchPage<T>(endpoint: string, params?: Record<string, unknown>): Promise<Page<T>> {
+    const response = await this.api.get(endpoint, params);
+    const items = Array.isArray(response.data) ? response.data : response.data ? [response.data] : [];
+    return { items, pageInfo: response.pageInfo ?? { hasMore: false, nextCursor: null, limit: items.length } };
+  }
+
+  private async fetchAll<T>(endpoint: string, params?: Record<string, unknown>): Promise<T[]> {
+    const epoch = currentApiIdentity();
+    const items: T[] = [];
+    let cursor = params?.cursor;
+    const seen = new Set<string>();
+    do {
+      assertApiIdentity(epoch);
+      const page = await this.fetchPage<T>(endpoint, { ...params, cursor });
+      assertApiIdentity(epoch);
+      items.push(...page.items);
+      if (!page.pageInfo.hasMore) return items;
+      cursor = page.pageInfo.nextCursor;
+      if (typeof cursor !== "string" || seen.has(cursor)) throw new Error("Invalid pagination cursor from server");
+      seen.add(cursor);
+    } while (true);
+  }
+
+  // Serialize whole cookie identity mutations, including the login handshake.
+  // Epochs reject obsolete queued operations; the newest response writes cookies last.
+  private changeIdentity<T>(operation: () => Promise<T>): Promise<T> {
+    const epoch = currentApiIdentity();
+    const run = this.identityTransition.catch(() => undefined).then(async () => {
+      await settleCookieRefresh();
+      assertApiIdentity(epoch);
+      return operation();
+    });
+    this.identityTransition = run.catch(() => undefined);
+    return run;
+  }
+
   // ===== Auth API =====
 
   async login(
     data: AuthWebPostRequest,
-  ): Promise<{ user: User; expiresAt: string }> {
-    const response = await this.api.post(API_ENDPOINTS.TOKEN, data);
-    return response.data;
+  ): Promise<{ user: User; expiresAt: number }> {
+    return this.changeIdentity(async () => {
+      const handshake = await this.api.get(API_ENDPOINTS.TOKEN);
+      const response = await this.api.post(API_ENDPOINTS.TOKEN, data, { "X-CSRF-Token": handshake.data.csrfToken });
+      return response.data;
+    });
   }
 
   async logout(): Promise<void> {
-    await this.api.post(API_ENDPOINTS.LOGOUT);
+    await this.changeIdentity(() => this.api.post(API_ENDPOINTS.LOGOUT));
   }
 
-  async refreshToken(): Promise<{ expiresAt: string }> {
+  async refreshToken(): Promise<{ expiresAt: number }> {
     const response = await this.api.post(API_ENDPOINTS.REFRESH);
     return response.data;
   }
@@ -76,14 +118,17 @@ export class NetworkService {
   }
 
   async deleteUser(): Promise<void> {
-    await this.api.delete(API_ENDPOINTS.USER);
+    await this.changeIdentity(() => this.api.delete(API_ENDPOINTS.USER));
   }
 
   // ===== File API =====
 
   async fetchFiles(params?: FileGetRequest): Promise<File[]> {
-    const response = await this.api.get(API_ENDPOINTS.FILE, params);
-    return response.data;
+    return this.fetchAll<File>(API_ENDPOINTS.FILE, params as Record<string, unknown>);
+  }
+
+  async fetchFilesPage(params?: FileGetRequest): Promise<Page<File>> {
+    return this.fetchPage<File>(API_ENDPOINTS.FILE, params as Record<string, unknown>);
   }
 
   async createFile(data: FormData): Promise<File> {
@@ -98,8 +143,11 @@ export class NetworkService {
   // ===== Chat API =====
 
   async fetchChats(params?: ChatGetRequest): Promise<Chat[]> {
-    const response = await this.api.get(API_ENDPOINTS.CHAT, params);
-    return response.data;
+    return this.fetchAll<Chat>(API_ENDPOINTS.CHAT, params as Record<string, unknown>);
+  }
+
+  async fetchChatsPage(params?: ChatGetRequest): Promise<Page<Chat>> {
+    return this.fetchPage<Chat>(API_ENDPOINTS.CHAT, params as Record<string, unknown>);
   }
 
   async createChat(data: ChatPostRequest): Promise<Chat> {
@@ -119,8 +167,11 @@ export class NetworkService {
   // ===== Message API =====
 
   async fetchMessages(params?: MessageGetRequest): Promise<Message[]> {
-    const response = await this.api.get(API_ENDPOINTS.MESSAGE, params);
-    return response.data;
+    return this.fetchAll<Message>(API_ENDPOINTS.MESSAGE, params as Record<string, unknown>);
+  }
+
+  async fetchMessagesPage(params?: MessageGetRequest): Promise<Page<Message>> {
+    return this.fetchPage<Message>(API_ENDPOINTS.MESSAGE, params as Record<string, unknown>);
   }
 
   async createMessage(data: MessagePostRequest): Promise<Message> {
@@ -140,8 +191,11 @@ export class NetworkService {
   // ===== Analysis API =====
 
   async fetchAnalyzes(params?: AnalysisGetRequest): Promise<Analysis[]> {
-    const response = await this.api.get(API_ENDPOINTS.ANALYSIS, params);
-    return response.data;
+    return this.fetchAll<Analysis>(API_ENDPOINTS.ANALYSIS, params as Record<string, unknown>);
+  }
+
+  async fetchAnalyzesPage(params?: AnalysisGetRequest): Promise<Page<Analysis>> {
+    return this.fetchPage<Analysis>(API_ENDPOINTS.ANALYSIS, params as Record<string, unknown>);
   }
 
   async fetchAnalysis(id: string): Promise<Analysis | null> {
@@ -173,6 +227,8 @@ export class NetworkService {
   async syncRevenueCatPurchases(): Promise<{
     creditsGranted: number;
     processedTransactions: number;
+    pendingVerification?: number;
+    message?: string;
   }> {
     const response = await this.api.post(API_ENDPOINTS.REVENUECAT_SYNC);
     return response.data;
@@ -191,7 +247,7 @@ export class NetworkService {
 
   // ===== Privacy Analysis API =====
 
-  async createPrivacyAnalysis(data: PrivacyAnalysisPostRequest): Promise<{ chat: Chat; analyses: Analysis[] }> {
+  async createPrivacyAnalysis(data: PrivacyAnalysisPostRequest): Promise<{ chat: Chat | null; analyses: Analysis[]; job?: { id: string; status: string } }> {
     const response = await this.api.post(API_ENDPOINTS.PRIVACY_ANALYSIS, data);
     return response.data;
   }

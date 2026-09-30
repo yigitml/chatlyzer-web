@@ -29,27 +29,31 @@ export const ChatCard = ({
   onCancel,
   onTitleChange,
   isUpdating,
-  isPrivacy
+  isPrivacy,
 }: ChatCardProps) => (
-  <div className={`
+  <div
+    className={`ph-no-capture ph-mask
     p-3 rounded-none cursor-pointer transition-all duration-100 border-2 border-primary font-mono
-    ${isSelected 
-      ? 'bg-primary text-primary-foreground translate-x-1 translate-y-1 shadow-none' 
-      : 'bg-card text-card-foreground hover:-translate-y-0.5 hover:-translate-x-0.5 hover:shadow-brutal active:translate-x-1 active:translate-y-1 active:shadow-none'
+    ${
+      isSelected
+        ? "bg-primary text-primary-foreground translate-x-1 translate-y-1 shadow-none"
+        : "bg-card text-card-foreground hover:-translate-y-0.5 hover:-translate-x-0.5 hover:shadow-brutal active:translate-x-1 active:translate-y-1 active:shadow-none"
     }
-  `}>
+  `}
+  >
     <div className="flex items-center justify-between">
       <div className="flex-1 min-w-0">
         {isEditing ? (
           <div className="flex items-center gap-2">
             <Input
+              aria-label="Chat title"
               value={editTitle}
               onChange={(e) => onTitleChange(e.target.value)}
               onKeyDown={(e) => {
-                if (e.key === 'Enter') {
+                if (e.key === "Enter") {
                   e.preventDefault();
                   onSave();
-                } else if (e.key === 'Escape') {
+                } else if (e.key === "Escape") {
                   e.preventDefault();
                   onCancel();
                 }
@@ -61,15 +65,21 @@ export const ChatCard = ({
               <Button
                 size="sm"
                 variant="ghost"
+                aria-label="Save chat title"
                 onClick={onSave}
                 disabled={isUpdating}
                 className="h-6 w-6 p-0 text-green-400 hover:text-green-300"
               >
-                {isUpdating ? <LoadingSpinner size="sm" /> : <Check className="w-3 h-3" />}
+                {isUpdating ? (
+                  <LoadingSpinner size="sm" />
+                ) : (
+                  <Check className="w-3 h-3" />
+                )}
               </Button>
               <Button
                 size="sm"
                 variant="ghost"
+                aria-label="Cancel title edit"
                 onClick={onCancel}
                 className="h-6 w-6 p-0 text-red-400 hover:text-red-300"
               >
@@ -78,19 +88,27 @@ export const ChatCard = ({
             </div>
           </div>
         ) : (
-          <div onClick={onSelect} className="flex items-center gap-2">
-            {isPrivacy && <Shield className="w-4 h-4 text-current flex-shrink-0" />}
-            <p className="text-current text-sm font-bold uppercase tracking-wider truncate">
+          <button
+            type="button"
+            onClick={onSelect}
+            aria-pressed={isSelected}
+            className="flex w-full items-center gap-2 text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4"
+          >
+            {isPrivacy && (
+              <Shield className="w-4 h-4 text-current flex-shrink-0" />
+            )}
+            <span className="text-current text-sm font-bold uppercase tracking-wider truncate">
               {chat.title || "Untitled Chat"}
-            </p>
-          </div>
+            </span>
+          </button>
         )}
       </div>
-      
+
       {!isEditing && (
         <Button
           size="icon"
           variant="ghost"
+          aria-label="Edit chat title"
           onClick={onEdit}
           className="h-6 w-6 p-0 text-current opacity-50 hover:opacity-100"
         >
@@ -98,9 +116,11 @@ export const ChatCard = ({
         </Button>
       )}
     </div>
-    
+
     {isPrivacy && (
-      <p className="text-current opacity-70 font-bold uppercase text-xs mt-1">Privacy Mode</p>
+      <p className="text-current opacity-70 font-bold uppercase text-xs mt-1">
+        Privacy Mode
+      </p>
     )}
   </div>
 );

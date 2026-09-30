@@ -34,7 +34,7 @@ export default function TermsPage() {
         {
           title: "Credits and purchases",
           content: (
-            <p>Analyses consume the number of credits shown in the app. Purchased credits are applied after the payment provider confirms the transaction. Except where required by law or stated at checkout, completed credit purchases are non-refundable. Failed analyses may be automatically refunded in credits. Payment processing is handled by RevenueCat and its configured payment processor under their applicable terms.</p>
+            <p>Analyses consume the number of credits shown in the app. Purchased credits are applied after the payment provider confirms the transaction. Except where required by law or stated at checkout, completed credit purchases are non-refundable. Failed analyses are reconciled and their debits are restored once. Provider refunds or payment reversals remove the corresponding paid credit grant; credits already spent can leave a negative balance that future grants first repay. Consumable credits remain bound to the account that received them and do not transfer when a provider customer account changes. Sandbox purchases grant isolated test credits, which are usable only in test billing mode. Lost Ghost results are not retained and cannot be replayed; a new analysis may charge credits again. Payment processing is handled by RevenueCat and its configured payment processor under their applicable terms.</p>
           ),
         },
         {

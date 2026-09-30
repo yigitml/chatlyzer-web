@@ -11,11 +11,13 @@ export default defineConfig({
     env: {
       NODE_ENV: "production",
       JWT_SECRET: "integration-only-jwt-secret-never-use-in-production",
-      REFRESH_TOKEN_SECRET: "integration-only-refresh-secret-never-use-in-production",
+      REFRESH_TOKEN_SECRET:
+        "integration-only-refresh-secret-never-use-in-production",
       OPENAI_API_KEY: "integration-mocked-openai",
       NEXT_PUBLIC_GOOGLE_CLIENT_ID: "integration.apps.googleusercontent.com",
       REVENUECAT_SECRET_API_KEY: "integration-mocked-revenuecat",
-      REVENUECAT_WEBHOOK_SECRET: "integration-webhook-authorization",
+      REVENUECAT_WEBHOOK_SECRET:
+        "integration-webhook-authorization-259be5ad4ae487d9759b15dcc",
     },
   },
 });

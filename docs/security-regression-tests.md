@@ -1,40 +1,25 @@
-# Security Regression Test Plan
+# Regression checks
 
-Add or maintain coverage for these cases before major releases.
+Use Node 22 with a dedicated local PostgreSQL database ending in `_test`. Integration tests exercise real handlers and database transactions while mocking external providers. Never run them against production.
 
-## Authentication
+```sh
+npm ci
+npx prisma validate
+npx prisma migrate deploy
+npm run check:schema
+npm run test:migrations
+npm run typecheck
+npm run lint
+npm test
+npm run test:integration
+npm run check:env:production
+npm run build
+npm run start:cloud
+node scripts/smoke-test.mjs http://localhost:3000
+```
 
-- Unauthenticated requests to protected APIs return `401`.
-- Revoked web sessions and mobile devices cannot use existing access tokens.
-- Mobile refresh-token replay fails after refresh-token rotation.
-- Web auth responses do not include JWTs in JSON bodies.
+`npm run check:contracts` also requires the public mobile checkout, either beside this repository or at `CHATLYZER_MOBILE_ROOT`.
 
-## Authorization
+Maintained coverage includes authentication and refresh races, resource ownership and erasure, transactional imports, analysis retries and compensation, privacy/ghost lifecycles, purchase identifiers/refunds, billing isolation, cursor traversal, parsing, provider schemas, and browser identity changes.
 
-- User A cannot read, update, or delete User B's chats.
-- User A cannot read messages, analyses, files, credits, legacy order history, or subscriptions belonging to User B.
-- Admin-only endpoints reject non-admin users server-side.
-
-## Abuse Controls
-
-- Auth endpoints return `429` after configured threshold.
-- General authenticated endpoints return `429` after configured threshold.
-- Analysis endpoints return `429` under rapid repeated requests.
-
-## Webhooks And Payments
-
-- Duplicate RevenueCat transactions do not grant duplicate credits.
-- RevenueCat webhooks with missing or wrong authorization return `401`.
-- Duplicate RevenueCat transactions do not grant duplicate credits.
-
-## Privacy Modes
-
-- Normal analysis can persist chat messages.
-- Privacy analysis persists chat metadata and analysis results but no raw messages.
-- Ghost analysis persists no chat, messages, or analysis rows.
-
-## Input Validation
-
-- Oversized chat imports are rejected.
-- Invalid IDs and malformed request bodies return `400`.
-- File/share inputs reject unsupported MIME types and oversized ZIP files.
+The optional browser harness uses the built UI with synthetic API fixtures. It checks desktop/mobile layouts, keyboard controls, pagination, retries, account deletion, and session expiry. Setup and invocation are documented in [the frontend test guide](../src/frontend/__tests__/README.md). Fixtures do not establish real Google, AI, payment, telemetry, or native-client acceptance.

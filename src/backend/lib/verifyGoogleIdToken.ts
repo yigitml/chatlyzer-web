@@ -1,36 +1,17 @@
-import { OAuth2Client } from 'google-auth-library';
-
-const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
+import { OAuth2Client } from "google-auth-library";
+import { ApiError } from "./apiBoundary";
+const client = new OAuth2Client();
 
 export async function verifyGoogleIdToken(idToken: string) {
+  const audience = (process.env.GOOGLE_ALLOWED_CLIENT_IDS || process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || "")
+    .split(",").map(value => value.trim()).filter(Boolean);
+  if (!audience.length) throw new ApiError("Google authentication is not configured", 503);
   try {
-    const ticket = await client.verifyIdToken({
-      idToken,
-      audience: process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID,
-    });
-
+    const ticket = await client.verifyIdToken({ idToken, audience });
     const payload = ticket.getPayload();
-    if (!payload) {
-      throw new Error('Invalid token payload');
-    }
-
-    const email = payload.email;
-    const name = payload.name;
-
-    if (!email || !name || payload.email_verified !== true) {
-      throw new Error("Missing or unverified required user information");
-    }
-
-    const userInfo = {
-      id: payload.sub,
-      email: payload.email!,
-      name: payload.name!,
-      picture: payload.picture,
-    };
-
-    return userInfo;
-  } catch (err) {
-    console.error('Failed to verify Google ID token:', err);
-    throw new Error('Unauthorized');
-  }
+    if (!payload || !payload.sub || !payload.email || !payload.name || payload.email_verified !== true ||
+      !audience.includes(payload.aud) || !["accounts.google.com", "https://accounts.google.com"].includes(payload.iss) ||
+      !payload.exp || payload.exp <= Math.floor(Date.now() / 1000)) throw new Error("Rejected Google claims");
+    return { id: payload.sub, email: payload.email, name: payload.name, picture: payload.picture };
+  } catch { throw new ApiError("Unauthorized", 401); }
 }

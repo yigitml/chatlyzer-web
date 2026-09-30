@@ -1,5 +1,7 @@
 import { NextRequest } from "next/server";
-import prisma from "@/backend/lib/prisma";
+import { rawPrisma } from "@/backend/lib/prisma";
+import { lockActiveAccount } from "@/backend/lib/accountLock";
+import { apiErrorResponse } from "@/backend/lib/apiBoundary";
 import { ApiResponse } from "@/shared/types/api/apiResponse";
 import { withProtectedRoute } from "@/backend/middleware/jwtAuth";
 export const POST = withProtectedRoute(async (request: NextRequest) => {
@@ -11,18 +13,13 @@ export const POST = withProtectedRoute(async (request: NextRequest) => {
       return ApiResponse.error("Unauthorized", 401).toResponse();
     }
 
-    // Soft-delete only this specific session (not all sessions)
-    if (sessionId) {
-      await prisma.userSession.update({
-        where: {
-          userId_sessionId: {
-            userId,
-            sessionId,
-          },
-        },
-        data: { deletedAt: new Date() },
+    await rawPrisma.$transaction(async tx => {
+      await lockActiveAccount(tx, userId, request.user!.tokenVersion);
+      await tx.userSession.updateMany({
+        where: { userId, sessionId, loginGeneration: request.user!.loginGeneration, deletedAt: null },
+        data: { deletedAt: new Date(), refreshTokenVersion: { increment: 1 } },
       });
-    }
+    });
 
     const isProduction = process.env.NODE_ENV === "production";
     const securePart = isProduction ? "; Secure" : "";
@@ -34,7 +31,6 @@ export const POST = withProtectedRoute(async (request: NextRequest) => {
     response.headers.append("Set-Cookie", `refreshToken=; HttpOnly; Path=/api/auth/web/refresh; Max-Age=0${securePart}; SameSite=Strict`);
     return response;
   } catch (error) {
-    console.error("Error during logout:", error);
-    return ApiResponse.error("Logout failed", 500).toResponse();
+    return apiErrorResponse(error, "Logout failed");
   }
 });

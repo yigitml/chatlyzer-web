@@ -3,227 +3,158 @@ import { withProtectedRoute } from "@/backend/middleware/jwtAuth";
 import { withAnalysisRateLimiter } from "@/backend/middleware/rateLimiter";
 import { ApiResponse } from "@/shared/types/api/apiResponse";
 import prisma from "@/backend/lib/prisma";
-import type {
-  PrivacyAnalysisPostRequest,
-} from "@/shared/types/api/apiRequest";
-import { analyzeAllChatTypesPrivate, smartChatSampler } from "@/backend/lib/openai";
-import { consumeUserCredits, refundUserCredits } from "@/backend/lib/consumeUserCredits";
-import { CreditType, AnalysisStatus } from "../../../generated/client/client";
-import { 
-  getAllAnalysisTypes, 
-  analysisTypeToSchemaKey, 
-  analysisTypeToTypeLiteral 
+import { analyzeAllChatTypesPrivate } from "@/backend/lib/openai";
+import {
+  reserveAnalysisJob,
+  completeAnalysisJob,
+  failAnalysisJob,
+  JobError,
+} from "@/backend/lib/analysisJobs";
+import { readJson, apiErrorResponse } from "@/backend/lib/apiBoundary";
+import { logger } from "@/backend/lib/logger";
+import { AnalysisStatus } from "../../../generated/client/client";
+import {
+  getAllAnalysisTypes,
+  analysisTypeToSchemaKey,
+  analysisTypeToTypeLiteral,
 } from "@/shared/types/analysis";
 import {
   getValidationMessage,
   privacyAnalysisPostSchema,
 } from "@/shared/types/api/requestSchemas";
 
-export const POST = withAnalysisRateLimiter(withProtectedRoute(async (request: NextRequest) => {
-  let creditsConsumed = false;
-  let authenticatedUserId = "";
-
-  try {
-    authenticatedUserId = request.user!.id;
-    const parsed = privacyAnalysisPostSchema.safeParse(await request.json());
-    if (!parsed.success) {
-      return ApiResponse.error(getValidationMessage(parsed.error), 400).toResponse();
-    }
-    const data: PrivacyAnalysisPostRequest = parsed.data;
-    const requestKey = data.requestKey?.trim() || null;
-
-    if (requestKey && !data.isGhostMode) {
-      const existingAnalyses = await prisma.analysis.findMany({
-        where: {
-          userId: authenticatedUserId,
-          requestKey,
-          deletedAt: null,
-          chat: {
-            isPrivacy: true,
-            deletedAt: null,
-          },
-        },
-        include: {
-          chat: true,
-        },
-        orderBy: {
-          createdAt: "asc",
-        },
-      });
-
-      if (existingAnalyses.length > 0) {
-        return ApiResponse.success(
-          {
-            chat: existingAnalyses[0].chat,
-            analyses: existingAnalyses,
-          },
-          "Privacy analysis request already exists",
-          200,
+export const POST = withProtectedRoute(
+  withAnalysisRateLimiter(async (request: NextRequest) => {
+    let jobId: string | undefined;
+    try {
+      const parsed = privacyAnalysisPostSchema.safeParse(
+        await readJson(request),
+      );
+      if (!parsed.success)
+        return ApiResponse.error(
+          getValidationMessage(parsed.error),
+          400,
         ).toResponse();
-      }
-    }
-
-    const existingChat = data.isGhostMode
-      ? null
-      : await prisma.chat.findFirst({
-          where: {
-            title: data.title,
-            userId: authenticatedUserId,
-            deletedAt: null,
-          }
+      const data = parsed.data;
+      const userId = request.user!.id;
+      const { job, isNew } = await reserveAnalysisJob(
+        userId,
+        data.isGhostMode ? "GHOST" : "PRIVACY",
+        data.requestKey,
+        undefined,
+        request.user!.tokenVersion,
+      );
+      if (!isNew) {
+        if (job.status === "PROCESSING")
+          return ApiResponse.success(
+            {
+              chat: null,
+              analyses: [],
+              job: { id: job.id, status: job.status },
+            },
+            "Analysis is processing",
+            202,
+          ).toResponse();
+        if (job.status !== "COMPLETED")
+          throw new JobError("Analysis failed; retry with a new request key");
+        if (job.mode === "GHOST")
+          throw new JobError(
+            "Ghost result was not retained; use a new request key to run again",
+            410,
+          );
+        const chat = await prisma.chat.findFirst({
+          where: { id: job.chatId!, userId, deletedAt: null },
         });
-
-    if (existingChat) {
-      return ApiResponse.error("Chat already exists", 400).toResponse();
-    }
-
-    const m = [];
-
-    for (const message of data.messages) {
-      if (message.content.length < 500) {
-        m.push(message);
+        const analyses = await prisma.analysis.findMany({
+          where: { jobId: job.id, userId, deletedAt: null },
+          orderBy: [{ createdAt: "asc" }, { id: "asc" }],
+        });
+        if (!chat || analyses.length !== getAllAnalysisTypes().length)
+          throw new JobError("Saved analysis was deleted", 410);
+        return ApiResponse.success({ chat, analyses }).toResponse();
       }
-    }
-
-    const smallMessages = smartChatSampler(m);
-    if (smallMessages.length === 0) {
-      return ApiResponse.error("At least one valid message is required", 400).toResponse();
-    }
-
-    // Consume 8 credits for comprehensive analysis — use advisory lock
-    // to prevent race conditions from concurrent requests.
-    const creditResult = await prisma.$transaction(async (tx) => {
-      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${authenticatedUserId}))`;
-      const consumed = await consumeUserCredits(authenticatedUserId, CreditType.ANALYSIS, 8, tx);
-      return consumed;
-    });
-
-    if (creditResult) {
-      creditsConsumed = true;
-    } else {
-      return ApiResponse.error("Insufficient credits", 402).toResponse();
-    }
-
-    // Perform comprehensive analysis using messages from request
-    const comprehensiveAnalysisData = await analyzeAllChatTypesPrivate(
-      data.title,
-      smallMessages
-    );
-
-    // If ghost mode is enabled, return analysis results without saving anything to database
-    if (data.isGhostMode) {
-      // Get all analysis types using utility function
-      const analysisTypes = getAllAnalysisTypes();
-      
-      // Format analysis results for ghost mode response
-      const ghostAnalyses = analysisTypes.map((analysisType) => {
-      const schemaKey = analysisTypeToSchemaKey(analysisType);
-      const analysisResult = comprehensiveAnalysisData.analyses[schemaKey as keyof typeof comprehensiveAnalysisData.analyses];
-        
-        if (!analysisResult) {
-          throw new Error(`Analysis result for ${analysisType} is missing or undefined`);
-        }
-        
-        // Add the type field back to the analysis result
-        return {
-          id: `ghost-${Date.now()}-${analysisType}`, // Temporary ID for ghost mode
-          chatId: "",
-          userId: authenticatedUserId,
-          result: {
-            type: analysisTypeToTypeLiteral(analysisType),
-            ...analysisResult
-          },
-          status: AnalysisStatus.COMPLETED,
-          error: null,
-          createdAt: new Date(),
-          updatedAt: new Date()
-        };
+      jobId = job.id;
+      // Full validated input goes to the provider boundary: exact metrics precede sampling.
+      const output = await analyzeAllChatTypesPrivate(
+        data.title,
+        data.messages,
+      );
+      const results = getAllAnalysisTypes().map((type) => {
+        const result =
+          output.analyses[
+            analysisTypeToSchemaKey(type) as keyof typeof output.analyses
+          ];
+        if (!result) throw new Error("Incomplete provider analysis");
+        return { ...result, type: analysisTypeToTypeLiteral(type) };
       });
-
+      const payload = await completeAnalysisJob(job.id, async (tx) => {
+        const now = new Date();
+        const participants = [
+          ...new Set(data.messages.map((message) => message.sender)),
+        ];
+        if (data.isGhostMode)
+          return {
+            chat: {
+              id: `ghost-${job.id}`,
+              title: data.title,
+              participants,
+              userId,
+              isPrivacy: true,
+              createdAt: now,
+              updatedAt: now,
+            },
+            analyses: results.map((result, index) => ({
+              id: `ghost-${job.id}-${index}`,
+              chatId: "",
+              userId,
+              result,
+              status: AnalysisStatus.COMPLETED,
+              error: null,
+              createdAt: now,
+              updatedAt: now,
+            })),
+          };
+        const chat = await tx.chat.create({
+          data: { title: data.title, participants, userId, isPrivacy: true },
+        });
+        const analyses = [];
+        for (const result of results)
+          analyses.push(
+            await tx.analysis.create({
+              data: {
+                chatId: chat.id,
+                userId,
+                requestKey: job.requestKey,
+                jobId: job.id,
+                result,
+                status: AnalysisStatus.COMPLETED,
+              },
+            }),
+          );
+        await tx.analysisJob.update({
+          where: { id: job.id },
+          data: { chatId: chat.id },
+        });
+        return { chat, analyses };
+      });
       return ApiResponse.success(
-        {
-          chat: {
-            id: `ghost-${Date.now()}`, // Temporary ID for ghost mode
-            title: data.title,
-            participants: [...new Set(smallMessages.map(message => message.sender))],
-            userId: authenticatedUserId,
-            isPrivacy: true,
-            createdAt: new Date(),
-            updatedAt: new Date()
-          },
-          analyses: ghostAnalyses
-        },
-        "Ghost analysis completed! No data was saved.",
-        200
+        payload,
+        data.isGhostMode
+          ? "Ghost analysis complete. Only a content-free billing reservation is retained; results cannot be replayed."
+          : "Privacy analysis complete. Messages were not stored.",
       ).toResponse();
-    }
-
-    // Regular privacy analysis - save chat and analyses to database
-    // Extract participants from messages for the chat record
-    const participants = [...new Set(smallMessages.map(message => message.sender))];
-
-    // Create chat record WITHOUT storing messages, marked as privacy
-    const chat = await prisma.chat.create({
-      data: {
-        title: data.title,
-        participants: participants,
-        userId: authenticatedUserId,
-        isPrivacy: true, // Mark as privacy chat
-      }
-    });
-
-    // Get all analysis types using utility function
-    const analysisTypes = getAllAnalysisTypes();
-
-    // Create analysis records for each type
-    const analysisPromises = analysisTypes.map(async (analysisType) => {
-      const schemaKey = analysisTypeToSchemaKey(analysisType);
-      const analysisResult = comprehensiveAnalysisData.analyses[schemaKey as keyof typeof comprehensiveAnalysisData.analyses];
-      
-      console.log(`Processing ${analysisType} (${schemaKey}):`, !!analysisResult);
-      
-      if (!analysisResult) {
-        throw new Error(`Analysis result for ${analysisType} is missing or undefined`);
-      }
-      
-      // Add the type field back to the analysis result
-      const analysisWithType = {
-        type: analysisTypeToTypeLiteral(analysisType),
-        ...analysisResult
-      };
-      
-      return prisma.analysis.create({
-        data: {
-          chatId: chat.id,
-          userId: authenticatedUserId,
-          requestKey,
-          result: analysisWithType,
-          status: AnalysisStatus.COMPLETED,
-          error: null,
+    } catch (error) {
+      if (jobId) {
+        try {
+          await failAnalysisJob(jobId);
+        } catch (recoveryError) {
+          logger.error(
+            "Privacy job recovery deferred to lease reconciler",
+            recoveryError,
+          );
         }
-      });
-    });
-    
-    const analyses = await Promise.all(analysisPromises);
-
-    return ApiResponse.success(
-      {
-        chat: chat,
-        analyses: analyses
-      },
-      "Privacy analysis completed successfully! Messages were analyzed but not stored.",
-      200
-    ).toResponse();
-
-  } catch (error) {
-    console.error("Error processing POST /api/privacy-analysis", error);
-    
-    // Refund credits if they were consumed but analysis failed
-    if (creditsConsumed) {
-      console.log(`Refunding 8 credits to user ${authenticatedUserId} due to failure`);
-      await refundUserCredits(authenticatedUserId, CreditType.ANALYSIS, 8);
+      }
+      return apiErrorResponse(error);
     }
-
-    return ApiResponse.error("Internal server error", 500).toResponse();
-  }
-}));
+  }),
+);

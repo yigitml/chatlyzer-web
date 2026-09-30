@@ -1,7 +1,7 @@
 import { Message } from "../../../generated/client";
 
 export interface AuthWebPostRequest {
-  accessToken: string;
+  idToken: string;
   sessionId: string;
 }
 
@@ -10,7 +10,12 @@ export interface AuthMobilePostRequest {
   deviceId: string;
 }
 
-export interface FileGetRequest {
+export interface PaginationRequest {
+  limit?: number;
+  cursor?: string;
+}
+
+export interface FileGetRequest extends PaginationRequest {
   id?: string;
 }
 
@@ -23,13 +28,13 @@ export interface FileDeleteRequest {
   id: string;
 }
 
-export interface ChatGetRequest {
+export interface ChatGetRequest extends PaginationRequest {
   id?: string;
 }
 
 export interface ChatPostRequest {
   title: string;
-  messages?: Message[];
+  messages: Pick<Message, "sender" | "content" | "timestamp" | "metadata">[];
 }
 
 export interface ChatPutRequest {
@@ -41,7 +46,7 @@ export interface ChatDeleteRequest {
   id: string;
 }
 
-export interface AnalysisGetRequest {
+export interface AnalysisGetRequest extends PaginationRequest {
   id?: string;
   chatId?: string;
   includeInProgress?: boolean;
@@ -71,14 +76,14 @@ export interface AnalysisDeleteRequest {
   id: string;
 }
 
-export interface MessageGetRequest {
+export interface MessageGetRequest extends PaginationRequest {
   id?: string;
   chatId?: string;
 }
 
 export interface MessagePostRequest {
   content: string;
-  timestamp?: Date;
+  timestamp?: Date | string;
   sender: string;
   chatId: string;
   metadata?: any;
@@ -129,7 +134,7 @@ export interface UserPostRequest {
 
 export interface UserPutRequest {
   name?: string;
-  image?: string;
+  image?: string | null;
   isOnboarded?: boolean;
   isFirstModelCreated?: boolean;
   isTourCompleted?: boolean;

@@ -1,9 +1,11 @@
+import { apiErrorResponse, readJson } from "@/backend/lib/apiBoundary";
 import { NextRequest } from "next/server";
 import { withProtectedRoute } from "@/backend/middleware/jwtAuth";
 import { withRateLimiter } from "@/backend/middleware/rateLimiter";
 import { ApiResponse } from "@/shared/types/api/apiResponse";
 import prisma from "@/backend/lib/prisma";
-import type { SubscriptionDeleteRequest } from "@/shared/types/api/apiRequest";
+import { idBodySchema, getValidationMessage } from "@/shared/types/api/requestSchemas";
+import { lockActiveAccount } from "@/backend/lib/accountLock";
 import { getPagination, paginateResults, paginationHeaders } from "@/shared/utils/pagination";
 
 export const GET = withRateLimiter(withProtectedRoute(async (request: NextRequest) => {
@@ -43,27 +45,30 @@ export const GET = withRateLimiter(withProtectedRoute(async (request: NextReques
     const page = paginateResults(subscriptions, pagination.limit);
     return ApiResponse.success(page.items).toResponse(paginationHeaders(page.pageInfo));
   } catch (error) {
-    console.error("Error fetching subscriptions:", error);
-    return ApiResponse.error("Failed to fetch subscriptions", 500).toResponse();
+    return apiErrorResponse(error, "Failed to fetch subscriptions");
   }
 }));
 
 export const DELETE = withRateLimiter(withProtectedRoute(async (request: NextRequest) => {
   try {
-    const body: SubscriptionDeleteRequest = await request.json();
-    const { id } = body;
+    const parsed = idBodySchema.safeParse(await readJson(request));
+    if (!parsed.success) return ApiResponse.error(getValidationMessage(parsed.error), 400).toResponse();
+    const { id } = parsed.data;
     const authenticatedUserId = request.user!.id;
 
     if (!id) {
       return ApiResponse.error("Subscription ID is required", 400).toResponse();
     }
 
-    const deletedSubscription = await prisma.subscription.update({
+    const deletedSubscription = await prisma.$transaction(async tx => {
+      await lockActiveAccount(tx, authenticatedUserId, request.user!.tokenVersion);
+      return tx.subscription.update({
       where: { id, userId: authenticatedUserId, deletedAt: null },
       data: {
         deletedAt: new Date(),
         isActive: false,
       },
+    });
     });
 
     if (!deletedSubscription) {
@@ -75,7 +80,6 @@ export const DELETE = withRateLimiter(withProtectedRoute(async (request: NextReq
 
     return ApiResponse.success(deletedSubscription).toResponse();
   } catch (error) {
-    console.error("Error deleting subscription:", error);
-    return ApiResponse.error("Failed to delete subscription", 500).toResponse();
+    return apiErrorResponse(error, "Failed to delete subscription");
   }
 }));

@@ -53,7 +53,7 @@ export function LegalPage({
             {summary}
           </p>
           <p className="mt-4 font-mono text-xs font-bold uppercase tracking-widest text-muted-foreground">
-            Effective September 29, 2026
+            Effective September 30, 2026
           </p>
         </div>
 

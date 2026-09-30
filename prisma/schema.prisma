@@ -14,7 +14,7 @@ model User {
   createdAt        DateTime          @default(now())
   isOnboarded      Boolean           @default(false)
   image            String?
-  googleId         String?
+  googleId         String?           @unique
   polarCustomerId  String?
   files            File[]
   credits          UserCredit[]
@@ -31,22 +31,27 @@ model User {
   chats            Chat[]
   messages         Message[]
   analyzes         Analysis[]
+  analysisJobs     AnalysisJob[]
 }
 
 model UserSession {
   id             String    @id @default(cuid())
   sessionId      String
+  loginGeneration String @default(uuid())
+  refreshTokenVersion Int @default(0)
   lastActivityAt DateTime
   userId         String
   user           User      @relation(fields: [userId], references: [id])
   deletedAt      DateTime?
 
   @@unique([userId, sessionId])
+  @@index([userId, deletedAt, lastActivityAt])
 }
 
 model UserDevice {
   id          String    @id @default(cuid())
   deviceId    String
+  loginGeneration String @default(uuid())
   refreshTokenVersion Int @default(0)
   lastLoginAt DateTime
   userId      String
@@ -54,6 +59,7 @@ model UserDevice {
   deletedAt   DateTime?
 
   @@unique([userId, deviceId])
+  @@index([userId, deletedAt, lastLoginAt])
 }
 
 model Subscription {
@@ -81,6 +87,8 @@ model UserCredit {
   createdAt      DateTime      @default(now())
   updatedAt      DateTime      @updatedAt
   minimumBalance Int           @default(0)
+  sandboxAmount  Int           @default(0)
+  sandboxTotalAmount Int       @default(0)
   deletedAt      DateTime?
 
   @@unique([userId, type])
@@ -114,6 +122,8 @@ model RevenueCatPurchase {
   purchasedAt            DateTime?
   creditsGranted         Int       @default(0)
   rawPayload             Json?
+  environment            String @default("legacy")
+  reversedAt             DateTime?
   createdAt              DateTime  @default(now())
   deletedAt              DateTime?
 
@@ -149,6 +159,8 @@ model File {
   chatId    String?
   chat      Chat?     @relation(fields: [chatId], references: [id])
   deletedAt DateTime?
+  @@index([userId, deletedAt])
+  @@index([chatId, userId, deletedAt])
 }
 
 model Chat {
@@ -164,6 +176,8 @@ model Chat {
   messages         Message[]
   analyzes         Analysis[]
   files            File[]
+  @@index([userId, deletedAt, createdAt])
+  @@index([userId, title, deletedAt])
 }
 
 model Message {
@@ -179,6 +193,8 @@ model Message {
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
   deletedAt DateTime?
+  @@index([chatId, deletedAt, timestamp])
+  @@index([userId, deletedAt])
 }
 
 model Analysis {
@@ -189,6 +205,8 @@ model Analysis {
   status    AnalysisStatus @default(PENDING)
   error     String?
   requestKey String?
+  jobId     String?
+  job       AnalysisJob? @relation(fields: [jobId], references: [id])
   createdAt DateTime       @default(now())
   updatedAt DateTime       @updatedAt
   deletedAt DateTime?
@@ -197,4 +215,45 @@ model Analysis {
 
   @@index([userId, requestKey])
   @@index([chatId, requestKey])
+  @@index([userId, deletedAt, status])
+  @@index([chatId, userId, deletedAt])
+  @@index([jobId])
+}
+
+// Content-free request reservation and debit recovery ledger, including ghost mode.
+model AnalysisJob {
+  id String @id @default(cuid())
+  userId String
+  user User @relation(fields: [userId], references: [id])
+  requestKey String
+  mode String
+  chatId String?
+  status String @default("PROCESSING")
+  accountVersion Int
+  leaseExpiresAt DateTime
+  debitAmount Int @default(8)
+  debitEnvironment String @default("production")
+  refundedAt DateTime?
+  error String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  analyses Analysis[]
+  @@unique([userId, requestKey])
+  @@index([status, leaseExpiresAt])
+}
+
+model RevenueCatEvent {
+  id String @id
+  type String
+  disposition String
+  eventTimestamp BigInt @default(0)
+  createdAt DateTime @default(now())
+}
+
+model RateLimit {
+  key String @id @db.VarChar(255)
+  points Int @default(0)
+  expire BigInt?
+  @@index([expire], map: "rate_limits_expire_idx")
+  @@map("rate_limits")
 }

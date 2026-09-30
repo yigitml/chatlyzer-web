@@ -9,6 +9,18 @@ for (const path of ["/", "/home", "/auth/sign-in", "/profile", "/delete-account"
   assert.match(response.headers.get("content-security-policy") || "", /frame-ancestors 'none'/);
   console.log(`PASS ${path}`);
 }
+for (const path of ["/robots.txt", "/sitemap.xml"]) {
+  const response = await fetch(new URL(path, base));
+  assert.equal(response.status, 200);
+  const text = await response.text();
+  if (path === "/sitemap.xml") {
+    assert.match(text, /\/privacy/);
+    assert.doesNotMatch(text, /\/home|\/profile|\/features|\/auth\/signin/);
+  } else assert.match(text, /Disallow: \/api\//);
+  console.log(`PASS ${path}`);
+}
+const asset = await fetch(new URL("/iconsvg.svg", base));
+assert.equal(asset.status, 200, "Standalone public assets must exist");
 const health = await fetch(new URL("/api/health", base));
 assert.equal(health.status, 200);
 assert.equal((await health.json()).checks.database, "ok");

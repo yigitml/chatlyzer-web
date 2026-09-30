@@ -1,0 +1,1 @@
+ALTER TABLE "RevenueCatEvent" ADD COLUMN "eventTimestamp" BIGINT NOT NULL DEFAULT 0;

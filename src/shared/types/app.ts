@@ -1,6 +1,5 @@
+import type { PublicUser as User, PublicCredit as UserCredit } from "@/shared/types/api/publicDtos";
 import {
-  User,
-  UserCredit,
   Subscription,
   Message,
   Chat,
@@ -27,6 +26,8 @@ import {
 export enum ImportMode {
   MANUAL = "manual",
   WHATSAPP = "whatsapp",
+  TELEGRAM = "telegram",
+  DISCORD = "discord",
 }
 
 export interface PhotoPagination {

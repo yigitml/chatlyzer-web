@@ -1,7 +1,14 @@
 import { z } from "zod";
 
+const samplingSchema = z.object({
+  totalMessages: z.number().int().nonnegative(), sampledMessages: z.number().int().nonnegative(),
+  qualitativeSampled: z.boolean(), statisticsScope: z.literal("full_conversation"),
+  timeBasis: z.literal("UTC"), currentStreakBasis: z.literal("latest_message_day"),
+});
+
 export const ChatStatsSchema = z.object({
   type: z.literal("chat_stats"),
+  sampling: samplingSchema.nullable().optional(),
   schemaVersion: z.literal("2.0.0").nullable().optional(),
   overview: z.object({
     emotionalContext: z.string(), // "The situation feels tense..."
@@ -35,9 +42,9 @@ export const ChatStatsSchema = z.object({
   })),
 
   vibeBalance: z.object({
-    mutualEffortScore: z.number(), // How equal is the convo energy
-    emotionalBalance: z.number(), // Emotional sharing balance
-    dryVsJuicyRatio: z.number(),  // % of juicy vs boring msgs
+    mutualEffortScore: z.number().min(1).max(10), // How equal is the convo energy
+    emotionalBalance: z.number().min(1).max(10), // Emotional sharing balance
+    dryVsJuicyRatio: z.number().min(0).max(100),  // % of juicy vs boring msgs
   }),
 
   userRoles: z.array(z.object({
@@ -97,6 +104,7 @@ export const MessageRefSchema = z.object({
 // 1. Red Flag Analysis
 export const RedFlagAnalysisSchema = z.object({
   type: z.literal("red_flag"),
+  sampling: samplingSchema.nullable().optional(),
   schemaVersion: z.literal("2.0.0").nullable().optional(),
   overview: z.object({
     emotionalContext: z.string(),
@@ -104,7 +112,7 @@ export const RedFlagAnalysisSchema = z.object({
   }).nullable().optional(),
   flags: z.array(z.object({
     label: z.string(), // e.g., "Gaslighting", "Love bombing"
-    severity: z.number(),
+    severity: z.number().min(1).max(10),
     explanation: z.string(),
     messageRefs: z.array(MessageRefSchema),
   }))
@@ -113,6 +121,7 @@ export const RedFlagAnalysisSchema = z.object({
 // 2. Green Flag Analysis
 export const GreenFlagAnalysisSchema = z.object({
   type: z.literal("green_flag"),
+  sampling: samplingSchema.nullable().optional(),
   schemaVersion: z.literal("2.0.0").nullable().optional(),
   overview: z.object({
     emotionalContext: z.string(),
@@ -120,7 +129,7 @@ export const GreenFlagAnalysisSchema = z.object({
   }).nullable().optional(),
   traits: z.array(z.object({
     label: z.string(), // e.g., "Respectful boundaries", "Clear communication"
-    positivityScore: z.number(),
+    positivityScore: z.number().min(1).max(10),
     explanation: z.string(),
     messageRefs: z.array(MessageRefSchema),
   }))
@@ -129,6 +138,7 @@ export const GreenFlagAnalysisSchema = z.object({
 // 3. Vibe Check Analysis
 export const VibeCheckAnalysisSchema = z.object({
   type: z.literal("vibe_check"),
+  sampling: samplingSchema.nullable().optional(),
   schemaVersion: z.literal("2.0.0").nullable().optional(),
   overview: z.object({
     emotionalContext: z.string(),
@@ -136,7 +146,7 @@ export const VibeCheckAnalysisSchema = z.object({
   }).nullable().optional(),
   overallVibe: z.enum(["positive", "neutral", "awkward", "flirty", "chaotic", "dry"]),
   keywords: z.array(z.string()),
-  emojiScore: z.number(),
+  emojiScore: z.number().min(1).max(10),
   humorDetected: z.boolean(),
   moodDescriptors: z.array(z.string()),
   messageRefs: z.array(MessageRefSchema),
@@ -145,12 +155,13 @@ export const VibeCheckAnalysisSchema = z.object({
 // 4. Simp-O-Meter Analysis
 export const SimpOMeterAnalysisSchema = z.object({
   type: z.literal("simp_o_meter"),
+  sampling: samplingSchema.nullable().optional(),
   schemaVersion: z.literal("2.0.0").nullable().optional(),
   overview: z.object({
     emotionalContext: z.string(),
     explanation: z.string(),
   }).nullable().optional(),
-  simpScore: z.number(),
+  simpScore: z.number().min(1).max(10),
   behaviorsDetected: z.array(z.string()), // e.g., "excessive compliments", "one-sided texting"
   messageRefs: z.array(MessageRefSchema),
 });
@@ -158,6 +169,7 @@ export const SimpOMeterAnalysisSchema = z.object({
 // 5. Ghost Risk Analysis
 export const GhostRiskAnalysisSchema = z.object({
   type: z.literal("ghost_risk"),
+  sampling: samplingSchema.nullable().optional(),
   schemaVersion: z.literal("2.0.0").nullable().optional(),
   overview: z.object({
     emotionalContext: z.string(),
@@ -169,18 +181,19 @@ export const GhostRiskAnalysisSchema = z.object({
     explanation: z.string(),
     messageRefs: z.array(MessageRefSchema),
   })),
-  riskScore: z.number(),
+  riskScore: z.number().min(1).max(10),
 });
 
 // 6. Main Character Energy Analysis
 export const MainCharacterEnergyAnalysisSchema = z.object({
   type: z.literal("main_character_energy"),
+  sampling: samplingSchema.nullable().optional(),
   schemaVersion: z.literal("2.0.0").nullable().optional(),
   overview: z.object({
     emotionalContext: z.string(),
     explanation: z.string(),
   }).nullable().optional(),
-  mceScore: z.number(),
+  mceScore: z.number().min(1).max(10),
   traits: z.array(z.string()), // e.g., "Flamboyant humor", "Dramatic storytelling"
   standoutMoments: z.array(MessageRefSchema),
 });
@@ -188,12 +201,13 @@ export const MainCharacterEnergyAnalysisSchema = z.object({
 // 7. Emotional Depth Analysis
 export const EmotionalDepthAnalysisSchema = z.object({
   type: z.literal("emotional_depth"),
+  sampling: samplingSchema.nullable().optional(),
   schemaVersion: z.literal("2.0.0").nullable().optional(),
   overview: z.object({
     emotionalContext: z.string(),
     explanation: z.string(),
   }).nullable().optional(),
-  depthScore: z.number(),
+  depthScore: z.number().min(1).max(10),
   vulnerableMoments: z.array(z.object({
     description: z.string(),
     messageRefs: z.array(MessageRefSchema),

@@ -1,5 +1,7 @@
 import { NextRequest } from "next/server";
-import prisma from "@/backend/lib/prisma";
+import prisma, { rawPrisma } from "@/backend/lib/prisma";
+import { apiErrorResponse, readJson } from "@/backend/lib/apiBoundary";
+import { lockActiveAccount } from "@/backend/lib/accountLock";
 import { withProtectedRoute } from "@/backend/middleware/jwtAuth";
 import { withRateLimiter } from "@/backend/middleware/rateLimiter";
 import { ApiResponse } from "@/shared/types/api/apiResponse";
@@ -23,6 +25,7 @@ export const GET = withRateLimiter(withProtectedRoute(async (request: NextReques
       const message = await prisma.message.findFirst({
         where: { 
           id: id,
+          userId: authenticatedUserId,
           deletedAt: null,
           chat: {
             userId: authenticatedUserId,
@@ -39,7 +42,8 @@ export const GET = withRateLimiter(withProtectedRoute(async (request: NextReques
       const chat = await prisma.chat.findFirst({
         where: {
           id: chatId,
-          userId: authenticatedUserId
+          userId: authenticatedUserId,
+          deletedAt: null
         }
       });
 
@@ -51,9 +55,10 @@ export const GET = withRateLimiter(withProtectedRoute(async (request: NextReques
       const messages = await prisma.message.findMany({
         where: { 
           chatId,
+          userId: authenticatedUserId,
           deletedAt: null
         },
-        orderBy: { timestamp: "asc" },
+        orderBy: [{ timestamp: "asc" }, { id: "asc" }],
         take: pagination.take,
         ...(pagination.cursor ? { cursor: { id: pagination.cursor }, skip: 1 } : {}),
       });
@@ -64,21 +69,22 @@ export const GET = withRateLimiter(withProtectedRoute(async (request: NextReques
       return ApiResponse.error("Either message ID or chat ID is required", 400).toResponse();
     }
   } catch (error) {
-    console.error("Error fetching messages:", error);
-    return ApiResponse.error("Internal server error", 500).toResponse();
+    return apiErrorResponse(error, "Internal server error");
   }
 }));
 
 export const POST = withRateLimiter(withProtectedRoute(async (request: NextRequest) => {
   try {
     const authenticatedUserId = request.user!.id;
-    const parsed = messagePostSchema.safeParse(await request.json());
+    const parsed = messagePostSchema.safeParse(await readJson(request));
     if (!parsed.success) {
       return ApiResponse.error(getValidationMessage(parsed.error), 400).toResponse();
     }
     const data: MessagePostRequest = parsed.data;
     
-    const chat = await prisma.chat.findFirst({
+    return await rawPrisma.$transaction(async tx => {
+    await lockActiveAccount(tx, authenticatedUserId, request.user!.tokenVersion);
+    const chat = await tx.chat.findFirst({
       where: {
         id: data.chatId,
         userId: authenticatedUserId,
@@ -90,7 +96,7 @@ export const POST = withRateLimiter(withProtectedRoute(async (request: NextReque
       return ApiResponse.error("Chat not found or unauthorized", 404).toResponse();
     }
 
-    const message = await prisma.message.create({
+    const message = await tx.message.create({
       data: {
         userId: authenticatedUserId,
         content: data.content,
@@ -102,23 +108,25 @@ export const POST = withRateLimiter(withProtectedRoute(async (request: NextReque
     });
     
     return ApiResponse.success(message, "Message created successfully", 201).toResponse();
+    });
   } catch (error) {
-    console.error("Error creating message:", error);
-    return ApiResponse.error("Internal server error", 500).toResponse();
+    return apiErrorResponse(error, "Internal server error");
   }
 }));
 
 export const PUT = withRateLimiter(withProtectedRoute(async (request: NextRequest) => {
   try {
     const authenticatedUserId = request.user!.id;
-    const parsed = messagePutSchema.safeParse(await request.json());
+    const parsed = messagePutSchema.safeParse(await readJson(request));
     if (!parsed.success) {
       return ApiResponse.error(getValidationMessage(parsed.error), 400).toResponse();
     }
     const data: MessagePutRequest = parsed.data;
     const { id, content, metadata } = data;
 
-    const message = await prisma.message.findFirst({
+    return await rawPrisma.$transaction(async tx => {
+    await lockActiveAccount(tx, authenticatedUserId, request.user!.tokenVersion);
+    const message = await tx.message.findFirst({
       where: { id, deletedAt: null },
       include: { chat: true }
     });
@@ -131,7 +139,7 @@ export const PUT = withRateLimiter(withProtectedRoute(async (request: NextReques
       return ApiResponse.error("Unauthorized to modify this message", 403).toResponse();
     }
 
-    const updatedMessage = await prisma.message.update({
+    const updatedMessage = await tx.message.update({
       where: { id },
       data: {
         ...(content !== undefined ? { content } : {}),
@@ -140,22 +148,24 @@ export const PUT = withRateLimiter(withProtectedRoute(async (request: NextReques
     });
 
     return ApiResponse.success(updatedMessage, "Message updated successfully", 200).toResponse();
+    });
   } catch (error) {
-    console.error("Error updating message:", error);
-    return ApiResponse.error("Internal server error", 500).toResponse();
+    return apiErrorResponse(error, "Internal server error");
   }
 }));
 
 export const DELETE = withRateLimiter(withProtectedRoute(async (request: NextRequest) => {
   try {
     const authenticatedUserId = request.user!.id;
-    const parsed = idBodySchema.safeParse(await request.json());
+    const parsed = idBodySchema.safeParse(await readJson(request));
     if (!parsed.success) {
       return ApiResponse.error(getValidationMessage(parsed.error), 400).toResponse();
     }
     const { id } = parsed.data;
 
-    const message = await prisma.message.findFirst({
+    return await rawPrisma.$transaction(async tx => {
+    await lockActiveAccount(tx, authenticatedUserId, request.user!.tokenVersion);
+    const message = await tx.message.findFirst({
       where: { id, deletedAt: null },
       include: { chat: true }
     });
@@ -168,16 +178,16 @@ export const DELETE = withRateLimiter(withProtectedRoute(async (request: NextReq
       return ApiResponse.error("Unauthorized to delete this message", 403).toResponse();
     }
 
-    const deletedMessage = await prisma.message.update({
+    const deletedMessage = await tx.message.update({
       where: { id },
       data: {
-        deletedAt: new Date(),
+        deletedAt: new Date(), content: "", sender: "", metadata: {}, timestamp: new Date(0),
       },
     });
 
     return ApiResponse.success(deletedMessage, "Message deleted successfully", 200).toResponse();
+    });
   } catch (error) {
-    console.error("Error deleting message:", error);
-    return ApiResponse.error("Internal server error", 500).toResponse();
+    return apiErrorResponse(error, "Internal server error");
   }
 }));

@@ -61,3 +61,11 @@ describe("consumeUserCredits", () => {
     ).rejects.toThrow("User credit data not found");
   });
 });
+
+describe("credit amount boundary", () => {
+  it.each([0, -1, 1.5, Number.NaN, Number.MAX_SAFE_INTEGER + 1])("rejects invalid debit %s before touching a balance", async amount => {
+    mocks.executeRaw.mockClear();
+    await expect(consumeUserCredits("user_123", "ANALYSIS" as any, amount)).rejects.toThrow("positive integer");
+    expect(mocks.executeRaw).not.toHaveBeenCalled();
+  });
+});
