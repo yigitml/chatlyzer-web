@@ -42,10 +42,16 @@ try {
     /Duplicate Google subjects require explicit account reconciliation/,
   );
   await client.query(`DELETE FROM "User" WHERE "id" = 'duplicate'`);
-  for (const migration of additions)
-    await client.query(
-      readFileSync(`prisma/migrations/${migration}/migration.sql`, "utf8"),
-    );
+  for (const migration of additions) {
+    if (migration.includes("isolate_late_legacy")) {
+      await client.query(`INSERT INTO "User"("id","name","email","updatedAt") VALUES ('late','Late','late@example.test',now());
+        INSERT INTO "UserCredit"("id","userId","type","amount","totalAmount","updatedAt") VALUES ('late-credit','late','ANALYSIS',24,24,now());
+        INSERT INTO "RevenueCatPurchase"("id","revenueCatTransactionId","userId","productId","creditsGranted","rawPayload","storeTransactionId") VALUES ('late-purchase','late-transaction','late','credits_24',24,'{"is_sandbox":true}','late-transaction');`);
+    }
+    await client.query(readFileSync(`prisma/migrations/${migration}/migration.sql`, "utf8"));
+  }
+  const late = (await client.query(`SELECT "amount","sandboxAmount" FROM "UserCredit" WHERE "id"='late-credit'`)).rows[0];
+  assert.deepEqual(late, { amount: 0, sandboxAmount: 24 });
   const credit = (
     await client.query(
       `SELECT "amount","sandboxAmount" FROM "UserCredit" WHERE "id"='credit'`,
@@ -63,7 +69,7 @@ try {
       `SELECT "environment" FROM "RevenueCatPurchase" ORDER BY "id"`,
     )
   ).rows.map((row) => row.environment);
-  assert.deepEqual(purchases, ["sandbox", "sandbox", "legacy", "legacy"]);
+  assert.deepEqual(purchases, ["sandbox", "sandbox", "sandbox", "legacy", "legacy"]);
   const rows = (
     await client.query(
       `SELECT "id","status","error" FROM "Analysis" ORDER BY "id"`,

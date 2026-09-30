@@ -136,7 +136,7 @@ The core model connects users to devices, sessions, chats, messages, analyses, c
 
 Production runs at [chatlyzerai.com](https://chatlyzerai.com) on Deno Deploy with Neon PostgreSQL. `deno.json` configures the Next.js build; releases validate the production environment and apply Prisma migrations from the release checkout before publishing. No VPS, SSH, Nginx, or PM2 is required. See the [cloud deployment guide](docs/cloud-deployment.md) for setup, service limits, and the live acceptance record.
 
-RevenueCat remains in sandbox mode until merchant onboarding and historical purchase reconciliation are complete. Interrupted analysis reservations recover through the Deno scheduled job or the maintenance CLI.
+Public production excludes sandbox credits. Checkout stays unavailable until merchant onboarding provides a live Web Billing key. Interrupted analysis reservations recover through the Deno scheduled job or the maintenance CLI.
 
 ## License
 

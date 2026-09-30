@@ -9,7 +9,7 @@ export const serverEnvSchema = z.object({
   OPENAI_API_KEY: z.string().min(1, "OPENAI_API_KEY is required"),
   GOOGLE_ALLOWED_CLIENT_IDS: z.string().optional(),
   TRUSTED_CLIENT_IP_HEADER: z.enum(["none", "cf-connecting-ip", "x-forwarded-for", "x-real-ip"]).default("none"),
-  REVENUECAT_FULFILLMENT_MODE: z.enum(["sandbox", "production"]).default("sandbox"),
+  REVENUECAT_FULFILLMENT_MODE: z.enum(["sandbox", "production"]).default("production"),
   NEXT_PUBLIC_APP_URL: z.string().url().optional().or(z.literal("")),
   GOOGLE_OAUTH2_URL: z.string().url().optional().or(z.literal("")),
   REVENUECAT_SECRET_API_KEY: z.string().optional(),

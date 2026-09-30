@@ -46,6 +46,10 @@ jobs:
         with:
           node-version: "22"
           cache: npm
+      - name: Setup Deno
+        uses: denoland/setup-deno@22d081ff2d3a40755e97629de92e3bcbfa7cf2ed
+        with:
+          deno-version: "2.9.5"
       - run: npm ci
       - run: npx prisma validate
       - run: npx prisma migrate deploy
@@ -70,3 +74,12 @@ jobs:
             sleep 2
           done
           node scripts/smoke-test.mjs http://localhost:3000
+      - name: HTTP smoke test under Deno
+        run: |
+          PORT=3001 HOSTNAME=127.0.0.1 deno run -A --unstable-cron .next/standalone/server.js > /tmp/chatlyzer-deno.log 2>&1 &
+          trap 'kill $! 2>/dev/null || true' EXIT
+          for attempt in $(seq 1 30); do
+            if curl --fail --silent http://127.0.0.1:3001/api/health; then break; fi
+            sleep 2
+          done
+          node scripts/smoke-test.mjs http://127.0.0.1:3001
