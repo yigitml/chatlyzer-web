@@ -14,7 +14,8 @@ export async function register() {
       };
     }
   ).Deno;
-  if (typeof deno?.cron !== "function") return;
+  // Previews without a database can still warm up public pages.
+  if (typeof deno?.cron !== "function" || !process.env.DATABASE_URL) return;
 
   const { reconcileAnalysisJobs } = await import("./backend/lib/analysisJobs");
   deno.cron(
