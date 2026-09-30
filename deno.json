@@ -3,8 +3,12 @@
   "deploy": {
     "org": "yigitml",
     "app": "chatlyzer-web",
-    "framework": "nextjs",
     "install": "npm ci",
-    "build": "npm run build"
+    "build": "npm run build",
+    "runtime": {
+      "type": "dynamic",
+      "entrypoint": "server.js",
+      "cwd": ".next/standalone"
+    }
   }
 }

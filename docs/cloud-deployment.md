@@ -1,6 +1,6 @@
 # Cloud deployment
 
-Production runs at [chatlyzerai.com](https://chatlyzerai.com) on Deno Deploy with Neon PostgreSQL. The provider hostname is [chatlyzer-web.yigitml.deno.net](https://chatlyzer-web.yigitml.deno.net). `deno.json` uses the Next.js preset and a local-source release.
+Production runs at [chatlyzerai.com](https://chatlyzerai.com) on Deno Deploy with Neon PostgreSQL. The provider hostname is [chatlyzer-web.yigitml.deno.net](https://chatlyzer-web.yigitml.deno.net). The local-source release starts the prepared standalone server from `.next/standalone`. The dashboard and `deno.json` use a dynamic runtime with `server.js` as its entrypoint.
 
 ## Configuration
 
@@ -13,14 +13,14 @@ Use Node 22 and TLS-enabled PostgreSQL. Keep signing secrets stable across relea
 - Set public `NEXT_PUBLIC_` values in Build and Production. Rebuild when they change.
 - Give previews a separate test database and provider credentials; never connect previews to production data.
 
-The health endpoint validates production configuration and database connectivity. Deno's Next.js artifact does not include repository maintenance tooling, so apply migrations from the release checkout before publishing.
+The health endpoint validates production configuration and database connectivity. Apply migrations from the release checkout before publishing.
 
 ## Release
 
 1. Require passing GitHub CI and review the migration impact.
 2. Back up production and verify restoration into an isolated local database.
 3. Load protected production credentials, run `npm run check:env:production`, then `npx prisma migrate deploy`.
-4. Publish the clean checkout with `deno deploy --prod`.
+4. Publish the clean checkout with `deno deploy /absolute/path/to/clean-checkout --prod`.
 5. Verify health, public pages, static assets, authentication, chat persistence, analysis, and purchase synchronization on the production origin.
 6. Check the Deno Cron dashboard for `Recover interrupted analyses`. It runs every minute and refunds expired analysis reservations without retaining or replaying conversations.
 
