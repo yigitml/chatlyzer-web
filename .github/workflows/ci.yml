@@ -32,8 +32,11 @@ jobs:
       OPENAI_API_KEY: ci-mocked-openai
       NEXT_PUBLIC_GOOGLE_CLIENT_ID: ci.apps.googleusercontent.com
       REVENUECAT_SECRET_API_KEY: ci-mocked-revenuecat
-      REVENUECAT_WEBHOOK_SECRET: ci-webhook-authorization
+      REVENUECAT_WEBHOOK_SECRET: ci-webhook-authorization-8779f5f01d78186632329d472d676edf
       NEXT_PUBLIC_REVENUECAT_WEB_API_KEY: ci-web-api-key
+      NEXT_PUBLIC_POSTHOG_KEY: ""
+      REVENUECAT_FULFILLMENT_MODE: sandbox
+      TRUSTED_CLIENT_IP_HEADER: none
       NEXT_TELEMETRY_DISABLED: "1"
     steps:
       - name: Checkout code
@@ -46,6 +49,12 @@ jobs:
       - run: npm ci
       - run: npx prisma validate
       - run: npx prisma migrate deploy
+      - run: npm run check:schema
+      - run: npm run test:migrations
+      - name: Compare mobile contract surface
+        run: |
+          git clone --depth 1 https://github.com/yigitml/chatlyzer-mobile.git /tmp/chatlyzer-mobile
+          CHATLYZER_MOBILE_ROOT=/tmp/chatlyzer-mobile npm run check:contracts
       - run: npm run check:env:production
       - run: npm run typecheck
       - run: npm run lint

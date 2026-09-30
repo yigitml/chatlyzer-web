@@ -1,5 +1,7 @@
 import { NextRequest } from "next/server";
-import prisma from "@/backend/lib/prisma";
+import { rawPrisma } from "@/backend/lib/prisma";
+import { lockActiveAccount } from "@/backend/lib/accountLock";
+import { apiErrorResponse } from "@/backend/lib/apiBoundary";
 import { ApiResponse } from "@/shared/types/api/apiResponse";
 import { withProtectedRoute } from "@/backend/middleware/jwtAuth";
 export const POST = withProtectedRoute(async (request: NextRequest) => {
@@ -11,18 +13,13 @@ export const POST = withProtectedRoute(async (request: NextRequest) => {
       return ApiResponse.error("Unauthorized", 401).toResponse();
     }
 
-    // Soft-delete only this specific device session (not all sessions)
-    if (deviceId) {
-      await prisma.userDevice.update({
-        where: {
-          userId_deviceId: {
-            userId,
-            deviceId,
-          },
-        },
-        data: { deletedAt: new Date() },
+    await rawPrisma.$transaction(async tx => {
+      await lockActiveAccount(tx, userId, request.user!.tokenVersion);
+      await tx.userDevice.updateMany({
+        where: { userId, deviceId, loginGeneration: request.user!.loginGeneration, deletedAt: null },
+        data: { deletedAt: new Date(), refreshTokenVersion: { increment: 1 } },
       });
-    }
+    });
 
     return ApiResponse.success({
       message: "Logged out successfully",
@@ -30,7 +27,6 @@ export const POST = withProtectedRoute(async (request: NextRequest) => {
       "Set-Cookie": `refreshToken=; HttpOnly; Path=/api/auth/mobile/refresh; Max-Age=0; Secure; SameSite=Strict`,
     });
   } catch (error) {
-    console.error("Error during logout:", error);
-    return ApiResponse.error("Logout failed", 500).toResponse();
+    return apiErrorResponse(error, "Logout failed");
   }
 });

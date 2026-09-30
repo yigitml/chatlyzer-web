@@ -1,156 +1,40 @@
 import { NextRequest } from "next/server";
-import jwt from "jsonwebtoken";
-import prisma from "@/backend/lib/prisma";
+import { randomBytes, timingSafeEqual } from "node:crypto";
 import { ApiResponse } from "@/shared/types/api/apiResponse";
-import type { AuthWebPostRequest } from "@/shared/types/api/apiRequest";
 import { withAuthRateLimiter } from "@/backend/middleware/rateLimiter";
 import { toPublicUser } from "@/shared/types/api/publicDtos";
+import { verifyGoogleIdToken } from "@/backend/lib/verifyGoogleIdToken";
+import { login, tokens, accessCookie, refreshCookie } from "@/backend/lib/authSession";
+import { ApiError, apiErrorResponse, readJson } from "@/backend/lib/apiBoundary";
 
+function csrfCookie(value: string, maxAge: number) {
+  return `loginCsrf=${value}; HttpOnly; Path=/api/auth/web; Max-Age=${maxAge}${process.env.NODE_ENV === "production" ? "; Secure" : ""}; SameSite=Strict`;
+}
+function allowedOrigin(request: NextRequest) {
+  return process.env.NEXT_PUBLIC_APP_URL ? new URL(process.env.NEXT_PUBLIC_APP_URL).origin : request.nextUrl.origin;
+}
+/** Browser initiation binds the following credential exchange to this browser. */
+export const GET = withAuthRateLimiter(async () => {
+  const csrfToken = randomBytes(32).toString("hex");
+  return ApiResponse.success({ csrfToken }).toResponse({ "Set-Cookie": csrfCookie(csrfToken, 600), "Cache-Control": "no-store" });
+});
 export const POST = withAuthRateLimiter(async (request: NextRequest) => {
   try {
-    const data: AuthWebPostRequest = await request.json();
-    const { accessToken, sessionId } = data;
-
-    if (
-      !accessToken ||
-      typeof accessToken !== "string" ||
-      accessToken.length === 0
-    ) {
-      return ApiResponse.error("Invalid access token", 400).toResponse();
-    }
-
-    if (!sessionId || typeof sessionId !== "string" || sessionId.length < 8) {
-      return ApiResponse.error("Invalid session ID", 400).toResponse();
-    }
-
-    const userInfoResponse = await fetch(
-      `${process.env.GOOGLE_OAUTH2_URL || "https://www.googleapis.com/oauth2/v3"}/userinfo`,
-      {
-        headers: { Authorization: `Bearer ${accessToken}` },
-      },
-    );
-
-    if (!userInfoResponse.ok) {
-      return ApiResponse.error("Failed to fetch user info", 401).toResponse();
-    }
-
-    const payload = await userInfoResponse.json();
-
-    if (!payload.email || !payload.name || payload.email_verified !== true) {
-      return ApiResponse.error("Invalid user info", 401).toResponse();
-    }
-
-    let user;
-    user = await prisma.user.findUnique({
-      where: { email: payload.email },
-    });
-
-    if (user?.deletedAt || user?.isActive === false) {
-      return ApiResponse.error("Account has been deleted", 403).toResponse();
-    }
-
-    if (!user) {
-      user = await prisma.user.create({
-        data: {
-          email: payload.email,
-          name: payload.name,
-          googleId: payload.sub,
-          image: payload.picture,
-          tokenVersion: 0,
-        },
-      });
-
-      const subscription = await prisma.subscription.create({
-        data: {
-          userId: user.id,
-          name: "Free Plan",
-          price: 0,
-          durationDays: 30,
-          createdAt: new Date(),
-          isActive: true,
-        },
-      });
-      await prisma.userCredit.create({
-        data: {
-          userId: user.id,
-          type: "ANALYSIS",
-          totalAmount: 128,
-          amount: 0,
-          subscriptionId: subscription.id,
-        },
-      });
-    }
-
-    await prisma.userSession.upsert({
-      where: {
-        userId_sessionId: {
-          userId: user.id,
-          sessionId: sessionId,
-        },
-      },
-      update: {
-        deletedAt: null,
-        lastActivityAt: new Date(),
-      },
-      create: {
-        userId: user.id,
-        sessionId: sessionId,
-        lastActivityAt: new Date(),
-      },
-    });
-
-    await prisma.user.update({
-      where: { id: user.id },
-      data: {
-        lastLoginAt: new Date(),
-      },
-    });
-
-    const jwtToken = jwt.sign(
-      {
-        userId: user.id,
-        email: user.email,
-        sessionId: sessionId,
-        isMobile: false,
-        tokenVersion: user.tokenVersion,
-        iat: Math.floor(Date.now() / 1000),
-      },
-      process.env.JWT_SECRET!,
-      { expiresIn: "7d" },
-    );
-
-    const refreshToken = jwt.sign(
-      {
-        userId: user.id,
-        sessionId: sessionId,
-        tokenVersion: user.tokenVersion,
-      },
-      process.env.REFRESH_TOKEN_SECRET!,
-      { expiresIn: "30d" },
-    );
-
-    const accessTokenMaxAge = 7 * 24 * 60 * 60; // 7 days in seconds
-    const isProduction = process.env.NODE_ENV === "production";
-    const securePart = isProduction ? "; Secure" : "";
-
-    const response = ApiResponse.success({
-      expiresAt: Math.floor(Date.now() / 1000) + accessTokenMaxAge,
-      user: toPublicUser(user),
-    }).toResponse();
-
-    response.headers.append(
-      "Set-Cookie",
-      `accessToken=${jwtToken}; HttpOnly; Path=/; Max-Age=${accessTokenMaxAge}${securePart}; SameSite=Strict`
-    );
-    response.headers.append(
-      "Set-Cookie",
-      `refreshToken=${refreshToken}; HttpOnly; Path=/api/auth/web/refresh; Max-Age=${30 * 24 * 60 * 60}${securePart}; SameSite=Strict`
-    );
-
+    if (request.headers.get("origin") !== allowedOrigin(request)) throw new ApiError("Untrusted login origin", 403);
+    const csrfHeader = request.headers.get("x-csrf-token") || "";
+    const csrf = request.cookies.get("loginCsrf")?.value || "";
+    if (!/^[a-f0-9]{64}$/.test(csrf) || csrfHeader.length !== csrf.length ||
+      !timingSafeEqual(Buffer.from(csrf), Buffer.from(csrfHeader))) throw new ApiError("Invalid login state", 403);
+    const data = await readJson(request, 32768) as Record<string, unknown> | null;
+    if (!data || typeof data.idToken !== "string" || !data.idToken || typeof data.sessionId !== "string" ||
+      data.sessionId.length < 8 || data.sessionId.length > 200) throw new ApiError("Invalid login request", 400);
+    const identity = await verifyGoogleIdToken(data.idToken);
+    const { user, loginGeneration, refreshTokenVersion } = await login(identity, data.sessionId, false);
+    const credentials = tokens(user, data.sessionId, false, loginGeneration, refreshTokenVersion);
+    const response = ApiResponse.success({ expiresAt: Math.floor(Date.now() / 1000) + 900, user: toPublicUser(user) }).toResponse({ "Cache-Control": "no-store" });
+    response.headers.append("Set-Cookie", accessCookie(credentials.token));
+    response.headers.append("Set-Cookie", refreshCookie(credentials.refreshToken, false));
+    response.headers.append("Set-Cookie", csrfCookie("", 0));
     return response;
-  } catch (error: any) {
-    console.error("Web auth error:", error?.message || error);
-    if (error?.code) console.error("Prisma error code:", error.code, "meta:", error?.meta);
-    return ApiResponse.error("Authentication failed", 500).toResponse();
-  }
+  } catch (error) { return apiErrorResponse(error, "Authentication failed"); }
 });

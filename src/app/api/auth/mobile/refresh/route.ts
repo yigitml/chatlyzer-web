@@ -1,114 +1,22 @@
 import { NextRequest } from "next/server";
-import jwt from "jsonwebtoken";
-import prisma from "@/backend/lib/prisma";
 import { ApiResponse } from "@/shared/types/api/apiResponse";
-import { getRequiredServerEnv } from "@/shared/config/env";
-import { logger } from "@/backend/lib/logger";
 import { withAuthRateLimiter } from "@/backend/middleware/rateLimiter";
 import { authRefreshSchema } from "@/shared/types/api/requestSchemas";
+import { ApiError, apiErrorResponse, readJson } from "@/backend/lib/apiBoundary";
+import { rotate, refreshCookie } from "@/backend/lib/authSession";
 
 export const POST = withAuthRateLimiter(async (request: NextRequest) => {
   try {
-    let bodyRefreshToken: string | undefined;
-    try {
-      const body = authRefreshSchema.parse(await request.json());
-      bodyRefreshToken = body.refreshToken;
-    } catch {
-      bodyRefreshToken = undefined;
+    let bodyToken: string | undefined;
+    if (request.body !== null) {
+      const parsed = authRefreshSchema.safeParse(await readJson(request, 32768));
+      if (!parsed.success) throw new ApiError("Invalid refresh request", 400);
+      bodyToken = parsed.data.refreshToken;
     }
-
-    const refreshToken =
-      bodyRefreshToken || request.cookies.get("refreshToken")?.value;
-    if (!refreshToken) {
-      return ApiResponse.error("No refresh token provided", 401).toResponse();
-    }
-
-    let decoded: any;
-    try {
-      decoded = jwt.verify(refreshToken, getRequiredServerEnv("REFRESH_TOKEN_SECRET"), {
-        algorithms: ["HS256"],
-      });
-    } catch {
-      return ApiResponse.error("Invalid refresh token", 401).toResponse();
-    }
-
-    const user = await prisma.user.findUnique({
-      where: { id: decoded.userId },
-      include: { devices: true },
-    });
-
-    if (!user || user.deletedAt || !user.isActive) {
-      return ApiResponse.error("User not found", 401).toResponse();
-    }
-
-    if (user.tokenVersion !== decoded.tokenVersion) {
-      return ApiResponse.error("Token has been revoked", 401).toResponse();
-    }
-
-    const device = user.devices.find(
-      (d: any) => d.deviceId === decoded.deviceId && d.deletedAt === null,
-    );
-    if (!device) {
-      return ApiResponse.error("Device session revoked", 401).toResponse();
-    }
-
-    if (device.refreshTokenVersion !== decoded.refreshTokenVersion) {
-      return ApiResponse.error("Refresh token has been rotated", 401).toResponse();
-    }
-
-    const nextRefreshTokenVersion = device.refreshTokenVersion + 1;
-
-    await prisma.userDevice.update({
-      where: {
-        userId_deviceId: {
-          userId: user.id,
-          deviceId: decoded.deviceId,
-        },
-      },
-      data: {
-        lastLoginAt: new Date(),
-        refreshTokenVersion: nextRefreshTokenVersion,
-      },
-    });
-
-    await prisma.user.update({
-      where: { id: user.id },
-      data: {
-        lastLoginAt: new Date(),
-      },
-    });
-
-    const newJwtToken = jwt.sign(
-      {
-        userId: user.id,
-        email: user.email,
-        deviceId: decoded.deviceId,
-        isMobile: true,
-        tokenVersion: user.tokenVersion,
-        iat: Math.floor(Date.now() / 1000),
-      },
-      getRequiredServerEnv("JWT_SECRET"),
-      { expiresIn: "15m" },
-    );
-
-    const newRefreshToken = jwt.sign(
-      {
-        userId: user.id,
-        deviceId: decoded.deviceId,
-        tokenVersion: user.tokenVersion,
-        refreshTokenVersion: nextRefreshTokenVersion,
-      },
-      getRequiredServerEnv("REFRESH_TOKEN_SECRET"),
-      { expiresIn: "30d" },
-    );
-
-    return ApiResponse.success({
-      token: newJwtToken,
-      refreshToken: newRefreshToken,
-      expiresAt: new Date(Date.now() + 15 * 60 * 1000).toISOString(),
-    }).toResponse();
-  } catch (error: unknown) {
-    logger.error("Refresh token error", error);
-    return ApiResponse.error("Token refresh failed", 500).toResponse();
-  }
+    const token = bodyToken || request.cookies.get("refreshToken")?.value;
+    if (!token) throw new ApiError("No refresh token provided", 401);
+    const credentials = await rotate(token, true);
+    return ApiResponse.success({ ...credentials, expiresAt: new Date(Date.now() + 900000).toISOString() })
+      .toResponse({ "Set-Cookie": refreshCookie(credentials.refreshToken, true), "Cache-Control": "no-store" });
+  } catch (error) { return apiErrorResponse(error, "Token refresh failed"); }
 });

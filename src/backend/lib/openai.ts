@@ -51,299 +51,149 @@ IMPORTANT: For each analysis section, you must:
 Provide a complete analysis for ALL categories in the exact format specified in the schema.`;
 
 
-const formatTimestamp = (timestamp: Date | string): string => {
-  const date = new Date(timestamp);
-  const hours = date.getHours().toString().padStart(2, '0');
-  const minutes = date.getMinutes().toString().padStart(2, '0');
-  return `${hours}:${minutes}`;
-};
+type ProviderMessage = { id: string; sender: string; timestamp: string; content: string };
+const encoder = encodingForModel("gpt-4");
+const INPUT_TOKEN_LIMIT = 12_000;
+const createOpenAIClient = () => new OpenAI({ apiKey: getRequiredServerEnv("OPENAI_API_KEY"), timeout: 60_000, maxRetries: 0 });
 
-const createMinimalChat = (chatJson: any) => {
-  return {
-    title: chatJson.title,
-    messages: chatJson.messages.map((msg: any) => {
-      return {
-        sender: msg.sender,
-        timestamp: formatTimestamp(msg.timestamp),
-        content: msg.content,
-        ...(msg.metadata && { metadata: msg.metadata })
-      };
-    })
-  };
-};
+function normalizeMessages(messages: any[]): ProviderMessage[] {
+  return messages.map((message, index) => ({
+    id: String(message.id || `input-${index}`),
+    sender: String(message.sender),
+    timestamp: new Date(message.timestamp).toISOString(),
+    content: String(message.content),
+  })).sort((a, b) => a.timestamp.localeCompare(b.timestamp) || a.id.localeCompare(b.id));
+}
 
-const createOpenAIClient = () => new OpenAI({
-  apiKey: getRequiredServerEnv("OPENAI_API_KEY"),
-});
-
-const getAnalysisTypeFromSchema = (schema: ChatlyzerSchemaType): AnalysisType => {
-  const schemaEntries = Object.entries(ChatlyzerSchemas);
-  for (const [key, value] of schemaEntries) {
-    if (value === schema) {
-      return key as AnalysisType;
-    }
-  }
-  return "ChatStats";
-};
-
-const parseOpenAIResponse = (responseContent: string | null) => {
-  if (!responseContent) {
-    throw new Error("No content found in response");
-  }
-  
-  const parsedContent = JSON.parse(responseContent);
-  return parsedContent.analysis || parsedContent.all_analyses || parsedContent;
-};
-
-const createSystemPrompt = (analysisType: AnalysisType, detectedLanguage?: string): string => {
-  const basePrompt = ANALYSIS_PROMPTS[analysisType] || ANALYSIS_PROMPTS.ChatStats;
-  
-  let prompt = `${basePrompt} ${SHARED_INSTRUCTIONS}`;
-  if (detectedLanguage && detectedLanguage !== "UNKNOWN") {
-    prompt += `\n\nIMPORTANT: The detected primary language of this chat is '${detectedLanguage}' (ISO 639-1 code). You MUST write your entire analysis and all explanations exactly in this language.`;
-  }
-  
-  return prompt.trim();
-};
-
-const getDetectedLanguage = (messages: any[]): string => {
-  if (!messages || messages.length === 0) return "UNKNOWN";
-  
-  // Select a message from the middle of the convo
-  const middleIndex = Math.floor(messages.length / 2);
-  let contentToDetect = messages[middleIndex]?.content || "";
-  
-  // If the middle message is too short (e.g., just an emoji or "ok"),
-  // try to find a slightly longer message nearby to ensure accurate detection
-  if (contentToDetect.length < 5) {
-    let offset = 1;
-    while (middleIndex - offset >= 0 || middleIndex + offset < messages.length) {
-      if (middleIndex + offset < messages.length && messages[middleIndex + offset]?.content?.length >= 5) {
-        contentToDetect = messages[middleIndex + offset].content;
-        break;
-      }
-      if (middleIndex - offset >= 0 && messages[middleIndex - offset]?.content?.length >= 5) {
-        contentToDetect = messages[middleIndex - offset].content;
-        break;
-      }
-      offset++;
-      if (offset > 15) break; // Limit search radius
-    }
-  }
-
-  const detected = detect(contentToDetect);
-  return detected || "UNKNOWN";
-};
-
-const fetchChatData = async (chatId: string) => {
-  const chatJson = await prisma.chat.findUnique({ 
-    where: { id: chatId }, 
-    include: { 
-      messages: {
-        orderBy: { timestamp: 'asc' }
-      }
-    } 
+/** Budget serialized provider fields; arbitrary metadata is deliberately omitted. */
+export const smartChatSampler = (messages: any[], targetTokenLimit = 10_000): ProviderMessage[] => {
+  if (!Number.isSafeInteger(targetTokenLimit) || targetTokenLimit <= 0) throw new Error("Invalid input budget");
+  const normalized = normalizeMessages(messages || []).map(message => ({ ...message,
+    // Qualitative excerpts bound tokenizer CPU on long repetitive exports. Exact
+    // metrics still use full messages, and sampling disclosure includes excerpts.
+    content: message.content.length > 2000 ? `${message.content.slice(0,1500)}\n[content excerpted]\n${message.content.slice(-500)}` : message.content,
+  }));
+  // Tokenize bounded individual records, never an arbitrarily large/repetitive blob.
+  const costs = normalized.map(message => {
+    const json = JSON.stringify(message);
+    return Buffer.byteLength(json, "utf8") > targetTokenLimit * 8 ? Infinity : encoder.encode(json).length + 1;
   });
-
-  if (!chatJson) {
-    throw new Error("Chat not found");
+  const total = costs.reduce((sum, cost) => sum + cost, 2);
+  if (total <= targetTokenLimit) return normalized;
+  const selected: ProviderMessage[] = [];
+  const finiteTotal = costs.filter(Number.isFinite).reduce((sum,cost)=>sum+cost,2);
+  const approximateCount = Math.max(1, Math.min(normalized.length, Math.floor(normalized.length * targetTokenLimit / finiteTotal)));
+  let used = 2;
+  for (let i = 0; i < approximateCount; i++) {
+    const index = Math.floor(i * normalized.length / approximateCount);
+    if (used + costs[index] <= targetTokenLimit) { selected.push(normalized[index]); used += costs[index]; }
   }
+  // JSON boundary token merges may differ from record sums; trim until exact serialization fits.
+  while (selected.length && encoder.encode(JSON.stringify(selected)).length > targetTokenLimit) selected.pop();
 
-  return chatJson;
+  return selected;
 };
+export const smallChatBuilder = (messages: any[]) => smartChatSampler(messages);
 
-export async function analyzeChat<T extends ChatlyzerSchemaType>(
-  chatId: string, 
-  schema: T,
-): Promise<z.infer<T>> {
-  try {
-    const chatJson = await fetchChatData(chatId);
-    const minimalChat = createMinimalChat(chatJson);
-    const openai = createOpenAIClient();
-    
-    const detectedLanguage = getDetectedLanguage(minimalChat.messages);
-    const analysisType = getAnalysisTypeFromSchema(schema);
-    const systemPrompt = createSystemPrompt(analysisType, detectedLanguage);
-    const content = `Analyze this chat and provide a complete ${analysisType} analysis following the exact format in your instructions:\nChat: ${JSON.stringify(minimalChat)}`;
-
-    console.log(`[analyzeChat] Analyzing chat ${chatId}, content length: ${content.length} chars`);
-    const response = await openai.chat.completions.create({
-      model: MODELS.MAIN,
-      messages: [
-        { role: "system", content: systemPrompt },
-        { 
-          role: "user", 
-          content: content
-        }
-      ],
-      response_format: zodResponseFormat(schema, "analysis")
-    });
-    
-    const analysisData = parseOpenAIResponse(response.choices[0].message.content);
-    return schema.parse(analysisData) as z.infer<T>;
-  } catch (error) {
-    console.error("Error in analyzeChat:", error);
-    throw new Error("Failed to analyze chat");
-  }
-}
-
-export async function analyzeAllChatTypes(chatId: string): Promise<z.infer<typeof ChatlyzerSchemas.AllAnalyses>> {
-  try {
-    const chatJson = await fetchChatData(chatId);
-    const minimalChat = createMinimalChat(chatJson);
-    const openai = createOpenAIClient();
-    
-    const detectedLanguage = getDetectedLanguage(minimalChat.messages);
-    let systemPrompt = `${COMPREHENSIVE_ANALYSIS_PROMPT}\n\n${SHARED_INSTRUCTIONS}`;
-    if (detectedLanguage && detectedLanguage !== "UNKNOWN") {
-      systemPrompt += `\n\nIMPORTANT: The detected primary language of this chat is '${detectedLanguage}' (ISO 639-1 code). You MUST write your entire analysis and all explanations exactly in this language.`;
+/** Exact UTC statistics over every active input message, before qualitative sampling. */
+export function deterministicChatStats(messages: any[]) {
+  const all = normalizeMessages(messages);
+  const counts = new Map<string, { messages: number; words: number; emojis: Map<string, number>; responses: number[]; starts: number; unanswered: number }>();
+  const days = new Map<string, number>();
+  let wordCount = 0, emojiCount = 0;
+  for (let i = 0; i < all.length; i++) {
+    const message = all[i];
+    const stat = counts.get(message.sender) || { messages: 0, words: 0, emojis: new Map(), responses: [] as number[], starts: 0, unanswered: 0 };
+    counts.set(message.sender, stat);
+    const words = message.content.trim().split(/\s+/u).filter(Boolean).length;
+    stat.messages++; stat.words += words; wordCount += words;
+    for (const emoji of message.content.match(/\p{Extended_Pictographic}(?:\uFE0F|\p{Emoji_Modifier})?(?:\u200D\p{Extended_Pictographic}(?:\uFE0F|\p{Emoji_Modifier})?)*/gu) || []) {
+      stat.emojis.set(emoji, (stat.emojis.get(emoji) || 0) + 1); emojiCount++;
     }
-    systemPrompt = systemPrompt.trim();
-
-    const smallChat = smartChatSampler(minimalChat.messages);
-
-    const response = await openai.chat.completions.create({
-      model: MODELS.MAIN,
-      messages: [
-        { role: "system", content: systemPrompt },
-        { 
-          role: "user", 
-          content: `Analyze this chat comprehensively across all analysis types and provide the complete multi-faceted analysis:\nChat: ${JSON.stringify(smallChat)}`
-        }
-      ],
-      response_format: zodResponseFormat(ChatlyzerSchemas.AllAnalyses, "all_analyses")
-    });
-    
-    const analysisData = parseOpenAIResponse(response.choices[0].message.content);
-    return ChatlyzerSchemas.AllAnalyses.parse(analysisData);
-  } catch (error) {
-    console.error("Error in analyzeAllChatTypes:", error);
-    throw new Error(`Failed to perform comprehensive chat analysis, ${error}`);
+    const day = message.timestamp.slice(0, 10); days.set(day, (days.get(day) || 0) + 1);
+    const previous = all[i - 1];
+    const gap = previous ? (Date.parse(message.timestamp) - Date.parse(previous.timestamp)) / 1000 : Infinity;
+    if (!previous || gap >= 6 * 3600) {
+      stat.starts++;
+      if (previous) counts.get(previous.sender)!.unanswered++;
+    }
+    if (previous && previous.sender !== message.sender) stat.responses.push(gap);
   }
-}
-
-// Helper function to create minimal chat structure from raw messages
-const createMinimalChatFromMessages = (title: string, messages: any[]) => {
+  if (all.length) counts.get(all.at(-1)!.sender)!.unanswered++;
+  const entries = [...counts.entries()];
+  const sortedDays = [...days.keys()].sort();
+  let maxStreak = 0, current = 0;
+  for (let i = 0; i < sortedDays.length; i++) {
+    current = i && Date.parse(sortedDays[i]) - Date.parse(sortedDays[i - 1]) === 86_400_000 ? current + 1 : 1;
+    maxStreak = Math.max(maxStreak, current);
+  }
+  const mostActiveDay = [...days.entries()].sort((a,b) => b[1] - a[1] || a[0].localeCompare(b[0]))[0]?.[0] || "";
   return {
-    title,
-    messages: messages.map((msg: any) => {
-      return {
-        sender: msg.sender,
-        timestamp: formatTimestamp(msg.timestamp),
-        content: msg.content,
-        ...(msg.metadata && { metadata: msg.metadata })
-      };
-    })
+    totals: { messageCount: all.length, wordCount, emojiCount, wordsPerUser: entries.map(([username,s]) => ({ username, wordCount: s.words })), messagesPerUser: entries.map(([username,s]) => ({ username, messageCount: s.messages })) },
+    emojiUsage: entries.map(([username,s]) => ({ username, emojis: [...s.emojis].map(([emoji,count]) => ({ emoji,count })) })),
+    avgResponseTime: entries.map(([username,s]) => ({ username, responseTimeSeconds: s.responses.length ? s.responses.reduce((a,b)=>a+b,0)/s.responses.length : 0 })),
+    initiatorStats: { mostLikelyToStartConvo: [...entries].sort((a,b)=>b[1].starts-a[1].starts)[0]?.[0] || "", mostGhosted: [...entries].sort((a,b)=>b[1].unanswered-a[1].unanswered)[0]?.[0] || "", openerFrequency: entries.map(([username,s])=>({username,timesStarted:s.starts})) },
+    chatStreak: { maxConsecutiveDays: maxStreak, currentStreakDays: current, mostActiveDay },
   };
-};
+}
 
-export const smallChatBuilder = (messages: any[]) => {
-  // Deprecated: Use smartChatSampler instead for better token management
-  return smartChatSampler(messages, 100000);
-};
+async function fetchChatData(chatId: string, userId: string) {
+  const chat = await prisma.chat.findFirst({ where: { id: chatId, ...(userId ? { userId } : {}), deletedAt: null, user: { isActive: true, deletedAt: null } }, include: { messages: { where: { deletedAt: null, ...(userId ? { userId } : {}) }, orderBy: [{ timestamp: "asc" }, { id: "asc" }] } } });
+  if (!chat) throw new Error("Active owned chat not found");
+  return chat;
+}
 
-/**
- * Smartly samples messages to fit within a target token limit.
- * Estimates tokens conservatively (1 token ~= 4 chars) and samples uniformly if limit is exceeded.
- */
-export const smartChatSampler = (messages: any[], targetTokenLimit: number = 10000) => {
-  if (!messages || messages.length === 0) return [];
+function getDetectedLanguage(messages: ProviderMessage[]) { return detect(messages.find(m => m.content.length >= 5)?.content || "") || "UNKNOWN"; }
+function boundedPayload(title: string, messages: any[], systemPrompt: string) {
+  const all = normalizeMessages(messages);
+  const sample = smartChatSampler(all, 8_000);
+  if (!sample.length) throw new Error("No message fits the provider input budget");
+  const sampling = { totalMessages: all.length, sampledMessages: sample.length, qualitativeSampled: sample.length !== all.length || sample.some(message => all.find(original => original.id === message.id)?.content !== message.content), statisticsScope: "full_conversation", timeBasis: "UTC", currentStreakBasis: "latest_message_day" };
+  const exactStats = deterministicChatStats(all);
+  const content = JSON.stringify({ title, messages: sample, sampling, exactStats });
+  if (encoder.encode(systemPrompt + content).length > INPUT_TOKEN_LIMIT) throw new Error("Serialized provider input exceeds budget");
+  return { content, sampling, exactStats, sample };
+}
 
-  // Use gpt-4 encoding (cl100k_base) as a safe proxy for gpt-4o-mini (o200k_base).
-  // cl100k_base is generally less efficient, so it provides a conservative estimate.
-  const enc = encodingForModel("gpt-4");
-
-  // Helper to count tokens for a message object
-  const countTokens = (msg: any) => {
-    // Estimate overhead for JSON structure (sender, timestamp keys etc)
-    // A safe buffer for JSON syntax overhead per message is ~20 tokens.
-    const overhead = 20; 
-    const contentTokens = enc.encode(msg.content || "").length;
-    const timestamp = msg.timestamp instanceof Date
-      ? msg.timestamp.toISOString()
-      : String(msg.timestamp || "");
-    const metadataTokens = enc.encode(msg.sender || "").length + enc.encode(timestamp).length;
-    
-    return contentTokens + metadataTokens + overhead;
-  };
-
-  let totalTokens = 0;
-  // Calculate total tokens first
-  for (const msg of messages) {
-    totalTokens += countTokens(msg);
+function sanitizeReferences(value: any, valid: Map<string, ProviderMessage>): void {
+  if (!value || typeof value !== "object") return;
+  for (const [key, child] of Object.entries(value)) {
+    if (Array.isArray(child) && (key === "messageRefs" || key === "standoutMoments")) {
+      value[key] = child.filter(ref => valid.has(ref.messageId)).map(ref => ({ ...ref, timestamp: valid.get(ref.messageId)!.timestamp, contentSnippet: valid.get(ref.messageId)!.content.slice(0, 240) }));
+    } else if (child && typeof child === "object") sanitizeReferences(child, valid);
   }
+}
 
-  // If within limit, return all
-  if (totalTokens <= targetTokenLimit) {
-    return messages;
-  }
-
-  // If over limit, we need to sample.
-  // We use a ratio based on total tokens to determine target count.
-  const ratio = targetTokenLimit / totalTokens;
-  const targetCount = Math.floor(messages.length * ratio);
-  
-  if (targetCount < 1) return messages.slice(0, 1);
-
-  const sampledMessages = [];
-  const interval = messages.length / targetCount;
-  let currentTokens = 0;
-  
-  // Sample uniformly
-  for (let i = 0; i < targetCount; i++) {
-    const index = Math.floor(i * interval);
-    if (index < messages.length) {
-      const msg = messages[index];
-      const tokens = countTokens(msg);
-      
-      // Stop if adding this message would exceed limit (strict enforcement)
-      if (currentTokens + tokens > targetTokenLimit) {
-        break; 
-      }
-      
-      sampledMessages.push(msg);
-      currentTokens += tokens;
-    }
-  }
-
-  console.log(`SmartSampler: Reduced ${messages.length} messages (${totalTokens} actual tokens) to ${sampledMessages.length} messages (${currentTokens} tokens) to fit ${targetTokenLimit} limit.`);
-  
-  return sampledMessages;
-};
-
-export async function analyzeAllChatTypesPrivate(
-  chatTitle: string, 
-  messages: any[]
-): Promise<z.infer<typeof ChatlyzerSchemas.AllAnalyses>> {
-  try {
-    const minimalChat = createMinimalChatFromMessages(chatTitle, messages);
-    const openai = createOpenAIClient();
-    
-    const detectedLanguage = getDetectedLanguage(minimalChat.messages);
-    let systemPrompt = `${COMPREHENSIVE_ANALYSIS_PROMPT}\n\n${SHARED_INSTRUCTIONS}`;
-    if (detectedLanguage && detectedLanguage !== "UNKNOWN") {
-      systemPrompt += `\n\nIMPORTANT: The detected primary language of this chat is '${detectedLanguage}' (ISO 639-1 code). You MUST write your entire analysis and all explanations exactly in this language.`;
-    }
-    systemPrompt = systemPrompt.trim();
-
-    const smallChat = smartChatSampler(minimalChat.messages);
-
-    const response = await openai.chat.completions.create({
-      model: MODELS.MAIN,
-      messages: [
-        { role: "system", content: systemPrompt },
-        { 
-          role: "user", 
-          content: `Analyze this chat comprehensively across all analysis types and provide the complete multi-faceted analysis:\nChat: ${JSON.stringify(smallChat)}`
-        }
-      ],
-      response_format: zodResponseFormat(ChatlyzerSchemas.AllAnalyses, "all_analyses")
-    });
-    
-    const analysisData = parseOpenAIResponse(response.choices[0].message.content);
-    return ChatlyzerSchemas.AllAnalyses.parse(analysisData);
-  } catch (error) {
-    console.error("Error in analyzeAllChatTypesPrivate:", error);
-    throw new Error(`Failed to perform comprehensive privacy chat analysis, ${error}`);
-  }
+async function comprehensive(title: string, messages: any[]): Promise<z.infer<typeof ChatlyzerSchemas.AllAnalyses>> {
+  const normalized = normalizeMessages(messages);
+  const language = getDetectedLanguage(normalized);
+  const systemPrompt = `${COMPREHENSIVE_ANALYSIS_PROMPT}\n${SHARED_INSTRUCTIONS}\nLanguage: ${language}. Exact numeric statistics are supplied; use them unchanged. Qualitative results describe only sampled messages; cite only supplied stable message IDs.`;
+  const payload = boundedPayload(title, normalized, systemPrompt);
+  const response = await createOpenAIClient().chat.completions.create({ model: MODELS.MAIN, messages: [{ role: "system", content: systemPrompt }, { role: "user", content: payload.content }], response_format: zodResponseFormat(ChatlyzerSchemas.AllAnalyses, "all_analyses"), max_completion_tokens: 12_000, store: false });
+  const raw = response.choices[0]?.message.content;
+  if (!raw) throw new Error("Empty provider output");
+  const parsed = JSON.parse(raw);
+  const output = ChatlyzerSchemas.AllAnalyses.parse(parsed.analysis || parsed.all_analyses || parsed);
+  Object.assign(output.analyses.chatStats, payload.exactStats);
+  for (const result of Object.values(output.analyses)) Object.assign(result, { sampling: payload.sampling });
+  sanitizeReferences(output, new Map(payload.sample.map(message => [message.id,message])));
+  return output;
+}
+export async function analyzeAllChatTypes(chatId: string, userId: string) {
+  const chat = await fetchChatData(chatId, userId);
+  return comprehensive(chat.title || "", chat.messages);
+}
+export async function analyzeAllChatTypesPrivate(title: string, messages: any[]) { return comprehensive(title, messages); }
+export async function analyzeChat<T extends ChatlyzerSchemaType>(chatId: string, schema: T, userId: string): Promise<z.infer<T>> {
+  const chat = await fetchChatData(chatId, userId);
+  const type = (Object.entries(ChatlyzerSchemas).find(([,value])=>value === schema)?.[0] || "ChatStats") as AnalysisType;
+  const prompt = `${ANALYSIS_PROMPTS[type] || ""} ${SHARED_INSTRUCTIONS}`;
+  const payload = boundedPayload(chat.title || "", chat.messages, prompt);
+  const response = await createOpenAIClient().chat.completions.create({ model: MODELS.MAIN, messages: [{ role:"system",content:prompt }, { role:"user",content:payload.content }], response_format:zodResponseFormat(schema,"analysis"), max_completion_tokens:12_000, store:false });
+  const raw = JSON.parse(response.choices[0]?.message.content || "null");
+  const output = schema.parse(raw?.analysis || raw) as z.infer<T>;
+  if (type === "ChatStats") Object.assign(output as object, payload.exactStats);
+  Object.assign(output as object, { sampling: payload.sampling });
+  sanitizeReferences(output, new Map(payload.sample.map(message => [message.id,message])));
+  return output;
 }

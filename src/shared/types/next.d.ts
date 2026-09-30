@@ -8,6 +8,7 @@ declare module "next/server" {
     isMobile?: boolean;
     deviceId?: string;
     tokenVersion?: number;
+    loginGeneration?: string;
     sessionId?: string;
   }
 

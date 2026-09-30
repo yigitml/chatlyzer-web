@@ -1,8 +1,15 @@
 "use client";
 
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/frontend/store/authStore";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/frontend/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/frontend/components/ui/card";
 import { Button } from "@/frontend/components/ui/button";
 import { AlertTriangle, LogIn, ArrowLeft, Skull, Sparkles } from "lucide-react";
 import Image from "next/image";
@@ -10,8 +17,27 @@ import Link from "next/link";
 
 export default function DeleteAccountPage() {
   const router = useRouter();
-  const { user, isInitialized, isAuthenticated } = useAuthStore();
+  const { user, isInitialized, isAuthenticated, deleteUser } = useAuthStore();
 
+  const [confirmed, setConfirmed] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const handleDelete = async () => {
+    if (!confirmed || isDeleting) return;
+    setIsDeleting(true);
+    setError(null);
+    try {
+      await deleteUser();
+      router.replace("/auth/sign-in");
+    } catch (error) {
+      setError(
+        error instanceof Error
+          ? error.message
+          : "Account deletion failed. Please try again.",
+      );
+      setIsDeleting(false);
+    }
+  };
   // Show loading while auth is initializing
   if (!isInitialized) {
     return (
@@ -33,8 +59,16 @@ export default function DeleteAccountPage() {
       {/* Navigation */}
       <header className="container mx-auto px-4 py-6 flex items-center justify-between">
         <Link href="/" className="flex items-center gap-2">
-          <Image src="/iconsvg.svg" alt="Chatlyzer" width={32} height={32} className="w-8 h-8" />
-          <span className="font-bold text-xl text-white relative after:content-[''] after:block after:h-0.5 after:w-full after:bg-gradient-to-r from-purple-400/40 to-pink-400/40 after:mt-1 after:rounded-full">Chatlyzer</span>
+          <Image
+            src="/iconsvg.svg"
+            alt="Chatlyzer"
+            width={32}
+            height={32}
+            className="w-8 h-8"
+          />
+          <span className="font-bold text-xl text-white relative after:content-[''] after:block after:h-0.5 after:w-full after:bg-gradient-to-r from-purple-400/40 to-pink-400/40 after:mt-1 after:rounded-full">
+            Chatlyzer
+          </span>
         </Link>
 
         <Button
@@ -55,18 +89,22 @@ export default function DeleteAccountPage() {
               <Skull className="w-4 h-4" />
               <span>Danger zone ahead 💀</span>
             </div>
-            
+
             <h1 className="text-4xl md:text-6xl font-bold mb-6">
               About to
               <br />
-              <span className="text-white relative after:content-[''] after:block after:h-1 after:w-full after:bg-gradient-to-r from-gray-400/20 to-gray-500/30 after:mt-1 after:rounded-full">delete everything</span> 🗑️
+              <span className="text-white relative after:content-[''] after:block after:h-1 after:w-full after:bg-gradient-to-r from-gray-400/20 to-gray-500/30 after:mt-1 after:rounded-full">
+                delete everything
+              </span>{" "}
+              🗑️
             </h1>
-            
+
             <p className="text-xl text-gray-400 max-w-2xl mx-auto mb-8">
-              This is your last stop before yeeting your account into the void. No take-backs bestie 💔
+              This is your last stop before yeeting your account into the void.
+              No take-backs bestie 💔
             </p>
           </div>
-          
+
           <div className="space-y-6">
             {/* Authentication Check */}
             {!isAuthenticated || !user ? (
@@ -77,7 +115,8 @@ export default function DeleteAccountPage() {
                     Hold up - who are you? 🤔
                   </CardTitle>
                   <CardDescription className="text-white/60">
-                    You gotta prove you're you before we let you destroy anything fr
+                    You gotta prove you're you before we let you destroy
+                    anything fr
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -87,9 +126,17 @@ export default function DeleteAccountPage() {
                         Before you can nuke your account:
                       </h3>
                       <ul className="text-sm text-gray-300 space-y-2">
-                        <li>• Sign in to verify it's actually you (not some random)</li>
-                        <li>• Confirm you own this account (security things, you know)</li>
-                        <li>• See exactly what's about to get deleted forever</li>
+                        <li>
+                          • Sign in to verify it's actually you (not some
+                          random)
+                        </li>
+                        <li>
+                          • Confirm you own this account (security things, you
+                          know)
+                        </li>
+                        <li>
+                          • See exactly what's about to get deleted forever
+                        </li>
                       </ul>
                     </div>
 
@@ -117,8 +164,9 @@ export default function DeleteAccountPage() {
                     Nuclear option activated ☢️
                   </CardTitle>
                   <CardDescription className="text-gray-300">
-                    This will permanently delete your account and ALL your data. Like, gone gone. 
-                    No "oops can I get it back" situations here bestie 💀
+                    This permanently removes your profile, saved chats, and
+                    analysis results. Like, gone gone. No "oops can I get it
+                    back" situations here bestie 💀
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -130,11 +178,17 @@ export default function DeleteAccountPage() {
                       </h3>
                       <ul className="text-sm text-gray-300 space-y-2">
                         <li>💀 Your account profile and all settings</li>
-                        <li>💀 Every single chat you've uploaded (all the tea)</li>
+                        <li>
+                          💀 Every single chat you've uploaded (all the tea)
+                        </li>
                         <li>💀 All your spicy analyses and insights</li>
-                        <li>💀 Subscription details and payment info</li>
+                        <li>💀 Your local subscription details</li>
                         <li>💀 Credit balance and usage history</li>
-                        <li>💀 Literally everything - it's all going to digital heaven</li>
+                        <li>
+                          Non-content records required to reconcile purchases
+                          and refunds may be retained. External provider and
+                          backup retention follow the privacy policy.
+                        </li>
                       </ul>
                     </div>
 
@@ -143,22 +197,43 @@ export default function DeleteAccountPage() {
                         Last chance to reconsider 🥺
                       </h3>
                       <p className="text-sm text-gray-300">
-                        Maybe just take a break instead? Your data will be here when you come back. 
-                        We won't judge if you change your mind - happens to the best of us 💜
+                        Maybe just take a break instead? Your data will be here
+                        when you come back. We won't judge if you change your
+                        mind - happens to the best of us 💜
                       </p>
                     </div>
 
-                    <div className="pt-2">
+                    <div className="pt-2 space-y-3">
+                      <label className="flex items-start gap-3 text-sm">
+                        <input
+                          type="checkbox"
+                          checked={confirmed}
+                          onChange={(event) =>
+                            setConfirmed(event.target.checked)
+                          }
+                          className="mt-1"
+                        />
+                        I understand that account deletion permanently removes
+                        my chats and analyses.
+                      </label>
+                      {error && (
+                        <p role="alert" className="text-red-400">
+                          {error}
+                        </p>
+                      )}
                       <Button
                         variant="destructive"
                         size="lg"
-                        className="w-full bg-gradient-to-r from-red-500/70 to-pink-500/70 hover:from-red-500/80 hover:to-pink-500/80 transition-all duration-200 hover:scale-105 opacity-50 cursor-not-allowed"
-                        disabled
+                        className="w-full bg-gradient-to-r from-red-500/70 to-pink-500/70 hover:from-red-500/80 hover:to-pink-500/80 transition-all duration-200 hover:scale-105"
+                        disabled={!confirmed || isDeleting}
+                        onClick={handleDelete}
                       >
-                        Delete everything forever 💥
+                        {isDeleting
+                          ? "Deleting account..."
+                          : "Delete account permanently"}
                       </Button>
                       <p className="text-xs text-gray-400 mt-2 text-center">
-                        This button is currently disabled - implementation pending (you're safe for now) 🛡️
+                        You will be signed out after deletion.
                       </p>
                     </div>
 

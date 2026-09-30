@@ -1,39 +1,23 @@
-const SENSITIVE_KEYS = new Set([
-  "token",
-  "accessToken",
-  "refreshToken",
-  "authorization",
-  "cookie",
-  "password",
-  "secret",
-]);
-
-function redact(value: unknown): unknown {
-  if (Array.isArray(value)) {
-    return value.map(redact);
+const SENSITIVE_KEYS = /token|authorization|cookie|password|secret|content|messages|participants|sender|email|payload|prompt|result|metadata|url/i;
+function redact(value: unknown, seen = new WeakSet<object>()): unknown {
+  if (value instanceof Error) {
+    // Provider/database exception messages and stacks can contain prompts, URLs,
+    // credentials or user values. Retain only safe diagnostic classifications.
+    const code = "code" in value && typeof value.code === "string" ? value.code : undefined;
+    return { name: value.name, ...(code ? { code } : {}) };
   }
-
   if (value && typeof value === "object") {
-    return Object.fromEntries(
-      Object.entries(value).map(([key, nested]) => [
-        key,
-        SENSITIVE_KEYS.has(key) ? "[REDACTED]" : redact(nested),
-      ]),
-    );
+    if (seen.has(value)) return "[Circular]";
+    seen.add(value);
+    if (Array.isArray(value)) return value.map(item => redact(item, seen));
+    return Object.fromEntries(Object.entries(value).map(([key, nested]) => [key, SENSITIVE_KEYS.test(key) ? "[REDACTED]" : redact(nested, seen)]));
   }
-
   return value;
 }
-
 function log(method: "info" | "warn" | "error", message: string, context?: unknown) {
-  if (context === undefined) {
-    console[method](message);
-    return;
-  }
-
-  console[method](message, redact(context));
+  if (context === undefined) console[method](message);
+  else console[method](message, redact(context));
 }
-
 export const logger = {
   info: (message: string, context?: unknown) => log("info", message, context),
   warn: (message: string, context?: unknown) => log("warn", message, context),

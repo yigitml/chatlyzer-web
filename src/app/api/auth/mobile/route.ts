@@ -1,138 +1,20 @@
-// pages/api/auth/mobile.ts (or wherever this lives)
 import { NextRequest } from "next/server";
-import jwt from "jsonwebtoken";
-import prisma from "@/backend/lib/prisma";
 import { ApiResponse } from "@/shared/types/api/apiResponse";
-import type { AuthMobilePostRequest } from "@/shared/types/api/apiRequest";
 import { verifyGoogleIdToken } from "@/backend/lib/verifyGoogleIdToken";
 import { withAuthRateLimiter } from "@/backend/middleware/rateLimiter";
-import { getRequiredServerEnv } from "@/shared/config/env";
-import { logger } from "@/backend/lib/logger";
 import { toPublicUser } from "@/shared/types/api/publicDtos";
+import { login, tokens, refreshCookie } from "@/backend/lib/authSession";
+import { ApiError, apiErrorResponse, readJson } from "@/backend/lib/apiBoundary";
 
 export const POST = withAuthRateLimiter(async (request: NextRequest) => {
   try {
-    const data: AuthMobilePostRequest = await request.json();
-    const { accessToken, deviceId } = data;
-
-    if (
-      !accessToken ||
-      typeof accessToken !== "string" ||
-      accessToken.length === 0
-    ) {
-      return ApiResponse.error("Invalid access token", 400).toResponse();
-    }
-
-    if (!deviceId || typeof deviceId !== "string" || deviceId.length < 8) {
-      return ApiResponse.error("Invalid device ID", 400).toResponse();
-    }
-
-    const payload = await verifyGoogleIdToken(accessToken);
-
-    let user = await prisma.user.findUnique({
-      where: { email: payload.email },
-    });
-
-    if (user?.deletedAt || user?.isActive === false) {
-      return ApiResponse.error("Account has been deleted", 403).toResponse();
-    }
-
-    if (!user) {
-      user = await prisma.user.create({
-        data: {
-          email: payload.email,
-          name: payload.name,
-          googleId: payload.id,
-          image: payload.picture,
-          tokenVersion: 0,
-          lastLoginAt: new Date(),
-        },
-      });
-
-      const subscription = await prisma.subscription.create({
-        data: {
-          userId: user.id,
-          name: "Free",
-          price: 0,
-          durationDays: 30,
-          createdAt: new Date(),
-          isActive: true,
-        },
-      });
-
-      await prisma.userCredit.create({
-        data: {
-          userId: user.id,
-          type: "ANALYSIS",
-          totalAmount: 128,
-          amount: 0,
-          subscriptionId: subscription.id,
-        },
-      });
-    }
-
-    const device = await prisma.userDevice.upsert({
-      where: {
-        userId_deviceId: {
-          userId: user.id,
-          deviceId: deviceId,
-        },
-      },
-      update: {
-        lastLoginAt: new Date(),
-        deletedAt: null,
-        refreshTokenVersion: { increment: 1 },
-      },
-      create: {
-        userId: user.id,
-        deviceId: deviceId,
-        lastLoginAt: new Date(),
-        deletedAt: null,
-        refreshTokenVersion: 0,
-      },
-    });
-
-    await prisma.user.update({
-      where: { id: user.id },
-      data: {
-        lastLoginAt: new Date(),
-      },
-    });
-
-    const jwtToken = jwt.sign(
-      {
-        userId: user.id,
-        email: user.email,
-        deviceId: deviceId,
-        isMobile: true,
-        tokenVersion: user.tokenVersion,
-        iat: Math.floor(Date.now() / 1000),
-      },
-      getRequiredServerEnv("JWT_SECRET"),
-      { expiresIn: "15m" },
-    );
-
-    const refreshToken = jwt.sign(
-      {
-        userId: user.id,
-        deviceId: deviceId,
-        tokenVersion: user.tokenVersion,
-        refreshTokenVersion: device.refreshTokenVersion,
-      },
-      getRequiredServerEnv("REFRESH_TOKEN_SECRET"),
-      { expiresIn: "30d" },
-    );
-
-    return ApiResponse.success({
-      token: jwtToken,
-      refreshToken,
-      expiresAt: new Date(Date.now() + 15 * 60 * 1000).toISOString(),
-      user: toPublicUser(user),
-    }).toResponse({
-      "Set-Cookie": `refreshToken=${refreshToken}; HttpOnly; Path=/api/auth/mobile/refresh; Secure; SameSite=Strict`,
-    });
-  } catch (error: unknown) {
-    logger.error("Mobile auth error", error);
-    return ApiResponse.error("Authentication failed", 500).toResponse();
-  }
+    const data = await readJson(request, 32768) as Record<string, unknown> | null;
+    if (!data || typeof data.accessToken !== "string" || !data.accessToken || typeof data.deviceId !== "string" ||
+      data.deviceId.length < 8 || data.deviceId.length > 200) throw new ApiError("Invalid login request", 400);
+    const identity = await verifyGoogleIdToken(data.accessToken);
+    const { user, loginGeneration, refreshTokenVersion } = await login(identity, data.deviceId, true);
+    const credentials = tokens(user, data.deviceId, true, loginGeneration, refreshTokenVersion);
+    return ApiResponse.success({ ...credentials, expiresAt: new Date(Date.now() + 900000).toISOString(), user: toPublicUser(user) })
+      .toResponse({ "Set-Cookie": refreshCookie(credentials.refreshToken, true), "Cache-Control": "no-store" });
+  } catch (error) { return apiErrorResponse(error, "Authentication failed"); }
 });

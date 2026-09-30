@@ -69,7 +69,7 @@ const prismaPair = globalForPrisma.prismaPair ?? prismaClientSingleton();
  * Extended Prisma client with soft-delete filtering on findMany.
  * Use this for most queries.
  */
-const prisma = prismaPair.extendedClient;
+const prisma = prismaPair.extendedClient as unknown as PrismaClient;
 
 /**
  * Raw Prisma client without extensions.

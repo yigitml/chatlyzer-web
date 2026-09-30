@@ -4,13 +4,14 @@ import { withAnalysisRateLimiter } from "@/backend/middleware/rateLimiter";
 import { ApiResponse } from "@/shared/types/api/apiResponse";
 import prisma from "@/backend/lib/prisma";
 import type {
-  AnalysisPostRequest,
   AnalysisPutRequest,
   AnalysisDeleteRequest,
 } from "@/shared/types/api/apiRequest";
 import { analyzeAllChatTypes } from "@/backend/lib/openai";
-import { consumeUserCredits, refundUserCredits } from "@/backend/lib/consumeUserCredits";
-import { CreditType, AnalysisStatus } from "../../../generated/client/client";
+import { reserveAnalysisJob, completeAnalysisJob, failAnalysisJob, reconcileAnalysisJobs, JobError } from "@/backend/lib/analysisJobs";
+import { lockActiveAccount } from "@/backend/lib/accountLock";
+import { readJson, apiErrorResponse } from "@/backend/lib/apiBoundary";
+import { AnalysisStatus } from "../../../generated/client/client";
 import { 
   getAllAnalysisTypes, 
   analysisTypeToSchemaKey, 
@@ -32,24 +33,7 @@ export const GET = withProtectedRoute(async (request: NextRequest) => {
     const chatId = searchParams.get("chatId");
     const authenticatedUserId = request.user!.id;
 
-    // Cleanup stuck analyses older than 10 minutes
-    const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000);
-    await prisma.analysis.updateMany({
-      where: {
-        userId: authenticatedUserId,
-        status: {
-          in: [AnalysisStatus.PENDING, AnalysisStatus.PROCESSING]
-        },
-        createdAt: {
-          lt: tenMinutesAgo
-        },
-        deletedAt: null
-      },
-      data: {
-        status: AnalysisStatus.FAILED,
-        error: "Analysis timed out - please try again"
-      }
-    });
+    await reconcileAnalysisJobs(authenticatedUserId);
 
     if (id) {
       const analysis = await prisma.analysis.findFirst({
@@ -62,7 +46,7 @@ export const GET = withProtectedRoute(async (request: NextRequest) => {
       if (analysis) {
         return ApiResponse.success(analysis).toResponse();
       }
-      return ApiResponse.error("analysis not found").toResponse();
+      return ApiResponse.error("Analysis not found", 404).toResponse();
     } else if (chatId) {
       const includeInProgress = searchParams.get("includeInProgress") === "true";
       const pagination = getPagination(searchParams);
@@ -73,7 +57,7 @@ export const GET = withProtectedRoute(async (request: NextRequest) => {
           deletedAt: null,
           ...(includeInProgress ? {} : { status: AnalysisStatus.COMPLETED })
         },
-        orderBy: { createdAt: "desc" },
+        orderBy: [{ createdAt: "desc" }, { id: "desc" }],
         take: pagination.take,
         ...(pagination.cursor ? { cursor: { id: pagination.cursor }, skip: 1 } : {}),
       });
@@ -86,7 +70,7 @@ export const GET = withProtectedRoute(async (request: NextRequest) => {
           userId: authenticatedUserId,
           deletedAt: null,
         },
-        orderBy: { createdAt: "desc" },
+        orderBy: [{ createdAt: "desc" }, { id: "desc" }],
         take: pagination.take,
         ...(pagination.cursor ? { cursor: { id: pagination.cursor }, skip: 1 } : {}),
       });
@@ -95,209 +79,61 @@ export const GET = withProtectedRoute(async (request: NextRequest) => {
     }
   } catch (error) {
    logger.error("Error processing GET /api/analysis", error);
-   return ApiResponse.error("Internal server error").toResponse();
+   return apiErrorResponse(error);
   }
 });
 
-export const POST = withAnalysisRateLimiter(withProtectedRoute(async (request: NextRequest) => {
+export const POST = withProtectedRoute(withAnalysisRateLimiter(async (request: NextRequest) => {
+  let jobId: string | undefined;
   try {
-   const authenticatedUserId = request.user!.id;
-   const parsed = analysisPostSchema.safeParse(await request.json());
-   if (!parsed.success) {
-     return ApiResponse.error(getValidationMessage(parsed.error), 400).toResponse();
-   }
-   const data: AnalysisPostRequest = parsed.data;
-   const requestKey = data.requestKey?.trim() || null;
-
-    // Verify the authenticated user owns this chat (prevents IDOR)
-    const chat = await prisma.chat.findFirst({
-      where: { id: data.chatId, userId: authenticatedUserId, deletedAt: null },
+    const parsed = analysisPostSchema.safeParse(await readJson(request));
+    if (!parsed.success) return ApiResponse.error(getValidationMessage(parsed.error), 400).toResponse();
+    const data = parsed.data;
+    const reservation = await reserveAnalysisJob(request.user!.id, "STANDARD", data.requestKey, data.chatId, request.user!.tokenVersion);
+    const { job, isNew } = reservation;
+    if (!isNew) {
+      if (job.status === "FAILED" || job.status === "CANCELLED") throw new JobError("Analysis failed; retry with a new request key");
+      const analyses = await prisma.analysis.findMany({ where: { jobId: job.id, deletedAt: null }, orderBy: [{ createdAt: "asc" }, { id: "asc" }] });
+      return ApiResponse.success(analyses, "Analysis request already exists", job.status === "PROCESSING" ? 202 : 200).toResponse();
+    }
+    jobId = job.id;
+    const output = await analyzeAllChatTypes(data.chatId, request.user!.id);
+    const analyses = await completeAnalysisJob(job.id, async tx => {
+      const rows = await tx.analysis.findMany({ where: { jobId: job.id, deletedAt: null }, orderBy: [{ createdAt: "asc" }, { id: "asc" }] });
+      const types = getAllAnalysisTypes();
+      if (rows.length !== types.length) throw new JobError("Analysis set was changed while processing");
+      const completed = [];
+      for (let index = 0; index < types.length; index++) {
+        const type = types[index];
+        const result = output.analyses[analysisTypeToSchemaKey(type) as keyof typeof output.analyses];
+        if (!result) throw new Error("Incomplete provider analysis");
+        completed.push(await tx.analysis.update({ where: { id: rows[index].id }, data: { result: { ...result, type: analysisTypeToTypeLiteral(type) }, status: AnalysisStatus.COMPLETED, error: null } }));
+      }
+      return completed;
     });
-    if (!chat) {
-      return ApiResponse.error("Chat not found or unauthorized", 404).toResponse();
+    return ApiResponse.success(analyses, "Comprehensive analysis completed successfully!", 200).toResponse();
+  } catch (error) {
+    if (jobId) {
+      try { await failAnalysisJob(jobId); }
+      catch (recoveryError) { logger.error("Analysis recovery deferred to lease reconciler", recoveryError); }
     }
-
-    // Start transaction with default isolation level (ReadCommitted)
-    const analysisRequest = await prisma.$transaction(async (tx) => {
-      // Acquire advisory lock for this chat ID to prevent concurrent analysis creation
-      // hashtext(text) returns an integer, which we use for the lock key
-      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${data.chatId}))`;
-
-      if (requestKey) {
-        const existingForRequest = await tx.analysis.findMany({
-          where: {
-            chatId: data.chatId,
-            userId: authenticatedUserId,
-            requestKey,
-            deletedAt: null,
-          },
-          orderBy: {
-            createdAt: "asc",
-          },
-        });
-
-        if (existingForRequest.length > 0) {
-          return {
-            analyses: existingForRequest,
-            shouldProcess: false,
-          };
-        }
-      }
-
-      // Check if analyses already exist or are in progress for this chat
-      const existingAnalyses = await tx.analysis.findMany({
-        where: {
-          chatId: data.chatId,
-          userId: authenticatedUserId,
-          deletedAt: null,
-        }
-      });
-
-      // Check for completed analyses
-      const completedAnalyses = existingAnalyses.filter(a => a.status === AnalysisStatus.COMPLETED);
-      if (completedAnalyses.length > 0) {
-        throw new Error("Analyses already exist for this chat");
-      }
-
-      // Check for pending or processing analyses
-      const inProgressAnalyses = existingAnalyses.filter(a => 
-        a.status === AnalysisStatus.PENDING || a.status === AnalysisStatus.PROCESSING
-      );
-      if (inProgressAnalyses.length > 0) {
-        throw new Error("Analysis is already in progress for this chat");
-      }
-
-      // Consume 8 credits for comprehensive analysis
-      const creditConsumption = await consumeUserCredits(authenticatedUserId, CreditType.ANALYSIS, 8, tx);
-
-      if (!creditConsumption) {
-        throw new Error("Insufficient credits");
-      }
-
-      // Get all analysis types using utility function
-      const analysisTypes = getAllAnalysisTypes();
-
-      // Create placeholder analysis records with PROCESSING status
-      const createdAnalyses = [];
-      for (let index = 0; index < analysisTypes.length; index += 1) {
-        const analysis = await tx.analysis.create({
-          data: {
-            chatId: data.chatId,
-            userId: authenticatedUserId,
-            requestKey,
-            status: AnalysisStatus.PROCESSING,
-            result: {},
-          }
-        });
-        createdAnalyses.push(analysis);
-      }
-      
-      return {
-        analyses: createdAnalyses,
-        shouldProcess: true,
-      };
-    });
-
-    const placeholderAnalyses = analysisRequest.analyses;
-
-    if (!analysisRequest.shouldProcess) {
-      return ApiResponse.success(
-        placeholderAnalyses,
-        "Analysis request already exists",
-        200,
-      ).toResponse();
-    }
-
-    // Get analysis types again for the next step (or reuse if we could, but it's cheap)
-    const analysisTypes = getAllAnalysisTypes();
-
-   try {
-     // Perform comprehensive analysis
-     const comprehensiveAnalysisData = await analyzeAllChatTypes(data.chatId);
-
-     // Update analysis records with results
-     const updatePromises = analysisTypes.map(async (analysisType, index) => {
-       const analysis = placeholderAnalyses[index];
-       const schemaKey = analysisTypeToSchemaKey(analysisType);
-       const analysisResult = comprehensiveAnalysisData.analyses[schemaKey as keyof typeof comprehensiveAnalysisData.analyses];
-       
-       logger.info("Processing analysis result", { analysisType, schemaKey, hasResult: Boolean(analysisResult) });
-       
-       if (!analysisResult) {
-         throw new Error(`Analysis result for ${analysisType} is missing or undefined`);
-       }
-       
-       // Add the type field back to the analysis result
-       const analysisWithType = {
-         type: analysisTypeToTypeLiteral(analysisType),
-         ...analysisResult
-       };
-       
-       return prisma.analysis.update({
-         where: { id: analysis.id },
-         data: {
-           result: analysisWithType,
-           status: AnalysisStatus.COMPLETED,
-           error: null,
-         }
-       });
-     });
-
-     const analyses = await Promise.all(updatePromises);
-
-     return ApiResponse.success(
-      analyses,
-      "Comprehensive analysis completed successfully!",
-      200
-     ).toResponse();
-
-   } catch (analysisError) {
-     // Mark all analyses as failed
-     await prisma.analysis.updateMany({
-       where: {
-         id: { in: placeholderAnalyses.map(a => a.id) }
-       },
-       data: {
-         status: AnalysisStatus.FAILED,
-         error: analysisError instanceof Error ? analysisError.message : 'Analysis failed'
-       }
-     });
-
-      // Refund credits since analysis failed
-      logger.info("Refunding credits due to analysis failure", { userId: authenticatedUserId, amount: 8 });
-      await refundUserCredits(authenticatedUserId, CreditType.ANALYSIS, 8);
-
-      throw analysisError;
-    }
-
-  } catch (error: any) {
-    logger.error("Error processing POST /api/analysis", error);
-    
-    if (error.code === 'P2034') {
-      return ApiResponse.error("Analysis already in progress (concurrency conflict)", 409).toResponse();
-    }
-
-    if (error.message === "Insufficient credits") {
-      return ApiResponse.error("Insufficient credits", 402).toResponse();
-    }
-    if (error.message === "Analyses already exist for this chat" || error.message === "Analysis is already in progress for this chat") {
-      return ApiResponse.error(error.message, 400).toResponse();
-    }
-    return ApiResponse.error("Internal server error", 500).toResponse();
+    return apiErrorResponse(error);
   }
 }));
 
 export const PUT = withProtectedRoute(async (request: NextRequest) => {
   try {
     const authenticatedUserId = request.user!.id;
-    const parsed = analysisPutSchema.safeParse(await request.json());
+    const parsed = analysisPutSchema.safeParse(await readJson(request));
     if (!parsed.success) {
       return ApiResponse.error(getValidationMessage(parsed.error), 400).toResponse();
     }
     const data: AnalysisPutRequest = parsed.data as AnalysisPutRequest;
     const { id, result } = data;
 
-    const updatedanalysis = await prisma.analysis.update({
+    const updatedanalysis = await prisma.$transaction(async tx => {
+      await lockActiveAccount(tx, authenticatedUserId, request.user!.tokenVersion);
+      return tx.analysis.update({
       where: {
         id,
         userId: authenticatedUserId,
@@ -307,9 +143,10 @@ export const PUT = withProtectedRoute(async (request: NextRequest) => {
         result: result,
       },
     });
+    });
 
     if (!updatedanalysis) {
-      return ApiResponse.error("analysis not found").toResponse();
+      return ApiResponse.error("Analysis not found", 404).toResponse();
     }
 
     return ApiResponse.success(
@@ -319,20 +156,22 @@ export const PUT = withProtectedRoute(async (request: NextRequest) => {
     ).toResponse();
   } catch (error) {
     logger.error("Error processing PUT /api/analysis", error);
-    return ApiResponse.error(`Failed to process request`, 500).toResponse();
+    return apiErrorResponse(error);
   }
 });
 
 export const DELETE = withProtectedRoute(async (request: NextRequest) => {
     try {
       const authenticatedUserId = request.user!.id;
-      const parsed = idBodySchema.safeParse(await request.json());
+      const parsed = idBodySchema.safeParse(await readJson(request));
       if (!parsed.success) {
         return ApiResponse.error(getValidationMessage(parsed.error), 400).toResponse();
       }
       const { id } = parsed.data as AnalysisDeleteRequest;
 
-      const deletedanalysis = await prisma.analysis.update({
+      const deletedanalysis = await prisma.$transaction(async tx => {
+        await lockActiveAccount(tx, authenticatedUserId, request.user!.tokenVersion);
+        return tx.analysis.update({
         where: {
           id,
           userId: authenticatedUserId,
@@ -341,6 +180,7 @@ export const DELETE = withProtectedRoute(async (request: NextRequest) => {
         data: {
           deletedAt: new Date(),
         },
+      });
       });
 
       if (!deletedanalysis) {
@@ -354,6 +194,6 @@ export const DELETE = withProtectedRoute(async (request: NextRequest) => {
       ).toResponse();
   } catch (error) {
     logger.error("Error processing DELETE /api/analysis", error);
-    return ApiResponse.error(`Failed to process request`, 500).toResponse();
+    return apiErrorResponse(error);
   }
 });

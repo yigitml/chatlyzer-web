@@ -21,7 +21,7 @@ Users can import conversations, manage chats and messages, request multiple form
 ## Engineering highlights
 
 - **End-to-end type safety** — shared TypeScript DTOs and Zod schemas define the boundary between clients, route handlers, and persisted data.
-- **Transaction-safe analysis flow** — credit consumption and analysis placeholders are created in a database transaction, with PostgreSQL advisory locks preventing duplicate concurrent work.
+- **Transaction-safe analysis flow** — credit consumption and analysis placeholders are created in a database transaction, with account locks and durable reservations preventing duplicate concurrent work.
 - **Idempotent requests** — request keys let clients safely retry analysis creation without paying twice or duplicating results.
 - **Layered request security** — JWT authentication, ownership checks, rate limiting, request context, environment validation, and deliberately coarse health responses.
 - **Multi-client authentication** — separate web and mobile refresh flows, device/session records, token-version invalidation, and Google identity verification.
@@ -47,30 +47,30 @@ Prisma ORM ── PostgreSQL
 
 The repository uses a pragmatic layered architecture:
 
-| Layer | Responsibility |
-| --- | --- |
-| `src/app` | App Router pages, layouts, and HTTP route handlers |
-| `src/frontend` | React components, hooks, providers, and Zustand stores |
-| `src/backend` | Infrastructure clients, middleware, logging, auth, and domain operations |
-| `src/shared` | Cross-layer schemas, DTOs, types, configuration, and utilities |
-| `prisma` | Relational schema and forward-only database migrations |
+| Layer          | Responsibility                                                           |
+| -------------- | ------------------------------------------------------------------------ |
+| `src/app`      | App Router pages, layouts, and HTTP route handlers                       |
+| `src/frontend` | React components, hooks, providers, and Zustand stores                   |
+| `src/backend`  | Infrastructure clients, middleware, logging, auth, and domain operations |
+| `src/shared`   | Cross-layer schemas, DTOs, types, configuration, and utilities           |
+| `prisma`       | Relational schema and forward-only database migrations                   |
 
 Route handlers stay focused on transport concerns while shared schemas validate untrusted input. Backend modules own external integrations and transactional behavior. Soft deletion is used throughout the relational model to retain operational control over user data lifecycle.
 
 ## Technology
 
-| Area | Implementation |
-| --- | --- |
-| Application | Next.js 16 App Router, React 19, TypeScript 5.9 |
-| UI | Tailwind CSS, Radix UI primitives, class-variance-authority, Lucide |
-| State | Zustand stores with focused domain hooks |
-| API contracts | Zod schemas, typed DTOs, consistent response wrappers |
-| Data | PostgreSQL, Prisma 7, `@prisma/adapter-pg` |
-| Authentication | Google OAuth / ID tokens, JWT access and refresh tokens |
-| AI | OpenAI API with structured analysis schemas |
-| Commerce | RevenueCat purchases, webhooks, and credit accounting |
-| Observability | PostHog, structured server logging, health endpoint |
-| Quality | Vitest, TypeScript, ESLint, contract-drift and environment checks |
+| Area           | Implementation                                                      |
+| -------------- | ------------------------------------------------------------------- |
+| Application    | Next.js 16 App Router, React 19, TypeScript 5.9                     |
+| UI             | Tailwind CSS, Radix UI primitives, class-variance-authority, Lucide |
+| State          | Zustand stores with focused domain hooks                            |
+| API contracts  | Zod schemas, typed DTOs, consistent response wrappers               |
+| Data           | PostgreSQL, Prisma 7, `@prisma/adapter-pg`                          |
+| Authentication | Google OAuth / ID tokens, JWT access and refresh tokens             |
+| AI             | OpenAI API with structured analysis schemas                         |
+| Commerce       | RevenueCat purchases, webhooks, and credit accounting               |
+| Observability  | PostHog, structured server logging, health endpoint                 |
+| Quality        | Vitest, TypeScript, ESLint, contract-drift and environment checks   |
 
 ## Local development
 
@@ -119,6 +119,9 @@ npm run typecheck
 npm run lint
 npm test
 npm run check:contracts
+npm run check:schema
+npm run test:migrations
+npm run test:integration
 npm run check:env:production
 npm run build
 ```
@@ -133,7 +136,7 @@ The core model connects users to devices, sessions, chats, messages, analyses, c
 
 Production runs at [chatlyzerai.com](https://chatlyzerai.com) on Deno Deploy with Neon PostgreSQL. `deno.json` configures the Next.js build; releases validate the production environment and apply Prisma migrations from the release checkout before publishing. No VPS, SSH, Nginx, or PM2 is required. See the [cloud deployment guide](docs/cloud-deployment.md) for setup, service limits, and the live acceptance record.
 
-Google sign-in, database persistence, OpenAI analysis, normal/privacy/ghost workflows, and RevenueCat sandbox credit fulfillment have been verified against production. RevenueCat remains in sandbox mode until merchant onboarding is completed.
+RevenueCat remains in sandbox mode until merchant onboarding and historical purchase reconciliation are complete. Interrupted analysis reservations recover through the Deno scheduled job or the maintenance CLI.
 
 ## License
 

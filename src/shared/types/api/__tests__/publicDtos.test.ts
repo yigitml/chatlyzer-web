@@ -25,8 +25,8 @@ describe("public DTOs", () => {
       email: "user@example.com",
       image: null,
       isOnboarded: true,
-      createdAt: new Date("2026-01-01T00:00:00Z"),
-      updatedAt: new Date("2026-01-02T00:00:00Z"),
+      createdAt: "2026-01-01T00:00:00.000Z",
+      updatedAt: "2026-01-02T00:00:00.000Z",
       lastLoginAt: null,
     });
     expect(publicUser).not.toHaveProperty("tokenVersion");

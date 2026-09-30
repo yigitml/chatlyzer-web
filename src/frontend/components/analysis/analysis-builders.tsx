@@ -18,7 +18,7 @@ export const VibeCheckAnalysisBuilder = ({ data }: { data: any }) => {
           explanation={data.overview.explanation} 
         />
       )}
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <MetricCard 
           title="Overall Vibe" 
           value={overallVibe.charAt(0).toUpperCase() + overallVibe.slice(1)} 
@@ -159,7 +159,7 @@ export const GhostRiskAnalysisBuilder = ({ data }: { data: any }) => {
           explanation={data.overview.explanation} 
         />
       )}
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <MetricCard 
           title="Risk Level" 
           value={getGhostRiskLevel(riskLevel)} 
@@ -369,7 +369,7 @@ export const ChatStatsAnalysisBuilder = ({ data }: { data: any }) => {
 
       {/* Initiator Stats */}
       {Object.keys(initiatorStats).length > 0 && (
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <MetricCard 
             title="Conversation Starter" 
             value={initiatorStats.mostLikelyToStartConvo || "Unknown"} 

@@ -6,11 +6,15 @@ import {
   Purchases,
   PurchasesError,
 } from "@revenuecat/purchases-js";
-import type { User } from "../../generated/client";
+import type { PublicUser as User } from "@/shared/types/api/publicDtos";
 
 const DEFAULT_CREDITS_PRODUCT_ID = "credits_24";
 
 let configuredUserId: string | null = null;
+let purchaseInProgress = false;
+export function resetRevenueCatIdentity() {
+  configuredUserId = null;
+}
 
 function getRevenueCatWebApiKey() {
   return process.env.NEXT_PUBLIC_REVENUECAT_WEB_API_KEY || "";
@@ -36,12 +40,17 @@ async function getPurchasesForUser(user: User) {
       apiKey,
       appUserId: user.id,
     });
-    void purchases.setAttributes({
-      $email: user.email,
-      $displayName: user.name,
-    }).catch((error) => {
-      console.warn("[RevenueCat] Failed to set web customer attributes:", error);
-    });
+    void purchases
+      .setAttributes({
+        $email: user.email,
+        $displayName: user.name,
+      })
+      .catch((error) => {
+        console.warn(
+          "[RevenueCat] Failed to set web customer attributes:",
+          error,
+        );
+      });
     return purchases;
   }
 
@@ -70,27 +79,42 @@ export function isRevenueCatUserCancellation(error: unknown) {
   );
 }
 
-export async function purchaseRevenueCatCredits(user: User) {
-  const purchases = await getPurchasesForUser(user);
-  const offerings = await purchases.getOfferings();
-  const packages = Object.values(offerings.all).flatMap(
-    (offering) => offering.availablePackages,
-  );
-  const creditsPackage = findCreditsPackage(packages);
-
-  if (!creditsPackage) {
+export async function purchaseRevenueCatCredits(
+  user: User,
+  assertSession: () => void = () => {},
+) {
+  if (purchaseInProgress)
     throw new Error(
-      `RevenueCat credits product not found: ${getCreditsProductId()}`,
+      "A checkout is already open. Finish it before starting another.",
     );
-  }
+  purchaseInProgress = true;
+  try {
+    assertSession();
+    const purchases = await getPurchasesForUser(user);
+    assertSession();
+    const offerings = await purchases.getOfferings();
+    assertSession();
+    const packages = Object.values(offerings.all).flatMap(
+      (offering) => offering.availablePackages,
+    );
+    const creditsPackage = findCreditsPackage(packages);
 
-  return purchases.purchase({
-    rcPackage: creditsPackage,
-    customerEmail: user.email,
-    metadata: {
-      app_user_id: user.id,
-      source: "chatlyzer-web",
-    },
-    skipSuccessPage: true,
-  });
+    if (!creditsPackage) {
+      throw new Error(
+        `RevenueCat credits product not found: ${getCreditsProductId()}`,
+      );
+    }
+
+    return await purchases.purchase({
+      rcPackage: creditsPackage,
+      customerEmail: user.email,
+      metadata: {
+        app_user_id: user.id,
+        source: "chatlyzer-web",
+      },
+      skipSuccessPage: true,
+    });
+  } finally {
+    purchaseInProgress = false;
+  }
 }

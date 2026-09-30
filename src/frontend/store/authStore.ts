@@ -1,15 +1,25 @@
 import { create } from "zustand";
-import { User } from "../../generated/client";
+import type { PublicUser as User } from "@/shared/types/api/publicDtos";
 import { createNetworkService } from "@/shared/utils/network";
 import { LOCAL_STORAGE_KEYS } from "@/shared/utils/storage";
-import { AuthWebPostRequest, UserPutRequest } from "@/shared/types/api/apiRequest";
+import type {
+  AuthWebPostRequest,
+  UserPutRequest,
+} from "@/shared/types/api/apiRequest";
+import {
+  assertCurrentSession,
+  resetAccountScope,
+  sessionGeneration,
+} from "./sessionScope";
+import { resetRevenueCatIdentity } from "@/frontend/lib/revenueCatWeb";
 
 interface AuthState {
   user: User | null;
   accessToken: string | null;
+  sessionGeneration: number;
   isInitialized: boolean;
   isAuthenticated: boolean;
-  networkService: ReturnType<typeof createNetworkService> | null;
+  networkService: ReturnType<typeof createNetworkService>;
   setUser: (user: User | null) => void;
   setAccessToken: (token: string | null) => void;
   setInitialized: (initialized: boolean) => void;
@@ -19,121 +29,94 @@ interface AuthState {
   initialize: () => Promise<void>;
   login: (data: AuthWebPostRequest) => Promise<User>;
   logout: () => Promise<void>;
+  expireSession: () => void;
   getNetworkService: () => ReturnType<typeof createNetworkService>;
 }
 
 export const useAuthStore = create<AuthState>((set, get) => {
-  const getCurrentToken = () => {
-    return get().accessToken;
+  const service = createNetworkService(() => get().accessToken);
+  const clearIdentity = () => {
+    const generation = resetAccountScope();
+    resetRevenueCatIdentity();
+    try {
+      localStorage.removeItem(LOCAL_STORAGE_KEYS.SELECTED_CHAT_ID);
+    } catch {
+      /* unavailable storage */
+    }
+    set({
+      user: null,
+      accessToken: null,
+      isAuthenticated: false,
+      sessionGeneration: generation,
+    });
   };
-
-  const sharedNetworkService = createNetworkService(getCurrentToken);
-
+  const acceptUser = (user: User) => {
+    if (get().user?.id !== user.id) clearIdentity();
+    set({ user, accessToken: null, isAuthenticated: true });
+  };
   return {
     user: null,
     accessToken: null,
+    sessionGeneration: sessionGeneration(),
     isInitialized: false,
     isAuthenticated: false,
-    networkService: sharedNetworkService,
-
-    login: async (data: AuthWebPostRequest) => {
-      try {
-        const response = await sharedNetworkService.login(data);
-        
-        // Web auth relies on HttpOnly cookies; do not keep JWTs in JavaScript.
-        set({
-          user: response.user,
-          accessToken: null,
-          isAuthenticated: true
-        });
-
-        return response.user;
-      } catch (error) {
-        console.error("Login failed:", error);
-        throw error;
-      }
-    },
-
-    initialize: async () => {
-      // Try to validate the session using the HttpOnly cookie.
-      // The cookie is sent automatically with credentials: 'include'.
-      try {
-        const userData = await sharedNetworkService.fetchUser();
-        
-        set({
-          user: userData,
-          isAuthenticated: true,
-          networkService: sharedNetworkService,
-        });
-      } catch {
-        // No valid session cookie — user is not authenticated
-        console.debug('AUTH STORE: No valid session, user not authenticated');
-      }
-      
-      set({ isInitialized: true });
-      
-      return;
-    },
-
-    fetchUser: async () => {
-      const { networkService } = get();
-      if (networkService) {
-        return await networkService.fetchUser();
-      }
-      throw new Error("Network service not initialized");
-    },
-
-    updateUser: async (data: UserPutRequest) => {
-      const { networkService } = get();
-      if (networkService) {
-        return await networkService.updateUser(data);
-      }
-      throw new Error("Network service not initialized");
-    },
-
-    deleteUser: async () => {
-      const { networkService } = get();
-      if (networkService) {
-        return await networkService.deleteUser();
-      }
-      throw new Error("Network service not initialized");
-    },
-
-    setUser: (user) =>
+    networkService: service,
+    login: async (data) => {
+      clearIdentity();
+      const generation = sessionGeneration();
+      const response = await service.login(data);
+      assertCurrentSession(generation);
+      // The request epoch already cleared private state before the login request.
       set({
-        user,
-        isAuthenticated: !!user,
-      }),
-
-    setAccessToken: (token) =>
-      set({
-        accessToken: token,
-      }),
-
-    setInitialized: (initialized) =>
-      set({
-        isInitialized: initialized,
-      }),
-
-    logout: async () => {
-      const { networkService } = get();
-      if (networkService) {
-        await networkService.logout();
-      }
-      // Clear any remaining localStorage data (non-auth preferences)
-      try {
-        localStorage.removeItem(LOCAL_STORAGE_KEYS.SELECTED_CHAT_ID);
-      } catch (e) {
-        console.error("Failed to clear localStorage on logout", e);
-      }
-      set({
-        user: null,
+        user: response.user,
         accessToken: null,
-        isAuthenticated: false,
-        networkService: null,
+        isAuthenticated: true,
+        isInitialized: true,
       });
+      return response.user;
     },
-
-    getNetworkService: () => sharedNetworkService,
+    initialize: async () => {
+      const generation = sessionGeneration();
+      try {
+        const user = await service.fetchUser();
+        assertCurrentSession(generation);
+        acceptUser(user);
+      } catch {
+        if (generation === sessionGeneration()) clearIdentity();
+      } finally {
+        set({ isInitialized: true });
+      }
+    },
+    fetchUser: async () => {
+      const generation = sessionGeneration();
+      const user = await service.fetchUser();
+      assertCurrentSession(generation);
+      return user;
+    },
+    updateUser: async (data) => {
+      const generation = sessionGeneration();
+      const user = await service.updateUser(data);
+      assertCurrentSession(generation);
+      return user;
+    },
+    deleteUser: async () => {
+      const generation = sessionGeneration();
+      await service.deleteUser();
+      assertCurrentSession(generation);
+      clearIdentity();
+    },
+    setUser: (user) => {
+      if (user) acceptUser(user);
+      else clearIdentity();
+    },
+    setAccessToken: (accessToken) => set({ accessToken }),
+    setInitialized: (isInitialized) => set({ isInitialized }),
+    logout: async () => {
+      // Clear immediately, including when the logout HTTP response is lost.
+      clearIdentity();
+      await service.logout();
+    },
+    expireSession: clearIdentity,
+    getNetworkService: () => service,
   };
 });

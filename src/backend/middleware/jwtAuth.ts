@@ -36,6 +36,12 @@ export function jwtAuth(): MiddlewareHandler {
       return ApiResponse.error("Invalid token", 401).toResponse();
     }
 
+    if (typeof decoded !== "object" || typeof decoded.userId !== "string" || typeof decoded.loginGeneration !== "string" ||
+      !Number.isInteger(decoded.tokenVersion) || typeof decoded.isMobile !== "boolean" ||
+      (decoded.isMobile ? typeof decoded.deviceId !== "string" : typeof decoded.sessionId !== "string")) {
+      return ApiResponse.error("Invalid token claims", 401).toResponse();
+    }
+
     const user = await prisma.user.findUnique({
       where: { id: decoded.userId },
     });
@@ -51,14 +57,14 @@ export function jwtAuth(): MiddlewareHandler {
     // Per-session/device revocation check
     if (decoded.isMobile && decoded.deviceId) {
       const device = await prisma.userDevice.findFirst({
-        where: { userId: user.id, deviceId: decoded.deviceId, deletedAt: null },
+        where: { userId: user.id, deviceId: decoded.deviceId, deletedAt: null, loginGeneration: decoded.loginGeneration },
       });
       if (!device) {
         return ApiResponse.error("Device session revoked", 401).toResponse();
       }
     } else if (decoded.sessionId) {
       const session = await prisma.userSession.findFirst({
-        where: { userId: user.id, sessionId: decoded.sessionId, deletedAt: null },
+        where: { userId: user.id, sessionId: decoded.sessionId, deletedAt: null, loginGeneration: decoded.loginGeneration },
       });
       if (!session) {
         return ApiResponse.error("Session revoked", 401).toResponse();
@@ -72,6 +78,7 @@ export function jwtAuth(): MiddlewareHandler {
       sessionId: decoded.sessionId,
       deviceId: decoded.deviceId,
       tokenVersion: user.tokenVersion,
+      loginGeneration: decoded.loginGeneration,
     };
 
     return NextResponse.next({

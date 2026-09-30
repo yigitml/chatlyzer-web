@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "next dev --turbopack",
     "build": "next build",
-    "start": "next start",
+    "start": "node scripts/start-standalone.mjs",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "format": "prettier --write .",
@@ -14,8 +14,11 @@
     "test": "vitest run",
     "check:contracts": "node scripts/check-api-contract-drift.mjs",
     "check:env:production": "node --import tsx scripts/validate-production-env.mjs",
-    "start:cloud": "npm run check:env:production && next start --hostname 0.0.0.0",
-    "test:integration": "vitest run --config vitest.integration.config.ts"
+    "start:cloud": "npm run check:env:production && node scripts/start-standalone.mjs",
+    "test:integration": "vitest run --config vitest.integration.config.ts",
+    "check:schema": "node scripts/check-schema-consistency.mjs",
+    "test:migrations": "node scripts/test-migration-upgrade.mjs",
+    "jobs:reconcile": "node --import tsx scripts/reconcile-analysis-jobs.ts"
   },
   "dependencies": {
     "@prisma/adapter-pg": "^7.10.0",
@@ -57,7 +60,11 @@
   },
   "overrides": {
     "postcss": ">=8.5.10",
-    "@hono/node-server": ">=1.19.13"
+    "@hono/node-server": ">=1.19.13",
+    "@prisma/config": {
+      "deepmerge-ts": "^8.0.2"
+    },
+    "mysql2": "^3.24.5"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.1.18",
@@ -65,6 +72,7 @@
     "@types/node": "^25.0.2",
     "@types/pg": "^8.16.0",
     "@types/react": "^19.2.7",
+    "@types/react-dom": "~19.2.0",
     "eslint": "^9.39.2",
     "eslint-config-next": "^16.0.10",
     "prettier": "^3.7.4",

@@ -1,6 +1,10 @@
 import { useState } from "react";
 import { useChatStore } from "@/frontend/store/chatStore";
-import { ChatPostRequest, ChatDeleteRequest, PrivacyAnalysisPostRequest } from "@/shared/types/api/apiRequest";
+import {
+  ChatPostRequest,
+  ChatDeleteRequest,
+  PrivacyAnalysisPostRequest,
+} from "@/shared/types/api/apiRequest";
 import { setStorageItem, LOCAL_STORAGE_KEYS } from "@/shared/utils/storage";
 import { ImportMode } from "@/shared/types/app";
 
@@ -11,26 +15,27 @@ interface Message {
 }
 
 export const useChatManagement = () => {
-  const { chats, createChat, updateChat, deleteChat, fetchChats } = useChatStore();
-  
+  const { chats, createChat, updateChat, deleteChat, fetchChats } =
+    useChatStore();
+
   // Chat Selection State
   const [selectedChatId, setSelectedChatId] = useState<string | null>(null);
-  
+
   // Chat Editing State
   const [editingChatId, setEditingChatId] = useState<string | null>(null);
   const [editingTitle, setEditingTitle] = useState("");
   const [isUpdatingTitle, setIsUpdatingTitle] = useState(false);
-  
+
   // Delete Chat State
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isDeletingChat, setIsDeletingChat] = useState(false);
-  
+
   // Create Chat Modal State
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isCreatingChat, setIsCreatingChat] = useState(false);
   const [chatTitle, setChatTitle] = useState("");
   const [chatMessages, setChatMessages] = useState<Message[]>([]);
-  
+
   // Message entry state (shared between all modals)
   const [newMessageSender, setNewMessageSender] = useState("");
   const [newMessageContent, setNewMessageContent] = useState("");
@@ -40,16 +45,17 @@ export const useChatManagement = () => {
   // Helper function to select chat with storage update
   const selectChat = (chatId: string | null) => {
     setSelectedChatId(chatId);
-    if (chatId) {
-      setStorageItem(LOCAL_STORAGE_KEYS.SELECTED_CHAT_ID, chatId);
-    }
+    setStorageItem(LOCAL_STORAGE_KEYS.SELECTED_CHAT_ID, chatId);
   };
 
   const handleCreateChat = async (
     showToast: (message: string, type: "success" | "error") => void,
     isPrivacyMode: boolean,
     isGhostMode: boolean,
-    handlePrivacyAnalysis: (data: PrivacyAnalysisPostRequest, showToast: (message: string, type: "success" | "error") => void) => Promise<{ chat: any; analyses: any[] } | undefined>
+    handlePrivacyAnalysis: (
+      data: PrivacyAnalysisPostRequest,
+      showToast: (message: string, type: "success" | "error") => void,
+    ) => Promise<{ chat: any; analyses: any[] } | undefined>,
   ) => {
     if (!chatTitle.trim()) {
       showToast("Chat title is required bestie", "error");
@@ -69,16 +75,17 @@ export const useChatManagement = () => {
         const analysisData: PrivacyAnalysisPostRequest = {
           title: chatTitle.trim(),
           isGhostMode: isGhostMode,
-          messages: chatMessages.map(msg => ({
+          messages: chatMessages.map((msg) => ({
             sender: msg.sender,
             content: msg.content,
             timestamp: msg.timestamp || new Date(),
-            metadata: null
-          }))
+            metadata: null,
+          })),
         };
 
         const result = await handlePrivacyAnalysis(analysisData, showToast);
-        
+
+        if (!result) return;
         if (result) {
           // For regular privacy analysis (not ghost mode), select the created chat
           if (!isGhostMode) {
@@ -90,12 +97,18 @@ export const useChatManagement = () => {
         // Regular chat creation
         const chatData: ChatPostRequest = {
           title: chatTitle.trim(),
-          messages: chatMessages.length > 0 ? chatMessages.map(msg => ({
-            sender: msg.sender,
-            content: msg.content,
-            timestamp: msg.timestamp || new Date(),
-            metadata: null
-          } as any)) : undefined
+          messages:
+            chatMessages.length > 0
+              ? chatMessages.map(
+                  (msg) =>
+                    ({
+                      sender: msg.sender,
+                      content: msg.content,
+                      timestamp: msg.timestamp || new Date(),
+                      metadata: null,
+                    }) as any,
+                )
+              : [],
         };
 
         const newChat = await createChat(chatData);
@@ -103,19 +116,24 @@ export const useChatManagement = () => {
         selectChat(newChat.id);
         showToast("Chat created! Ready for analysis ✨", "success");
       }
-      
+
       // Reset form and close modal
       resetCreateChatModal();
       setIsCreateModalOpen(false);
-      
     } catch (error) {
-      showToast(error instanceof Error ? error.message : "Failed to create chat", "error");
+      showToast(
+        error instanceof Error ? error.message : "Failed to create chat",
+        "error",
+      );
     } finally {
       setIsCreatingChat(false);
     }
   };
 
-  const handleEditChatTitle = async (chatId: string, showToast: (message: string, type: "success" | "error") => void) => {
+  const handleEditChatTitle = async (
+    chatId: string,
+    showToast: (message: string, type: "success" | "error") => void,
+  ) => {
     if (!editingTitle.trim()) {
       showToast("Chat title cannot be empty", "error");
       return;
@@ -129,13 +147,18 @@ export const useChatManagement = () => {
       setEditingTitle("");
       showToast("Title updated ✨", "success");
     } catch (error) {
-      showToast(error instanceof Error ? error.message : "Failed to update title", "error");
+      showToast(
+        error instanceof Error ? error.message : "Failed to update title",
+        "error",
+      );
     } finally {
       setIsUpdatingTitle(false);
     }
   };
 
-  const handleDeleteChat = async (showToast: (message: string, type: "success" | "error") => void) => {
+  const handleDeleteChat = async (
+    showToast: (message: string, type: "success" | "error") => void,
+  ) => {
     if (!selectedChatId) return;
 
     try {
@@ -143,14 +166,17 @@ export const useChatManagement = () => {
       const deleteRequest: ChatDeleteRequest = { id: selectedChatId };
       await deleteChat(deleteRequest);
       await fetchChats();
-      
+
       // Clear selection since chat is deleted
       selectChat(null);
-      
+
       setIsDeleteDialogOpen(false);
       showToast("Chat deleted 🗑️", "success");
     } catch (error) {
-      showToast(error instanceof Error ? error.message : "Failed to delete chat", "error");
+      showToast(
+        error instanceof Error ? error.message : "Failed to delete chat",
+        "error",
+      );
     } finally {
       setIsDeletingChat(false);
     }
@@ -197,7 +223,7 @@ export const useChatManagement = () => {
     newMessageContent,
     whatsappImportText,
     importMode,
-    
+
     // Setters
     selectChat,
     setEditingChatId,
@@ -210,7 +236,7 @@ export const useChatManagement = () => {
     setNewMessageContent,
     setWhatsappImportText,
     setImportMode,
-    
+
     // Actions
     handleCreateChat,
     handleEditChatTitle,
@@ -220,8 +246,10 @@ export const useChatManagement = () => {
     closeCreateChatModal,
     resetCreateChatModal,
     fetchChats,
-    
+
     // Computed values
-    selectedChat: selectedChatId ? chats.find(chat => chat.id === selectedChatId) || null : null,
+    selectedChat: selectedChatId
+      ? chats.find((chat) => chat.id === selectedChatId) || null
+      : null,
   };
-}; 
+};

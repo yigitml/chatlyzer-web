@@ -1,49 +1,79 @@
 "use client";
+import { availableCredits, sandboxBilling } from "@/frontend/lib/creditBalance";
 
 import { useEffect, useState } from "react";
 import { useAuthStore } from "@/frontend/store/authStore";
 import { useChatStore } from "@/frontend/store/chatStore";
-import { useMessageStore } from "@/frontend/store/messageStore";
+import { useRouter } from "next/navigation";
 import { useAnalysisStore } from "@/frontend/store/analysisStore";
 import { useCreditStore } from "@/frontend/store/creditStore";
-import { Card, CardContent, CardHeader, CardTitle } from "@/frontend/components/ui/card";
-import { Avatar, AvatarFallback, AvatarImage } from "@/frontend/components/ui/avatar";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/frontend/components/ui/card";
+import {
+  Avatar,
+  AvatarFallback,
+  AvatarImage,
+} from "@/frontend/components/ui/avatar";
 import { Button } from "@/frontend/components/ui/button";
 import { Input } from "@/frontend/components/ui/input";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/frontend/components/ui/dialog";
-import { 
-  User, 
-  Mail, 
-  Calendar, 
-  Clock, 
-  MessageCircle, 
-  BarChart3, 
-  Zap, 
-  Crown, 
-  Settings, 
-  Edit2, 
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/frontend/components/ui/dialog";
+import {
+  User,
+  Mail,
+  Calendar,
+  Clock,
+  MessageCircle,
+  BarChart3,
+  Zap,
+  Crown,
+  Settings,
+  Edit2,
   Save,
   X,
   CheckCircle,
   XCircle,
   ArrowLeft,
   Shield,
-  Trash2
+  Trash2,
 } from "lucide-react";
 import Link from "next/link";
 import { BuyCreditsButton } from "@/frontend/components/common/buy-credits-button";
 // Components
 const LoadingSpinner = ({ size = "sm" }: { size?: "sm" | "lg" }) => (
-  <div className={`border-2 border-white/20 border-t-white rounded-full animate-spin ${size === "lg" ? "w-8 h-8" : "w-4 h-4"}`} />
+  <div
+    className={`border-2 border-white/20 border-t-white rounded-full animate-spin ${size === "lg" ? "w-8 h-8" : "w-4 h-4"}`}
+  />
 );
 
-const Toast = ({ message, type, onClose }: { message: string; type: "success" | "error"; onClose: () => void }) => (
+const Toast = ({
+  message,
+  type,
+  onClose,
+}: {
+  message: string;
+  type: "success" | "error";
+  onClose: () => void;
+}) => (
   <div className="fixed top-6 right-6 z-50 animate-in slide-in-from-right duration-300">
-    <div className={`flex items-center gap-3 px-4 py-3 rounded-none border-2 border-primary shadow-brutal ${
-      type === "success" 
-        ? "bg-card text-foreground" 
-        : "bg-destructive text-destructive-foreground"
-    }`}>
+    <div
+      className={`flex items-center gap-3 px-4 py-3 rounded-none border-2 border-primary shadow-brutal ${
+        type === "success"
+          ? "bg-card text-foreground"
+          : "bg-destructive text-destructive-foreground"
+      }`}
+    >
       {type === "success" ? (
         <CheckCircle className="w-5 h-5 flex-shrink-0" />
       ) : (
@@ -53,6 +83,7 @@ const Toast = ({ message, type, onClose }: { message: string; type: "success" | 
       <Button
         variant="ghost"
         size="sm"
+        aria-label="Dismiss notification"
         onClick={onClose}
         className="h-auto p-1 text-white/60 hover:text-white"
       >
@@ -62,26 +93,32 @@ const Toast = ({ message, type, onClose }: { message: string; type: "success" | 
   </div>
 );
 
-const StatCard = ({ 
-  icon: Icon, 
-  label, 
-  value, 
-  description 
-}: { 
-  icon: any; 
-  label: string; 
-  value: string | number; 
+const StatCard = ({
+  icon: Icon,
+  label,
+  value,
+  description,
+}: {
+  icon: any;
+  label: string;
+  value: string | number;
   description?: string;
 }) => (
   <Card className="hover:-translate-y-1 hover:shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] transition-transform duration-200">
     <CardContent className="p-6">
       <div className="flex items-center gap-3 mb-2 border-b-2 border-primary pb-2">
         <Icon className="w-5 h-5" />
-        <span className="text-muted-foreground font-mono text-sm font-medium uppercase tracking-wider">{label}</span>
+        <span className="text-muted-foreground font-mono text-sm font-medium uppercase tracking-wider">
+          {label}
+        </span>
       </div>
-      <div className="text-3xl font-bold font-mono text-foreground mt-4 mb-1">{value.toLocaleString()}</div>
+      <div className="text-3xl font-bold font-mono text-foreground mt-4 mb-1">
+        {value.toLocaleString()}
+      </div>
       {description && (
-        <div className="text-xs text-muted-foreground font-mono uppercase">{description}</div>
+        <div className="text-xs text-muted-foreground font-mono uppercase">
+          {description}
+        </div>
       )}
     </CardContent>
   </Card>
@@ -91,30 +128,48 @@ const CreditsDisplay = ({ credits }: { credits: number }) => {
   return (
     <div className="flex items-center gap-2 bg-card border-2 border-primary shadow-brutal-sm rounded-none px-4 py-2">
       <Zap className="w-5 h-5 text-card-foreground flex-shrink-0" />
-      <span className="font-mono font-bold text-lg text-card-foreground whitespace-nowrap">{credits.toLocaleString()}</span>
+      <span className="font-mono font-bold text-lg text-card-foreground whitespace-nowrap">
+        {credits.toLocaleString()}
+      </span>
     </div>
   );
 };
 
 export default function ProfilePage() {
-  const { user, isAuthenticated, isInitialized, updateUser, setUser, deleteUser } = useAuthStore();
+  const {
+    user,
+    isAuthenticated,
+    isInitialized,
+    updateUser,
+    setUser,
+    deleteUser,
+  } = useAuthStore();
   const { chats, fetchChats } = useChatStore();
-  const { fetchMessages } = useMessageStore();
+  const router = useRouter();
   const { analyzes, fetchAnalyzes } = useAnalysisStore();
-  const { credits, subscription, fetchCredits, fetchSubscription } = useCreditStore();
-  
+  const {
+    credits,
+    subscription,
+    fetchCredits,
+    fetchSubscription,
+    restorePurchases,
+  } = useCreditStore();
+
   // UI State
   const [isEditing, setIsEditing] = useState(false);
   const [editedName, setEditedName] = useState("");
   const [isUpdating, setIsUpdating] = useState(false);
-  const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
+  const [toast, setToast] = useState<{
+    message: string;
+    type: "success" | "error";
+  } | null>(null);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
-  
+
   // Stats
-  const totalCredits = credits.reduce((sum, credit) => sum + credit.amount, 0);
+  const totalCredits = availableCredits(credits);
   const totalChats = chats.length;
   const totalAnalyses = analyzes.length;
-  
+
   // Toast system
   const showToast = (message: string, type: "success" | "error") => {
     setToast({ message, type });
@@ -132,14 +187,13 @@ export default function ProfilePage() {
   useEffect(() => {
     const fetchData = async () => {
       if (!user?.id) return;
-      
+
       try {
         await Promise.all([
           fetchChats(),
-          fetchMessages({}),
           fetchAnalyzes({}),
           fetchCredits(),
-          fetchSubscription()
+          fetchSubscription(),
         ]);
       } catch (error) {
         console.error("Failed to fetch profile data:", error);
@@ -147,7 +201,7 @@ export default function ProfilePage() {
     };
 
     fetchData();
-  }, [user, fetchChats, fetchMessages, fetchAnalyzes, fetchCredits, fetchSubscription]);
+  }, [user, fetchChats, fetchAnalyzes, fetchCredits, fetchSubscription]);
 
   const handleSaveProfile = async () => {
     if (!editedName.trim()) {
@@ -157,13 +211,13 @@ export default function ProfilePage() {
 
     try {
       setIsUpdating(true);
-      
+
       // Call the actual API to update the user profile
       const updatedUser = await updateUser({ name: editedName.trim() });
-      
+
       // Update the user state with the updated data
       setUser(updatedUser);
-      
+
       setIsEditing(false);
       showToast("Profile updated successfully ✨", "success");
     } catch (error) {
@@ -177,8 +231,7 @@ export default function ProfilePage() {
   const handleDeleteAccount = async () => {
     try {
       await deleteUser();
-      showToast("Account deletion initiated", "success");
-      setIsDeleteModalOpen(false);
+      router.replace("/auth/sign-in");
     } catch {
       showToast("Failed to delete account", "error");
     }
@@ -199,8 +252,13 @@ export default function ProfilePage() {
     return (
       <div className="min-h-screen bg-black flex items-center justify-center">
         <div className="text-center">
-          <h1 className="text-2xl font-bold text-white mb-4">Not authenticated</h1>
-                        <Link href="/auth/sign-in" className="text-blue-400 hover:text-blue-300">
+          <h1 className="text-2xl font-bold text-white mb-4">
+            Not authenticated
+          </h1>
+          <Link
+            href="/auth/sign-in"
+            className="text-blue-400 hover:text-blue-300"
+          >
             Sign in to continue
           </Link>
         </div>
@@ -209,7 +267,7 @@ export default function ProfilePage() {
   }
 
   return (
-    <div className="min-h-screen bg-black text-white">
+    <div className="ph-no-capture ph-mask min-h-screen bg-black text-white">
       {/* Toast */}
       {toast && (
         <Toast
@@ -219,49 +277,61 @@ export default function ProfilePage() {
         />
       )}
 
-      <div className="max-w-4xl mx-auto p-6 space-y-8">
+      <div className="max-w-4xl min-w-0 mx-auto p-4 sm:p-6 space-y-8">
         {/* Back Button */}
-        <Link href="/home" className="inline-flex items-center gap-2 bg-card border-2 border-primary text-card-foreground px-4 py-2 hover:-translate-x-1 hover:-translate-y-1 hover:shadow-brutal transition-all font-mono font-bold text-sm uppercase">
+        <Link
+          href="/home"
+          className="inline-flex items-center gap-2 bg-card border-2 border-primary text-card-foreground px-4 py-2 hover:-translate-x-1 hover:-translate-y-1 hover:shadow-brutal transition-all font-mono font-bold text-sm uppercase"
+        >
           <ArrowLeft className="w-4 h-4" />
           <span>Back</span>
         </Link>
 
         {/* Profile Header */}
         <div className="text-center mb-8 border-b-2 border-primary pb-8">
-          <h1 className="text-5xl font-extrabold font-display text-foreground mb-4">PROFILE_SETTINGS</h1>
-          <p className="text-muted-foreground font-mono uppercase tracking-widest">Manage your account and preferences</p>
+          <h1 className="text-xl sm:text-5xl break-words font-extrabold font-display text-foreground mb-4">
+            PROFILE_SETTINGS
+          </h1>
+          <p className="text-muted-foreground font-mono uppercase tracking-widest">
+            Manage your account and preferences
+          </p>
         </div>
 
         {/* Profile Info Card */}
         <Card>
           <CardHeader>
-            <CardTitle className="text-foreground flex items-center gap-2 font-mono uppercase tracking-wider text-xl">
+            <CardTitle className="text-foreground flex flex-wrap items-center gap-2 font-mono uppercase tracking-wider text-base sm:text-xl">
               <span className="text-muted-foreground text-sm mr-2">/01</span>
               <User className="w-5 h-5" />
               Profile Information
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-6">
-            <div className="flex items-center gap-6">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:gap-6">
               <Avatar className="w-20 h-20">
                 <AvatarImage src={user.image || ""} alt={user.name || "User"} />
                 <AvatarFallback className="text-xl">
                   {user.name?.substring(0, 2).toUpperCase() || "U"}
                 </AvatarFallback>
               </Avatar>
-              
-              <div className="flex-1 space-y-2">
+
+              <div className="min-w-0 w-full flex-1 space-y-2">
                 {/* Name Row */}
                 {isEditing ? (
                   <div className="space-y-2">
                     <div className="flex items-center gap-2">
                       <Input
+                        aria-label="Profile name"
                         value={editedName}
                         onChange={(e) => setEditedName(e.target.value)}
                         onKeyDown={(e) => {
-                          if (e.key === 'Enter' && editedName.trim() && !isUpdating) {
+                          if (
+                            e.key === "Enter" &&
+                            editedName.trim() &&
+                            !isUpdating
+                          ) {
                             handleSaveProfile();
-                          } else if (e.key === 'Escape') {
+                          } else if (e.key === "Escape") {
                             setIsEditing(false);
                             setEditedName(user.name || "");
                           }
@@ -270,16 +340,22 @@ export default function ProfilePage() {
                         placeholder="Enter your name..."
                         autoFocus
                       />
-                      <Button 
-                        onClick={handleSaveProfile} 
+                      <Button
+                        aria-label="Save profile name"
+                        onClick={handleSaveProfile}
                         disabled={isUpdating || !editedName.trim()}
                         size="sm"
                         className="px-3"
                       >
-                        {isUpdating ? <LoadingSpinner /> : <Save className="w-4 h-4" />}
+                        {isUpdating ? (
+                          <LoadingSpinner />
+                        ) : (
+                          <Save className="w-4 h-4" />
+                        )}
                       </Button>
-                      <Button 
-                        variant="ghost" 
+                      <Button
+                        variant="ghost"
+                        aria-label="Cancel profile edit"
                         onClick={() => {
                           setIsEditing(false);
                           setEditedName(user.name || "");
@@ -294,10 +370,13 @@ export default function ProfilePage() {
                   </div>
                 ) : (
                   <div className="flex items-center gap-3">
-                    <h2 className="text-xl font-semibold text-white">{user.name}</h2>
+                    <h2 className="text-xl font-semibold text-white">
+                      {user.name}
+                    </h2>
                     <Button
                       variant="ghost"
                       size="sm"
+                      aria-label="Edit profile name"
                       onClick={() => setIsEditing(true)}
                       className="text-white/60 hover:text-white"
                     >
@@ -307,18 +386,23 @@ export default function ProfilePage() {
                 )}
                 {/* Static Info - Always Visible */}
                 <div className="mt-4 border-t-2 border-primary pt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="flex items-center gap-2 text-muted-foreground font-mono text-sm">
+                  <div className="flex min-w-0 items-center gap-2 text-muted-foreground font-mono text-sm break-all">
                     <Mail className="w-4 h-4" />
                     <span>{user.email}</span>
                   </div>
-                  <div className="flex items-center gap-2 text-muted-foreground font-mono text-sm">
+                  <div className="flex min-w-0 items-center gap-2 text-muted-foreground font-mono text-sm break-all">
                     <Calendar className="w-4 h-4" />
-                    <span>Joined {new Date(user.createdAt).toLocaleDateString()}</span>
+                    <span>
+                      Joined {new Date(user.createdAt).toLocaleDateString()}
+                    </span>
                   </div>
                   {user.lastLoginAt && (
-                    <div className="flex items-center gap-2 text-muted-foreground font-mono text-sm">
+                    <div className="flex min-w-0 items-center gap-2 text-muted-foreground font-mono text-sm break-all">
                       <Clock className="w-4 h-4" />
-                      <span>Last active {new Date(user.lastLoginAt).toLocaleDateString()}</span>
+                      <span>
+                        Last active{" "}
+                        {new Date(user.lastLoginAt).toLocaleDateString()}
+                      </span>
                     </div>
                   )}
                 </div>
@@ -330,36 +414,56 @@ export default function ProfilePage() {
         {/* Credits & Subscription */}
         <Card>
           <CardHeader>
-            <CardTitle className="text-foreground flex items-center gap-2 font-mono uppercase tracking-wider text-xl">
+            <CardTitle className="text-foreground flex flex-wrap items-center gap-2 font-mono uppercase tracking-wider text-base sm:text-xl">
               <span className="text-muted-foreground text-sm mr-2">/02</span>
               <Crown className="w-5 h-5" />
               Credits & Subscription
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-6">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
-                <h3 className="text-lg font-medium text-white mb-1">Available Credits</h3>
-                <p className="text-white/60 text-sm">Use credits to run chat analyses</p>
+                <h3 className="text-lg font-medium text-white mb-1">
+                  Available Credits
+                </h3>
+                <p className="text-white/60 text-sm">
+                  Use credits to run chat analyses
+                </p>
               </div>
               <CreditsDisplay credits={totalCredits} />
+              {sandboxBilling(credits) && (
+                <p className="w-full text-sm text-amber-300">
+                  Test billing mode.{" "}
+                  {credits.reduce(
+                    (sum, credit) =>
+                      sum + Math.max(0, credit.sandboxAmount || 0),
+                    0,
+                  )}{" "}
+                  sandbox credits are available only while test billing is
+                  enabled. Each analysis uses one credit pool.
+                </p>
+              )}
             </div>
-            
+
             {subscription ? (
               <div className="p-4 bg-white/5 rounded-lg border border-white/10">
-                <div className="flex items-center justify-between">
+                <div className="flex flex-wrap items-center justify-between gap-3">
                   <div>
-                    <h4 className="font-medium text-white">{subscription.name}</h4>
+                    <h4 className="font-medium text-white">
+                      {subscription.name}
+                    </h4>
                     <p className="text-white/60 text-sm">
-                      {subscription.isActive ? "Active" : "Inactive"} • 
-                      ${subscription.price}/month
+                      {subscription.isActive ? "Active" : "Inactive"} • $
+                      {subscription.price}/month
                     </p>
                   </div>
-                  <div className={`px-3 py-1 rounded-full text-sm ${
-                    subscription.isActive 
-                      ? "bg-green-500/20 text-green-300 border border-green-500/30"
-                      : "bg-red-500/20 text-red-300 border border-red-500/30"
-                  }`}>
+                  <div
+                    className={`px-3 py-1 rounded-full text-sm ${
+                      subscription.isActive
+                        ? "bg-green-500/20 text-green-300 border border-green-500/30"
+                        : "bg-red-500/20 text-red-300 border border-red-500/30"
+                    }`}
+                  >
                     {subscription.isActive ? "Active" : "Inactive"}
                   </div>
                 </div>
@@ -367,8 +471,34 @@ export default function ProfilePage() {
             ) : null}
 
             <div className="text-center py-6 border-t border-white/10">
-              <p className="text-white/60 mb-4">Purchase 24 analysis credits to analyze your chats</p>
-              <BuyCreditsButton />
+              <p className="text-white/60 mb-4">
+                Purchase 24 analysis credits to analyze your chats
+              </p>
+              <div className="flex flex-col items-center gap-4">
+                <BuyCreditsButton />
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    void restorePurchases()
+                      .then(() =>
+                        showToast(
+                          "Credit balance refreshed",
+                          "success",
+                        ),
+                      )
+                      .catch((error) =>
+                        showToast(
+                          error instanceof Error
+                            ? error.message
+                            : "Unable to restore credits",
+                          "error",
+                        ),
+                      );
+                  }}
+                >
+                  Restore credits
+                </Button>
+              </div>
             </div>
           </CardContent>
         </Card>
@@ -396,7 +526,10 @@ export default function ProfilePage() {
             <StatCard
               icon={Calendar}
               label="Days Active"
-              value={Math.floor((Date.now() - new Date(user.createdAt).getTime()) / (1000 * 60 * 60 * 24))}
+              value={Math.floor(
+                (Date.now() - new Date(user.createdAt).getTime()) /
+                  (1000 * 60 * 60 * 24),
+              )}
               description="Since joining"
             />
           </div>
@@ -405,7 +538,7 @@ export default function ProfilePage() {
         {/* Account Settings */}
         <Card>
           <CardHeader>
-            <CardTitle className="text-foreground flex items-center gap-2 font-mono uppercase tracking-wider text-xl">
+            <CardTitle className="text-foreground flex flex-wrap items-center gap-2 font-mono uppercase tracking-wider text-base sm:text-xl">
               <span className="text-muted-foreground text-sm mr-2">/04</span>
               <Settings className="w-5 h-5" />
               Account Settings
@@ -415,13 +548,17 @@ export default function ProfilePage() {
             <div className="flex items-center justify-between p-4 bg-white/5 rounded-lg">
               <div>
                 <h4 className="font-medium text-white">Account Status</h4>
-                <p className="text-white/60 text-sm">Your account is {isAuthenticated ? "active" : "inactive"}</p>
+                <p className="text-white/60 text-sm">
+                  Your account is {isAuthenticated ? "active" : "inactive"}
+                </p>
               </div>
-              <div className={`px-3 py-1 rounded-full text-sm ${
-                isAuthenticated
-                  ? "bg-green-500/20 text-green-300 border border-green-500/30"
-                  : "bg-red-500/20 text-red-300 border border-red-500/30"
-              }`}>
+              <div
+                className={`px-3 py-1 rounded-full text-sm ${
+                  isAuthenticated
+                    ? "bg-green-500/20 text-green-300 border border-green-500/30"
+                    : "bg-red-500/20 text-red-300 border border-red-500/30"
+                }`}
+              >
                 {isAuthenticated ? "Active" : "Inactive"}
               </div>
             </div>
@@ -433,11 +570,13 @@ export default function ProfilePage() {
                   {user.isOnboarded ? "Completed" : "Not completed"}
                 </p>
               </div>
-              <div className={`px-3 py-1 rounded-full text-sm ${
-                user.isOnboarded 
-                  ? "bg-green-500/20 text-green-300 border border-green-500/30"
-                  : "bg-yellow-500/20 text-yellow-300 border border-yellow-500/30"
-              }`}>
+              <div
+                className={`px-3 py-1 rounded-full text-sm ${
+                  user.isOnboarded
+                    ? "bg-green-500/20 text-green-300 border border-green-500/30"
+                    : "bg-yellow-500/20 text-yellow-300 border border-yellow-500/30"
+                }`}
+              >
                 {user.isOnboarded ? "Complete" : "Pending"}
               </div>
             </div>
@@ -454,29 +593,43 @@ export default function ProfilePage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="flex items-center justify-between">
+            <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
                 <h4 className="font-medium text-white mb-1">Delete Account</h4>
                 <p className="text-white/60 text-sm">
-                  Permanently delete your account and all associated data
+                  Permanently delete your profile, chats, and analysis results
                 </p>
               </div>
-              <Dialog open={isDeleteModalOpen} onOpenChange={setIsDeleteModalOpen}>
+              <Dialog
+                open={isDeleteModalOpen}
+                onOpenChange={setIsDeleteModalOpen}
+              >
                 <DialogTrigger asChild>
-                  <Button variant="destructive" className="bg-red-500/20 hover:bg-red-500/30 text-red-300 border border-red-500/30">
+                  <Button
+                    variant="destructive"
+                    className="bg-red-500/20 hover:bg-red-500/30 text-red-300 border border-red-500/30"
+                  >
                     <Trash2 className="w-4 h-4 mr-2" />
                     Delete Account
                   </Button>
                 </DialogTrigger>
                 <DialogContent className="bg-black border-red-500/30 text-white">
                   <DialogHeader>
-                    <DialogTitle className="text-red-300">Delete Account</DialogTitle>
+                    <DialogTitle className="text-red-300">
+                      Delete Account
+                    </DialogTitle>
                     <DialogDescription className="text-white/60">
-                      This action cannot be undone. This will permanently delete your account and remove all your data from our servers.
+                      This action cannot be undone. This will permanently delete
+                      your profile, conversations, and analysis results.
+                      Non-content purchase records and external backup retention
+                      follow our privacy policy.
                     </DialogDescription>
                   </DialogHeader>
                   <DialogFooter>
-                    <Button variant="ghost" onClick={() => setIsDeleteModalOpen(false)}>
+                    <Button
+                      variant="ghost"
+                      onClick={() => setIsDeleteModalOpen(false)}
+                    >
                       Cancel
                     </Button>
                     <Button variant="destructive" onClick={handleDeleteAccount}>

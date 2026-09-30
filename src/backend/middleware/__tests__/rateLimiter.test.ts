@@ -1,37 +1,23 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { NextRequest } from "next/server";
 import { getClientIp } from "../rateLimiter";
-
-function requestWithHeaders(headers: Record<string, string>) {
-  return new NextRequest("https://chatlyzerai.com/api/auth/web", {
-    headers,
+function request(headers: Record<string, string>) { return new NextRequest("https://chatlyzerai.com/api/auth/web", { headers }); }
+afterEach(() => vi.unstubAllEnvs());
+describe("trusted ingress IP contract", () => {
+  it("ignores every caller IP header unless ingress trust is explicitly configured", () => {
+    vi.stubEnv("TRUSTED_CLIENT_IP_HEADER", "");
+    expect(getClientIp(request({ "cf-connecting-ip": "203.0.113.1", "x-forwarded-for": "198.51.100.2", "x-real-ip": "192.0.2.3" }))).toBe("unknown");
   });
-}
-
-describe("getClientIp", () => {
-  it("prefers Cloudflare client IP over proxy headers", () => {
-    const request = requestWithHeaders({
-      "cf-connecting-ip": "203.0.113.10",
-      "x-forwarded-for": "10.0.0.1, 10.0.0.2",
-      "x-real-ip": "127.0.0.1",
-    });
-
-    expect(getClientIp(request)).toBe("203.0.113.10");
+  it("uses only the configured overwritten header", () => {
+    vi.stubEnv("TRUSTED_CLIENT_IP_HEADER", "x-forwarded-for");
+    expect(getClientIp(request({ "cf-connecting-ip": "spoof", "x-forwarded-for": "198.51.100.25:53122, 10.0.0.2" }))).toBe("198.51.100.25");
   });
-
-  it("uses the first forwarded IP and strips IPv4 ports", () => {
-    const request = requestWithHeaders({
-      "x-forwarded-for": "198.51.100.25:53122, 10.0.0.2",
-    });
-
-    expect(getClientIp(request)).toBe("198.51.100.25");
+  it.each(["arbitrary-key", "999.0.0.1", "", "1.2.3", "[not-an-ip]"])("rejects invalid IP bucket %s", value => {
+    vi.stubEnv("TRUSTED_CLIENT_IP_HEADER", "cf-connecting-ip");
+    expect(getClientIp(request({ "cf-connecting-ip": value }))).toBe("unknown");
   });
-
-  it("falls back to x-real-ip when forwarded headers are absent", () => {
-    const request = requestWithHeaders({
-      "x-real-ip": "198.51.100.40",
-    });
-
-    expect(getClientIp(request)).toBe("198.51.100.40");
+  it("accepts valid bracketed IPv6 without accepting other header families", () => {
+    vi.stubEnv("TRUSTED_CLIENT_IP_HEADER", "x-real-ip");
+    expect(getClientIp(request({ "x-real-ip": "[2001:db8::1]:443" }))).toBe("2001:db8::1");
   });
 });
