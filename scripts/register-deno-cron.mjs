@@ -1,7 +1,7 @@
 import { createRequire } from "node:module";
 const require = createRequire(import.meta.url);
 // Register before the import that starts Next.js's HTTP listener.
-if (typeof globalThis.Deno?.cron === "function" && process.env.DATABASE_URL) {
+if (typeof globalThis.Deno?.cron === "function") {
   globalThis.Deno.cron(
     "Recover interrupted analyses",
     "* * * * *",
