@@ -13,6 +13,8 @@ Use Node 22 and TLS-enabled PostgreSQL. Keep signing secrets stable across relea
 - Set public `NEXT_PUBLIC_` values in Build and Production. Rebuild when they change.
 - Give previews a separate test database and provider credentials; never connect previews to production data.
 
+Set `PORT=8000` in the Deno runtime contexts so the standalone server binds to the service port used during warmup and cron discovery.
+
 The health endpoint validates production configuration and database connectivity. Apply migrations from the release checkout before publishing.
 
 ## Release
